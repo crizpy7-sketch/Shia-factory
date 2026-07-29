@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shia App Factory v0.3.0</title>
+<style>
+:root{--bg:#f4f1ec;--panel:#fff;--line:#d8d0c6;--text:#211f1c;--muted:#746d65;--accent:#6f3fd6;--ok:#2f7b4f;--danger:#b42318;--grid:#e8e1d9}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}button,input{font:inherit}.app{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto}.top{display:flex;gap:10px;align-items:center;padding:12px;background:#171513;color:#fff}.top strong{white-space:nowrap}.top input{flex:1;min-width:100px;background:#292522;color:#fff;border:1px solid #4b4540;border-radius:9px;padding:9px}.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 12px;font-weight:700}.primary{background:var(--accent);border-color:var(--accent);color:#fff}.layout{display:grid;grid-template-columns:220px minmax(0,1fr) 270px;min-height:0}.panel{background:var(--panel);overflow:auto;border-right:1px solid var(--line)}.panel.right{border-right:0;border-left:1px solid var(--line)}h2{font-size:16px;margin:0;padding:15px;border-bottom:1px solid var(--line)}.section{padding:14px;border-bottom:1px solid var(--line)}.shelf{border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:10px;background:#fff;cursor:grab}.shelf b{display:block}.meta{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;margin-top:4px}.canvas-wrap{overflow:auto;background:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}.canvas{position:relative;min-width:900px;min-height:650px}.node{position:absolute;width:210px;background:#fff;border:2px solid var(--line);border-radius:15px;box-shadow:0 12px 28px #00000012;user-select:none}.node.sel{border-color:var(--accent)}.head{padding:10px 12px;border-bottom:1px solid var(--line);cursor:move;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.node-remove{border:0;background:transparent;color:var(--danger);font-weight:900;font-size:20px;line-height:1;padding:0 2px;cursor:pointer}.node-remove:hover{transform:scale(1.1)}.body{padding:12px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0;font-size:13px}.port{width:16px;height:16px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--accent);border:3px solid #fff;cursor:crosshair}.port.in{background:var(--ok);box-shadow:0 0 0 2px var(--ok)}.pill{font-size:11px;padding:3px 7px;border-radius:999px;background:#eee8f8}.edges{position:absolute;inset:0;pointer-events:none}.edge{fill:none;stroke:var(--accent);stroke-width:4}.edge-hit{fill:none;stroke:transparent;stroke-width:18;pointer-events:stroke;cursor:pointer}.edge.selected{stroke:#b42318;stroke-width:5}.help{font-size:12px;line-height:1.4;color:var(--muted)}.inspector label{display:block;font-size:12px;font-weight:700;margin:10px 0 4px}.inspector input,.inspector textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px}.inspector textarea{height:190px;font-family:monospace;font-size:11px}.console{background:#151515;color:#eee;padding:10px 14px;max-height:150px;overflow:auto;font:12px ui-monospace,monospace}.ok{color:#82e6aa}.err{color:#ff8a80}.preview{display:none;position:fixed;inset:0;background:#f7f5f2;z-index:50;overflow:auto}.preview.open{display:block}.preview-top{position:sticky;top:0;background:#171513;color:#fff;padding:12px;display:flex;justify-content:space-between}.preview-grid{max-width:1500px;margin:auto;padding:20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}.runtime-frame{width:100%;height:980px;border:1px solid var(--line);border-radius:15px;background:#fff}.runtime-shell{min-width:0}.runtime-label{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:0 0 8px;font-size:13px}.runtime-state{color:var(--muted)}.card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:18px}.card input,.card select{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;margin:5px 0 12px}.record{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px}@media(max-width:850px){.layout{grid-template-columns:1fr}.panel{display:none}.canvas-wrap{min-height:70vh}.preview-grid{grid-template-columns:1fr}.runtime-frame{height:1050px}.top .minor{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><strong>SHIA APP FACTORY</strong><span>v0.3.0</span><input id="name" value="Untitled Shia App"><button class="btn minor" id="save">Save JSON</button><button class="btn primary" id="run">Run ▶</button></header>
+<main class="layout">
+<aside class="panel"><h2>Block Shelf</h2><div class="section"><div class="shelf" draggable="true" data-block="forms"><b>Forms Block #001</b><div class="meta"><span>Stable</span><span>v1.0.0</span></div></div><div class="shelf" draggable="true" data-block="records"><b>Records Block #002</b><div class="meta"><span>Development</span><span>v0.3.0</span></div></div><p class="help">Drag blocks to the canvas. Drag from the purple output port to the green input port.</p></div></aside>
+<section class="canvas-wrap" id="wrap"><div class="canvas" id="canvas"><svg class="edges" id="edges"></svg></div></section>
+<aside class="panel right"><h2>Inspector</h2><div class="section inspector" id="inspector"><p class="help">Select a block.</p></div><h2>Project Graph</h2><div class="section inspector"><textarea id="json" readonly></textarea></div></aside>
+</main>
+<div class="console" id="console"></div>
+</div>
+<div class="preview" id="preview"><div class="preview-top"><b id="previewTitle">Preview</b><button class="btn" id="exit">Exit Preview</button></div><div class="preview-grid" id="previewGrid"></div></div>
+<script>
+(()=>{
+const defs={forms:{name:'Forms Block #001',version:'1.0.0',out:{id:'submitted',type:'Record'}},records:{name:'Records Block #002',version:'0.2.0',in:{id:'addRecord',type:'Record'}}};
+let project={version:'0.3.0',name:'Untitled Shia App',blocks:[],connections:[]},selected=null,drag=null,offset={x:0,y:0},connecting=null,recordsByInstance={};
+const canvas=document.getElementById('canvas'),edges=document.getElementById('edges'),ins=document.getElementById('inspector'),json=document.getElementById('json'),con=document.getElementById('console');
+const runtimeFrames=new Map(),runtimeReady=new Set(),pendingDeliveries=new Map();
+const uid=p=>p+'-'+Math.random().toString(36).slice(2,7);
+function log(t,c=''){con.innerHTML+=`<div class="${c}">${new Date().toLocaleTimeString()}  ${t}</div>`;con.scrollTop=con.scrollHeight}
+function add(type,x,y){const b={id:uid(type),type,x,y,title:type==='forms'?'Customer Booking':'Appointment Records'};project.blocks.push(b);if(type==='records')recordsByInstance[b.id]=[];selected={kind:'block',id:b.id};render();log(defs[type].name+' added','ok')}
+function node(id){return project.blocks.find(b=>b.id===id)}
+function update(){project.name=document.getElementById('name').value;json.value=JSON.stringify(project,null,2)}
+function removeBlock(id){const b=node(id);if(!b)return;const removed=project.connections.filter(c=>c.from===id||c.to===id).length;project.blocks=project.blocks.filter(x=>x.id!==id);project.connections=project.connections.filter(c=>c.from!==id&&c.to!==id);delete recordsByInstance[id];selected=null;render();log(`${defs[b.type].name} removed; ${removed} connection${removed===1?'':'s'} removed`,'ok')}
+function removeConnection(id){const c=project.connections.find(x=>x.id===id);project.connections=project.connections.filter(x=>x.id!==id);selected=null;render();if(c)log('Connection removed','ok')}
+function pc(id,dir){const n=canvas.querySelector(`[data-id="${id}"]`),p=n&&n.querySelector(`.port[data-dir="${dir}"]`);if(!p)return null;const cr=canvas.getBoundingClientRect(),r=p.getBoundingClientRect();return{x:r.left-cr.left+r.width/2+canvas.parentElement.scrollLeft,y:r.top-cr.top+r.height/2+canvas.parentElement.scrollTop}}
+function path(a,b){const d=Math.max(60,Math.abs(b.x-a.x)*.45);return`M${a.x},${a.y} C${a.x+d},${a.y} ${b.x-d},${b.y} ${b.x},${b.y}`}
+function draw(){edges.setAttribute('width',canvas.scrollWidth);edges.setAttribute('height',canvas.scrollHeight);edges.innerHTML='<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#6f3fd6"/></marker></defs>';project.connections.forEach(c=>{const a=pc(c.from,'out'),b=pc(c.to,'in');if(!a||!b)return;const d=path(a,b);const visible=document.createElementNS('http://www.w3.org/2000/svg','path');visible.setAttribute('d',d);visible.setAttribute('class','edge'+(selected?.kind==='connection'&&selected.id===c.id?' selected':''));visible.setAttribute('marker-end','url(#a)');edges.appendChild(visible);const hit=document.createElementNS('http://www.w3.org/2000/svg','path');hit.setAttribute('d',d);hit.setAttribute('class','edge-hit');hit.addEventListener('click',()=>{selected={kind:'connection',id:c.id};render()});edges.appendChild(hit)})}
+function inspect(){if(!selected){ins.innerHTML='<p class="help">Select a block or connection.</p>';return}if(selected.kind==='connection'){const c=project.connections.find(x=>x.id===selected.id);if(!c){selected=null;return inspect()}ins.innerHTML=`<b>Connection</b><p class="help">${node(c.from)?.title||c.from}.submitted → ${node(c.to)?.title||c.to}.addRecord</p><p class="help">Type: ${c.type}</p><button class="btn" id="deleteConnection">Delete connection</button>`;document.getElementById('deleteConnection').onclick=()=>removeConnection(c.id);return}const b=node(selected.id);if(!b){selected=null;return inspect()}ins.innerHTML=`<b>${defs[b.type].name}</b><label>Instance title</label><input id="title" value="${b.title}"><p class="help">${b.type==='forms'?'Output: submitted → Record':'Input: addRecord ← Record'}</p><button class="btn" id="deleteBlock">Delete block</button>`;document.getElementById('title').oninput=e=>{b.title=e.target.value;update()};document.getElementById('deleteBlock').onclick=()=>removeBlock(b.id)}
+function render(){canvas.querySelectorAll('.node').forEach(n=>n.remove());project.blocks.forEach(b=>{const d=defs[b.type],el=document.createElement('div');el.className='node'+(selected?.kind==='block'&&selected.id===b.id?' sel':'');el.dataset.id=b.id;el.style.left=b.x+'px';el.style.top=b.y+'px';el.innerHTML=`<div class="head"><div><b>${d.name}</b><div class="meta">v${d.version}</div></div><button class="node-remove" title="Remove block" aria-label="Remove block">×</button></div><div class="body">${d.in?`<div class="row"><span class="port in" data-dir="in" data-type="${d.in.type}"></span><span>${d.in.id}</span><span class="pill">${d.in.type}</span></div>`:''}${d.out?`<div class="row"><span>${d.out.id}</span><span class="pill">${d.out.type}</span><span class="port" data-dir="out" data-type="${d.out.type}"></span></div>`:''}</div>`;canvas.appendChild(el);el.querySelector('.node-remove').onclick=e=>{e.stopPropagation();removeBlock(b.id)};el.onmousedown=e=>{if(e.target.classList.contains('port')||e.target.classList.contains('node-remove'))return;selected={kind:'block',id:b.id};drag=b;const r=el.getBoundingClientRect();offset={x:e.clientX-r.left,y:e.clientY-r.top};render()};el.querySelectorAll('.port').forEach(p=>{p.onmousedown=e=>{e.stopPropagation();if(p.dataset.dir==='out')connecting={from:b.id,type:p.dataset.type}};p.onmouseup=e=>{e.stopPropagation();if(connecting&&p.dataset.dir==='in'){if(connecting.type!==p.dataset.type){log('Connection rejected: incompatible types','err')}else if(connecting.from===b.id){log('Connection rejected: block cannot connect to itself','err')}else{const exists=project.connections.some(c=>c.from===connecting.from&&c.to===b.id&&c.fromPort==='submitted'&&c.toPort==='addRecord');if(exists)log('Connection already exists','err');else{project.connections.push({id:uid('conn'),from:connecting.from,fromPort:'submitted',to:b.id,toPort:'addRecord',type:p.dataset.type});log('Connected submitted → addRecord','ok')}}connecting=null;render()}}})});draw();inspect();update()}
+document.onmousemove=e=>{if(drag){const r=canvas.getBoundingClientRect();drag.x=Math.max(10,e.clientX-r.left+canvas.parentElement.scrollLeft-offset.x);drag.y=Math.max(10,e.clientY-r.top+canvas.parentElement.scrollTop-offset.y);const el=canvas.querySelector(`[data-id="${drag.id}"]`);if(el){el.style.left=drag.x+'px';el.style.top=drag.y+'px'}draw();update()}};
+document.onmouseup=()=>{drag=null;connecting=null};
+document.onkeydown=e=>{if((e.key==='Delete'||e.key==='Backspace')&&selected){const tag=document.activeElement?.tagName;if(tag==='INPUT'||tag==='TEXTAREA')return;e.preventDefault();selected.kind==='block'?removeBlock(selected.id):removeConnection(selected.id)}};
+document.querySelectorAll('.shelf').forEach(s=>s.ondragstart=e=>e.dataTransfer.setData('text/plain',s.dataset.block));document.getElementById('wrap').ondragover=e=>e.preventDefault();document.getElementById('wrap').ondrop=e=>{e.preventDefault();const r=canvas.getBoundingClientRect();add(e.dataTransfer.getData('text/plain'),e.clientX-r.left+canvas.parentElement.scrollLeft-100,e.clientY-r.top+canvas.parentElement.scrollTop-40)};
+document.getElementById('name').oninput=update;document.getElementById('save').onclick=()=>{update();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(project,null,2)],{type:'application/json'}));a.download='shia-project.json';a.click();URL.revokeObjectURL(a.href);log('Project JSON saved','ok')};
+document.getElementById('run').onclick=()=>{
+  document.getElementById('previewTitle').textContent=document.getElementById('name').value+' — Real Block Run Mode';
+  const g=document.getElementById('previewGrid');g.innerHTML='';
+  runtimeFrames.clear();runtimeReady.clear();pendingDeliveries.clear();
+  project.blocks.forEach(b=>{
+    const shell=document.createElement('section');shell.className='runtime-shell';
+    const label=document.createElement('div');label.className='runtime-label';
+    label.innerHTML=`<b>${b.title}</b><span class="runtime-state" id="state-${b.id}">Loading real ${defs[b.type].name}…</span>`;
+    const frame=document.createElement('iframe');frame.className='runtime-frame';frame.title=b.title;
+    frame.src=`blocks/${b.type==='forms'?'forms-001':'records-002'}/index.html?instance=${encodeURIComponent(b.id)}`;
+    shell.append(label,frame);g.appendChild(shell);runtimeFrames.set(b.id,frame);
+  });
+  document.getElementById('preview').classList.add('open');
+};
+
+window.addEventListener('message',event=>{
+  const msg=event.data;
+  if(!msg||msg.source!=='shia-block-runtime')return;
+  if(msg.type==='ready'){
+    runtimeReady.add(msg.instanceId);
+    const state=document.getElementById('state-'+msg.instanceId);if(state)state.textContent='Real block ready';
+    const b=node(msg.instanceId),frame=runtimeFrames.get(msg.instanceId);
+    if(b&&frame?.contentWindow)frame.contentWindow.postMessage({source:'shia-factory',type:'configure',instanceId:b.id,config:{title:b.title,configuration:'barber'}},'*');
+    log(`${b?.title||msg.instanceId} real runtime ready`,'ok');
+    return;
+  }
+  if(msg.port==='submitted'&&msg.dataType==='Record'){
+    const source=node(msg.instanceId);const targets=project.connections.filter(c=>c.from===msg.instanceId&&c.fromPort==='submitted');
+    log(`${source?.title||msg.instanceId} emitted real submitted event`,'ok');
+    if(!targets.length){log('No connected destination for submitted','err');return}
+    targets.forEach(c=>{
+      const targetFrame=runtimeFrames.get(c.to),deliveryId=uid('delivery');
+      if(!targetFrame?.contentWindow){log(`Runtime unavailable for ${node(c.to)?.title||c.to}`,'err');return}
+      pendingDeliveries.set(deliveryId,{started:performance.now(),target:c.to});
+      targetFrame.contentWindow.postMessage({source:'shia-factory',type:'port-input',instanceId:c.to,port:c.toPort,dataType:c.type,payload:msg.payload,fromInstanceId:msg.instanceId,deliveryId},'*');
+    });
+    return;
+  }
+  if(msg.type==='ack'){
+    const pending=pendingDeliveries.get(msg.deliveryId);const ms=pending?Math.max(0,Math.round(performance.now()-pending.started)):null;
+    pendingDeliveries.delete(msg.deliveryId);
+    log(`${node(msg.instanceId)?.title||msg.instanceId} acknowledged real addRecord${ms===null?'':` · ${ms} ms`}`,'ok');
+  }
+});
+
+document.getElementById('exit').onclick=()=>document.getElementById('preview').classList.remove('open');
+const f={id:'booking-form',type:'forms',x:120,y:180,title:'Customer Booking'},r={id:'appointment-records',type:'records',x:500,y:240,title:'Appointment Records'};project.blocks=[f,r];project.connections=[{id:'starter',from:f.id,fromPort:'submitted',to:r.id,toPort:'addRecord',type:'Record'}];recordsByInstance[r.id]=[];render();log('Factory v0.3.0 initialized','ok');log('Real block runtime mounting enabled','ok')})();
+</script>
+</body></html>
