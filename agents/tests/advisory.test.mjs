@@ -16,7 +16,7 @@ const codes=r=>r.findings.map(f=>f.code);
 test('an empty graph is reported as nothing to review', () => {
   const r=review({blocks:[],connections:[]},{defs});
   assert.deepEqual(codes(r), ['empty-graph']);
-  assert.equal(r.scope.blocks, 0);
+  assert.equal(r.scope_of.blocks, 0);
 });
 
 test('the default starter graph only flags the development-stage block', () => {
@@ -73,6 +73,76 @@ test('the review never mutates the project it was handed', () => {
   const before=JSON.stringify(project);
   review(project,{defs});
   assert.equal(JSON.stringify(project), before);
+});
+
+test('every finding carries a target for the Inspector card', () => {
+  const r=review({
+    blocks:[{id:'f',type:'forms',title:'Customer Booking'},{id:'r',type:'records',title:'Appointment Records'}],
+    connections:[]
+  },{defs});
+  assert.ok(r.findings.length>0);
+  for(const f of r.findings){
+    assert.ok(f.target, `finding without a target: ${f.code}`);
+    assert.ok(Array.isArray(f.tags)&&f.tags.length, `finding without tags: ${f.code}`);
+  }
+});
+
+test('block scope returns only findings for the selected block', () => {
+  const r=review({
+    blocks:[{id:'f',type:'forms',title:'Customer Booking'},{id:'r',type:'records',title:'Appointment Records'}],
+    connections:[]
+  },{defs,scope:'block',selectedBlockId:'r'});
+  assert.equal(r.scope, 'block');
+  assert.ok(r.findings.length>0);
+  assert.ok(r.findings.every(f=>f.blockId==='r'));
+});
+
+test('connections scope returns only wiring findings', () => {
+  const r=review({
+    blocks:[{id:'f',type:'forms',title:'Customer Booking'},{id:'r',type:'records',title:'Appointment Records'}],
+    connections:[]
+  },{defs,scope:'connections'});
+  assert.ok(r.findings.length>0);
+  assert.ok(r.findings.every(f=>f.tags.includes('connections')));
+  assert.equal(r.findings.some(f=>f.code==='unstable-dependency'), false);
+});
+
+test('highest-risk scope returns a single finding and reports what it withheld', () => {
+  const r=review({
+    blocks:[{id:'f',type:'forms',title:'Customer Booking'},{id:'r',type:'records',title:'Appointment Records'}],
+    connections:[]
+  },{defs,scope:'highest-risk'});
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].severity, 'high');
+  assert.ok(r.withheld>0);
+  assert.equal(r.total, r.findings.length+r.withheld);
+});
+
+test('runtime scope reports observed telemetry, not assumptions', () => {
+  const graph={blocks:[{id:'r',type:'records',title:'Appointment Records'}],connections:[]};
+  const none=review(graph,{defs,scope:'runtime'});
+  assert.ok(none.findings.some(f=>f.code==='runtime-no-evidence'), 'expected an explicit "no evidence yet" finding');
+
+  const observed=review(graph,{defs,scope:'runtime',telemetry:{readyCounts:{r:57},pendingDeliveries:2,mounted:true}});
+  const storm=observed.findings.find(f=>f.code==='runtime-ready-storm');
+  assert.equal(storm.severity, 'high');
+  assert.match(storm.message, /57 times/);
+  assert.equal(storm.target, 'Appointment Records');
+  assert.ok(observed.findings.some(f=>f.code==='runtime-unacked-delivery'));
+  assert.equal(observed.findings.some(f=>f.code==='runtime-no-evidence'), false);
+});
+
+test('a single ready per instance is not reported as a storm', () => {
+  const r=review({blocks:[{id:'r',type:'records',title:'Appointment Records'}],connections:[]},
+    {defs,scope:'runtime',telemetry:{readyCounts:{r:1},pendingDeliveries:0,mounted:true}});
+  assert.equal(r.findings.some(f=>f.code==='runtime-ready-storm'), false);
+});
+
+test('telemetry does not leak into the default factory scope unless something is wrong', () => {
+  const r=review({blocks:[{id:'f',type:'forms',title:'Customer Booking'},{id:'r',type:'records',title:'Appointment Records'}],
+    connections:[{id:'c',from:'f',fromPort:'submitted',to:'r',toPort:'addRecord',type:'Record'}]},
+    {defs,telemetry:{readyCounts:{f:1,r:1},pendingDeliveries:0,mounted:true}});
+  assert.deepEqual(codes(r), ['unstable-dependency']);
 });
 
 test('every review restates the authority and recertification boundaries', () => {
