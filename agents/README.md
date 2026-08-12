@@ -11,6 +11,7 @@ rework on a project graph. They never build, merge or deploy anything.
 | `agents/registry.js` | The Factory registry — which agents exist, their council seats, authority boundaries, invocation aliases and avatar paths. |
 | `agents/routing.js` | Resolves invocation aliases and refuses requests outside an agent's authority. |
 | `agents/advisory.js` | The advisory review pass over a Factory project graph. |
+| `agents/panel.js` | The Inspector interaction: request box, quick actions, run state and finding cards. |
 | `agents/tests/` | Deterministic tests for the three modules above. |
 | `assets/agents/<agent-id>/` | Avatar PNGs served by the Factory UI. |
 
@@ -39,8 +40,33 @@ line through as the request. In the browser:
 window.ShiaFactory.invoke('Boris review this graph');
 ```
 
-The same call runs from the **CALL BORIS** button on the council shelf and from his profile in the
-Inspector. Findings are written to the existing Factory console.
+The same call runs from the **CALL BORIS** button on the council shelf, which opens Boris in the
+existing Inspector panel.
+
+**Reviewing.** The Inspector panel holds a request box ("What should Boris review?"), five quick
+actions, and a **RUN BORIS** button. Findings render as cards — severity, target, finding, evidence,
+recommended action — and every line is also written to the bottom console, which remains the audit
+trail.
+
+| Quick action | Scope | Reports |
+| --- | --- | --- |
+| Review Entire Factory | `factory` | Everything below |
+| Review Selected Block | `block` | Findings for the last block selected on the workbench |
+| Find Highest-Risk Defect | `highest-risk` | The single most severe finding, and how many were withheld |
+| Review Runtime | `runtime` | Observed runtime telemetry — ready storms, unacknowledged deliveries — plus development-stage blocks |
+| Review Connections | `connections` | Unrouted outputs, unfed inputs, dangling connections |
+
+An empty request defaults to *"Review the current Factory graph and identify the single
+highest-impact defect."* A typed request picks its own scope from its wording; a quick action always
+wins over that inference.
+
+Runtime findings come only from telemetry the Factory actually observed (`ready` counts, pending
+deliveries). Before the blocks are mounted, a runtime review says it has no evidence yet rather than
+inventing a verdict.
+
+**A run always says something.** Refused requests render a REFUSED card with the reason, a review
+that throws renders NOT COMPLETED, a block review with nothing selected renders NO TARGET, and a
+clean scope renders CLEAR. Boris never silently produces an empty panel.
 
 **Avatars.** `avatar-square` on the shelf card, `avatar-circle` on the profile, `avatar-brand-sheet`
 as full identity art, `avatar-app-icon` where a compact icon is needed. The brand sheet is never used
