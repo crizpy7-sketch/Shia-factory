@@ -1,0 +1,13 @@
+{
+  "council": "Influencers Council",
+  "agent_id": "BORIS-001",
+  "role": "Systems, reliability, research and red-team challenger",
+  "authority": "advisory",
+  "activation": [
+    "architecture",
+    "reliability",
+    "failure-analysis",
+    "high-risk-system-design",
+    "council-debate"
+  ]
+}

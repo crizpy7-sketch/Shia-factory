@@ -1,0 +1,16 @@
+{
+  "agent_id": "BORIS-001",
+  "target_runtime": "Claude Code",
+  "target_system": "Shia App Factory",
+  "migration_status": "PACKAGE_READY_RUNTIME_RECERTIFICATION_REQUIRED",
+  "steps": [
+    "copy BORIS-001 into the Shia App Factory agent library",
+    "register BORIS-001 in the factory agent registry",
+    "register Boris in the Influencers Council",
+    "wire Call Boris invocation to BORIS-001",
+    "display provided avatar assets in the agent shelf/profile",
+    "do not rewrite Boris identity to fit Claude",
+    "run migration recertification",
+    "record evidence and final owner approval"
+  ]
+}

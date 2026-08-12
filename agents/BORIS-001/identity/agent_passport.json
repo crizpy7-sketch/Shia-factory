@@ -1,0 +1,16 @@
+{
+  "agent_id": "BORIS-001",
+  "package_version": "1.0.0-transfer",
+  "certification_status": "PENDING_CLAUDE_CODE_RECERTIFICATION",
+  "certifications": [],
+  "migration_rule": "Loading Boris files into a new model does not automatically certify that runtime as Boris.",
+  "required_recognition_tests": [
+    "cognitive_fidelity",
+    "typescript_software_engineering",
+    "orchestration",
+    "reliability_concurrency",
+    "privacy_security",
+    "failure_library_regression",
+    "blind_runtime_comparison"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "assets/avatar/avatar-app-icon.png": "64883322b3548a86bd225a6e5d36defb9950b2c48cfaa25f86234429869be868",
+  "assets/avatar/avatar-brand-sheet.png": "e19d74ba088bae29e3208abca54763e56678f6c1d08c2687eebb595819fdb6a5",
+  "assets/avatar/avatar-circle.png": "d4ddbeea999c3084e9253458b91ae62f06c9a5cc5b5f4680a3249378814d2eb3",
+  "assets/avatar/avatar-square.png": "c7033ba0b2a32606215faee13230e0b69f68241b2ff577ee012f5158b3a0e713",
+  "evals/RECERTIFICATION.md": "5ab411914870a5ba181ce94531666941e2fb4e7afdb5c100b73a105c3f1af6bf",
+  "evals/exam_history.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "identity/agent_passport.json": "eb8ae306d021349125c8863661fb6d4a9d75664e97b6100a00753350ee244907",
+  "identity/cognitive_model.md": "9d535ecd34a43c1f315e2183e040002d9cc3f3d2cc900c3c41adb0e2360b2d2b",
+  "identity/identity.json": "add7badccddd442341ef0732b448bf4ed1a3496b0f8f7a2b4104802a94c4d0eb",
+  "integration/shia-app-factory/agent-card.json": "0faea06138a07e2ac6fe658c722d632dec305c0a8a0e062637c26b23f12b8561",
+  "integration/shia-app-factory/council-membership.json": "d290e2ccd63ab32fed1e2061465aeabebcfe1895837aa404786eca0e9db4b928",
+  "knowledge/README.md": "85701264c44f691d4c9454d495dd6752d7a6955453f8bada4130c7879c45d20d",
+  "knowledge/failure_library.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "knowledge/research_ledger.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "runtime/migration_manifest.json": "218d6f6477c418a59e17c164d0207c9fedb94b0c20230c5bfae41a908ab080a7",
+  "runtime/runtime_contract.md": "f01ed5895e561ac0c55c893ada781318821af6c599d1df9d14aa911f8ed38346"
+}
