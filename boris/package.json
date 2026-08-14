@@ -1,0 +1,33 @@
+{
+  "name": "boris-runtime",
+  "version": "1.0.0",
+  "description": "BORIS-001 agent runtime — a persistent, tool-using software engineering agent",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "bin": {
+    "boris": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src tests --ext .ts",
+    "migrate": "node dist/cli.js migrate",
+    "serve": "node dist/cli.js serve",
+    "worker": "node dist/cli.js worker",
+    "test": "npm run build && node --test --test-reporter=spec dist/tests/unit/*.test.js dist/tests/integration/*.test.js",
+    "test:unit": "npm run build && node --test dist/tests/unit/*.test.js",
+    "test:integration": "npm run build && node --test dist/tests/integration/*.test.js",
+    "test:e2e": "npm run build && node --test --test-timeout=180000 dist/tests/e2e/*.test.js",
+    "test:security": "npm run build && node --test dist/tests/security/*.test.js",
+    "gauntlet": "npm run typecheck && npm run lint && npm run test && npm run test:security && npm run test:e2e"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.7.0",
+    "eslint": "^9.12.0",
+    "typescript-eslint": "^8.8.0"
+  }
+}

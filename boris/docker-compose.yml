@@ -1,0 +1,83 @@
+# BORIS-001 production topology.
+#
+#   reverse proxy (yours)  ->  boris-api  ->  shared state (volume)
+#                              boris-worker  ->  workspaces (volume)
+#
+# The API and the worker are separate processes so a stuck task cannot take the dashboard down.
+# Both share the database volume; the worker is the only one that executes tasks.
+#
+# Storage note: the shipped storage adapter is SQLite on a persistent volume. A Postgres adapter
+# is an implemented interface away (src/storage/types.ts) but is NOT included in this release —
+# see docs/architecture.md. Do not point BORIS_DB_URL at Postgres expecting it to work.
+services:
+  boris-api:
+    build:
+      context: ..
+      dockerfile: boris/Dockerfile
+    image: boris-runtime:latest
+    command: ["node", "dist/src/cli.js", "serve"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      BORIS_HOST: 0.0.0.0
+      BORIS_PORT: "8787"
+      BORIS_REQUIRE_AUTH: "true"
+      BORIS_API_TOKEN: ${BORIS_API_TOKEN:?set BORIS_API_TOKEN in .env}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      BORIS_PROVIDER: ${BORIS_PROVIDER:-anthropic}
+      BORIS_MODEL: ${BORIS_MODEL:-claude-sonnet-5}
+      BORIS_LOG_LEVEL: ${BORIS_LOG_LEVEL:-info}
+    volumes:
+      - boris-data:/app/boris/data
+      - boris-workspaces:/app/boris/workspaces
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  boris-worker:
+    image: boris-runtime:latest
+    build:
+      context: ..
+      dockerfile: boris/Dockerfile
+    command: ["node", "dist/src/cli.js", "worker"]
+    restart: unless-stopped
+    depends_on:
+      boris-api:
+        condition: service_healthy
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      BORIS_PROVIDER: ${BORIS_PROVIDER:-anthropic}
+      BORIS_MODEL: ${BORIS_MODEL:-claude-sonnet-5}
+      BORIS_LOG_LEVEL: ${BORIS_LOG_LEVEL:-info}
+      BORIS_MAX_CONCURRENT_TASKS: ${BORIS_MAX_CONCURRENT_TASKS:-2}
+      BORIS_MAX_COST_USD: ${BORIS_MAX_COST_USD:-5}
+    volumes:
+      - boris-data:/app/boris/data
+      - boris-workspaces:/app/boris/workspaces
+    stop_grace_period: 30s
+
+  boris-scheduler:
+    image: boris-runtime:latest
+    build:
+      context: ..
+      dockerfile: boris/Dockerfile
+    command: ["node", "dist/src/cli.js", "scheduler"]
+    restart: unless-stopped
+    depends_on:
+      boris-api:
+        condition: service_healthy
+    environment:
+      BORIS_LOG_LEVEL: ${BORIS_LOG_LEVEL:-info}
+      BORIS_PROVIDER: ${BORIS_PROVIDER:-anthropic}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - boris-data:/app/boris/data
+      - boris-workspaces:/app/boris/workspaces
+
+volumes:
+  boris-data:
+  boris-workspaces:
