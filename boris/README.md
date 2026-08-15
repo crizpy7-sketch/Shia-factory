@@ -26,7 +26,18 @@ node dist/src/cli.js bootstrap    # seed skills, import BORIS's portable state i
 node dist/src/cli.js run          # API + dashboard + worker + scheduler in one process
 ```
 
-Open <http://127.0.0.1:8787>. Submit an objective from the dashboard or the CLI:
+Then open the building:
+
+| Address | What it is |
+| --- | --- |
+| <http://127.0.0.1:8787/hq> | **Headquarters** — Office, Workshop, Lab, Records |
+| <http://127.0.0.1:8787/factory> | The block workbench |
+| <http://127.0.0.1:8787/> | The BORIS Control Center |
+
+Everything is served from one origin, so no cross-origin permission is involved. To host HQ
+elsewhere, set `BORIS_ALLOWED_ORIGINS` to that origin — there is no wildcard.
+
+Submit an objective from the dashboard or the CLI:
 
 ```sh
 node dist/src/cli.js submit "Inspect this codebase, find the failing test, repair it and verify." \

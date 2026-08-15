@@ -53,6 +53,12 @@ const BORIS={
   },
   /* avatar-square for the Factory shelf card, avatar-circle for profile/chat,
      avatar-brand-sheet for full identity art, avatar-app-icon where a compact icon is needed. */
+  /* The shipped avatar-square.png and avatar-circle.png are miscropped fragments of the brand
+     sheet (they include the sneakers above the portrait). The sheet itself is clean, so every
+     surface crops the portrait from it using these verified fractions. No packaged byte is
+     modified; when corrected square/circle exports arrive, drop `portrait` and the surfaces fall
+     back to the files. */
+  portrait:{source:'brand_sheet',x:0.022,y:0.828,size:0.128},
   avatars:{
     square:'assets/agents/boris-001/avatar-square.png',
     circle:'assets/agents/boris-001/avatar-circle.png',
@@ -61,14 +67,74 @@ const BORIS={
   }
 };
 
-const agents=[BORIS];
-const councils=[{name:'Influencers Council',members:['BORIS-001']}];
+/* GARY-001 is registered so the headquarters has a real second seat, but his identity package has
+   not arrived yet. Everything below is registration metadata supplied by Cristian — not transferred
+   state, not a reconstructed identity, and deliberately not a cognitive model. `provisional: true`
+   is what the UI reads to say so out loud. When Gary's files arrive they are imported verbatim,
+   exactly as BORIS-001's were, and this record is replaced by what they contain. */
+const GARY={
+  agent_id:'GARY-001',
+  display_name:'Gary',
+  class:'portable_named_agent',
+  origin:'Influencers Council',
+  package:null,
+  package_version:null,
+  provisional:true,
+  provisional_note:'Awaiting Gary\'s identity package. Discipline supplied by Cristian; cognitive model, authority detail, ledgers and avatar assets are not yet transferred and have not been invented.',
+  status:'registered_pending_identity_package',
+  roles:['marketing strategy','positioning and messaging','campaign design','audience research','copy and creative direction','growth analysis'],
+  /* Held at the strictest setting until his own package states otherwise. */
+  authority:{
+    advisory:true,
+    challenge_rights:true,
+    may_request_rework:true,
+    may_merge:false,
+    may_deploy:false,
+    may_access_secrets:false,
+    final_authority:'Cristian'
+  },
+  invocation_aliases:['Call Gary','Ask Gary','Run this through Gary','Gary review this','@Gary'],
+  runtime:{
+    host:null,
+    host_is_identity:false,
+    certification_status:'NO_PACKAGE_RECEIVED',
+    certified:false,
+    contract:null,
+    recertification:null,
+    migration_manifest:null
+  },
+  council:{
+    council:'Influencers Council',
+    role:'Marketing, positioning and growth',
+    authority:'advisory',
+    activation:['positioning','messaging','campaign','audience','pricing-narrative','launch','council-debate']
+  },
+  card:{
+    subtitle:'Marketing • Positioning • Campaigns • Growth',
+    status:'AWAITING IDENTITY PACKAGE',
+    badge:'Influencers Council',
+    action_label:'CALL GARY'
+  },
+  /* A monogram placeholder, clearly generated. Gary's real brand art replaces it on arrival. */
+  avatars:{
+    square:'assets/agents/gary-001/placeholder-monogram.svg',
+    circle:'assets/agents/gary-001/placeholder-monogram.svg',
+    brand_sheet:null,
+    app_icon:'assets/agents/gary-001/placeholder-monogram.svg'
+  }
+};
+
+const agents=[BORIS,GARY];
+const councils=[{name:'Influencers Council',members:['BORIS-001','GARY-001']}];
 
 return {
   version:'1.0.0',
   agents,
   councils,
   byId(id){return agents.find(a=>a.agent_id===id)||null},
+  /* Agents whose identity package has actually been transferred and verified. */
+  established(){return agents.filter(a=>!a.provisional)},
+  provisional(){return agents.filter(a=>a.provisional===true)},
   council(name){
     const c=councils.find(x=>x.name===name);
     if(!c)return null;

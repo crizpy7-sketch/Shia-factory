@@ -214,6 +214,84 @@ test('the dashboard and the avatar assets are served', async (t) => {
   });
 });
 
+test('the headquarters, the workbench and their assets are served from one origin', async (t) => {
+  const h = makeHarness();
+  t.after(() => h.cleanup());
+
+  await withServer(h, async (base) => {
+    const hq = await fetch(`${base}/hq`);
+    assert.equal(hq.status, 200);
+    const html = await hq.text();
+    assert.match(html, /SHIA HEADQUARTERS/);
+    assert.match(html, /agents\/hq\.js/, 'the HQ data layer must be reachable from the same origin');
+
+    const factory = await fetch(`${base}/factory`);
+    assert.equal(factory.status, 200);
+    assert.match(await factory.text(), /SHIA APP FACTORY/);
+
+    for (const [path, type] of [
+      ['/agents/registry.js', 'text/javascript'],
+      ['/agents/hq.js', 'text/javascript'],
+      ['/blocks/forms-001/index.html', 'text/html'],
+      ['/assets/agents/gary-001/placeholder-monogram.svg', 'image/svg+xml'],
+      ['/agents/BORIS-001/evals/RECERTIFICATION.md', 'text/markdown'],
+    ]) {
+      const response = await fetch(`${base}${path}`);
+      assert.equal(response.status, 200, `${path} should be served`);
+      // Compared as a prefix, not a regex: content types contain characters like "+" that a
+      // regex would quietly reinterpret.
+      assert.ok((response.headers.get('content-type') ?? '').startsWith(type as string),
+        `${path} served as ${response.headers.get('content-type')}, expected ${type}`);
+    }
+  });
+});
+
+test('only the mapped static files are served — nothing else in the repository is reachable', async (t) => {
+  const h = makeHarness();
+  t.after(() => h.cleanup());
+
+  await withServer(h, async (base) => {
+    for (const path of [
+      '/agents/BORIS-001/identity/identity.json',
+      '/boris/src/config.ts',
+      '/boris/data/boris.db',
+      '/CLAUDE.md',
+      '/../etc/passwd',
+      '/agents/registry.js/../../boris/.env',
+    ]) {
+      const response = await fetch(`${base}${path}`);
+      assert.equal(response.status, 404, `${path} must not be served, got ${response.status}`);
+    }
+  });
+});
+
+test('cross-origin access is refused unless the origin is explicitly allowed', async (t) => {
+  const closed = makeHarness();
+  t.after(() => closed.cleanup());
+
+  await withServer(closed, async (base) => {
+    const response = await fetch(`${base}/api/health`, { headers: { origin: 'https://evil.example' } });
+    assert.equal(response.headers.get('access-control-allow-origin'), null,
+      'no origin may be allowed by default');
+    const preflight = await fetch(`${base}/api/tasks`, {
+      method: 'OPTIONS', headers: { origin: 'https://evil.example' },
+    });
+    assert.equal(preflight.status, 403);
+  });
+
+  const open = makeHarness({ config: { allowedOrigins: ['http://127.0.0.1:8903'] } });
+  t.after(() => open.cleanup());
+  await withServer(open, async (base) => {
+    const allowed = await fetch(`${base}/api/health`, { headers: { origin: 'http://127.0.0.1:8903' } });
+    assert.equal(allowed.headers.get('access-control-allow-origin'), 'http://127.0.0.1:8903');
+    assert.equal(allowed.headers.get('vary'), 'Origin');
+
+    const other = await fetch(`${base}/api/health`, { headers: { origin: 'http://elsewhere.example' } });
+    assert.equal(other.headers.get('access-control-allow-origin'), null,
+      'allowing one origin must not allow another');
+  });
+});
+
 test('approvals can be listed and decided through the API', async (t) => {
   const h = makeHarness();
   t.after(() => h.cleanup());

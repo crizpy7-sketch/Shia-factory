@@ -12,6 +12,8 @@ blocks) and **BORIS-001** (a portable named agent, and the runtime that executes
 | `agents/*.js`, `agents/tests/` | The Factory's agent layer (registry, routing, advisory, panel) | Plain scripts, no build step, tested with `node --test` |
 | `assets/agents/boris-001/` | Avatar assets served by the Factory and the dashboard | Byte-identical to the package originals |
 | `boris/` | The BORIS runtime: TypeScript, strict, Node 22 | Where all agent execution lives |
+| `hq/` | The Headquarters: Office, Workshop, Lab, Records | Zero-build HTML. It reports state; it never invents it |
+| `agents/hq.js` | The HQ data layer | Pure functions over the registry and live runtime, tested with `node --test` |
 
 ## Commands
 
@@ -34,6 +36,39 @@ npm run test:e2e       # real repair, real process kill, real recovery
 npm run gauntlet       # everything, in order
 node dist/src/cli.js run   # API + dashboard + worker + scheduler
 ```
+
+## Headquarters
+
+The building has four rooms and one address. `node dist/src/cli.js run` serves all of it:
+
+| Route | Room |
+| --- | --- |
+| `/hq` | Office · Workshop · Lab · Records |
+| `/factory` | The block workbench, unchanged |
+| `/` | The BORIS Control Center |
+
+Rules for the building:
+
+- **The office may only display what the runtime returned.** No task counts, uptimes or costs are
+  synthesised. Offline means offline, with the command to start it.
+- **A provisional agent is labelled everywhere.** An agent registered without a transferred identity
+  package shows `AWAITING IDENTITY PACKAGE`, is excluded from `established()`, and cannot be given
+  work. Registration is not identity.
+- **Only mapped static files are served.** `STATIC_ROUTES` in `boris/src/api/server.ts` is an
+  allowlist; nothing else in the repository is reachable over HTTP.
+- **Cross-origin access is off by default.** `BORIS_ALLOWED_ORIGINS` opts specific origins in. There
+  is no wildcard, because a browser page on an unknown origin must not be able to queue agent work.
+
+## Agent roster
+
+| Agent | State |
+| --- | --- |
+| BORIS-001 | Identity package transferred and checksum-verified. Runtime recertification PENDING |
+| GARY-001 | Registered, marketing discipline, strictest authority. **Identity package not yet received** |
+
+Gary's entry in `agents/registry.js` is registration metadata supplied by Cristian — not transferred
+state. It carries no cognitive model, no ledgers and no brand art, and it must not acquire any by
+invention. When his files arrive they are imported verbatim, exactly as BORIS-001's were.
 
 ## Identity rules
 

@@ -49,7 +49,7 @@ test('authority boundaries match the package', () => {
 test('Boris is registered in the Influencers Council', () => {
   const council=registry.council('Influencers Council');
   assert.ok(council, 'Influencers Council missing from registry');
-  assert.deepEqual(council.members.map(m=>m.agent_id), ['BORIS-001']);
+  assert.ok(council.members.some(m=>m.agent_id==='BORIS-001'), 'Boris should hold a council seat');
   assert.equal(boris.council.council, membership.council);
   assert.equal(boris.council.role, membership.role);
   assert.equal(boris.council.authority, membership.authority);
@@ -79,6 +79,35 @@ test('the host runtime is not certified as Boris by integration alone', () => {
   const recert=readFileSync(join(root,boris.runtime.recertification),'utf8');
   assert.match(recert, /^Status: PENDING$/m, 'recertification is no longer PENDING');
   assert.equal(/- \[x\]/i.test(recert), false, 'a recertification gate was ticked without running the gauntlet');
+});
+
+test('Gary holds a council seat and is marked provisional until his package arrives', () => {
+  const gary=registry.byId('GARY-001');
+  assert.ok(gary, 'GARY-001 should be registered');
+  assert.equal(gary.provisional, true, 'a registration without a transferred package must say so');
+  assert.equal(gary.package, null, 'no package path may be claimed before one exists');
+  assert.equal(gary.runtime.certification_status, 'NO_PACKAGE_RECEIVED');
+  assert.ok(registry.council('Influencers Council').members.some(m=>m.agent_id==='GARY-001'));
+  assert.ok(registry.provisional().some(a=>a.agent_id==='GARY-001'));
+  assert.ok(registry.established().every(a=>a.agent_id!=='GARY-001'));
+});
+
+test('Gary is held at the strictest authority until his own package states otherwise', () => {
+  const gary=registry.byId('GARY-001');
+  assert.equal(gary.authority.may_merge, false);
+  assert.equal(gary.authority.may_deploy, false);
+  assert.equal(gary.authority.may_access_secrets, false);
+  assert.equal(gary.authority.final_authority, 'Cristian');
+});
+
+test('nothing about Gary is fabricated: no cognitive model, no ledgers, no invented art', () => {
+  const gary=registry.byId('GARY-001');
+  assert.equal(gary.avatars.brand_sheet, null, 'no brand sheet may be claimed');
+  assert.match(gary.avatars.square, /placeholder/, 'the stand-in must be named as a placeholder');
+  assert.ok(existsSync(join(root, gary.avatars.square)), 'the placeholder asset should exist');
+  assert.match(gary.provisional_note, /have not been invented/i);
+  assert.equal(existsSync(join(root, 'agents', 'GARY-001')), false,
+    'no identity package directory may be conjured for Gary before his files arrive');
 });
 
 test('the transferred package still matches its SHA256 manifest', () => {

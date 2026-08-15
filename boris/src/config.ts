@@ -77,6 +77,8 @@ export interface Config {
   apiHost: string;
   apiToken: string | null;
   requireAuth: boolean;
+  /** Origins permitted to call the API from a browser. Empty means same-origin only. */
+  allowedOrigins: string[];
   logLevel: 'debug' | 'info' | 'warn' | 'error';
   limits: Limits;
   autoApprove: boolean;
@@ -104,6 +106,7 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     apiHost: str('BORIS_HOST', '127.0.0.1'),
     apiToken,
     requireAuth: str('BORIS_REQUIRE_AUTH', apiToken ? 'true' : 'false') === 'true',
+    allowedOrigins: list('BORIS_ALLOWED_ORIGINS', []),
     logLevel: str('BORIS_LOG_LEVEL', 'info') as Config['logLevel'],
     autoApprove: str('BORIS_AUTO_APPROVE', 'false') === 'true',
     workerPollMs: num('BORIS_WORKER_POLL_MS', 1000),

@@ -158,6 +158,9 @@ const SPRITE = {
   deploying:[2,0], red_team:[2,1], fixing:[2,2],
   done:[3,0], learning:[3,1], sleep:[3,2],
 };
+// The shipped avatar-circle.png is a miscropped fragment of the sheet, so the profile portrait is
+// cropped from the sheet itself using the same verified fractions the registry records.
+const PORTRAIT = { x: 0.022, y: 0.828, size: 0.128 };
 // Heartbeat states map onto real expressions; nothing animates unless the runtime says so.
 const STATE_SPRITE = {
   idle:'sleep', sleep:'sleep', thinking:'thinking', planning:'thinking', researching:'researching',

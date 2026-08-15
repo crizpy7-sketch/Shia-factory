@@ -16,6 +16,33 @@ import { TaskStatus, TASK_STATUSES } from '../domain/types.js';
 import { validate } from '../util/validate.js';
 
 const MAX_BODY_BYTES = 64 * 1024;
+
+/**
+ * Files the runtime serves from the repository so the headquarters, the workbench and the blocks
+ * all live on one origin. Explicit allowlist: a path not on this map is not served, which removes
+ * directory traversal as a concern rather than filtering for it.
+ */
+const STATIC_ROUTES: Record<string, { file: string; type: string }> = {
+  '/hq': { file: 'hq/index.html', type: 'text/html; charset=utf-8' },
+  '/hq/': { file: 'hq/index.html', type: 'text/html; charset=utf-8' },
+  '/hq/index.html': { file: 'hq/index.html', type: 'text/html; charset=utf-8' },
+  '/factory': { file: 'index.html', type: 'text/html; charset=utf-8' },
+  '/factory/index.html': { file: 'index.html', type: 'text/html; charset=utf-8' },
+  '/agents/registry.js': { file: 'agents/registry.js', type: 'text/javascript; charset=utf-8' },
+  '/agents/routing.js': { file: 'agents/routing.js', type: 'text/javascript; charset=utf-8' },
+  '/agents/advisory.js': { file: 'agents/advisory.js', type: 'text/javascript; charset=utf-8' },
+  '/agents/panel.js': { file: 'agents/panel.js', type: 'text/javascript; charset=utf-8' },
+  '/agents/hq.js': { file: 'agents/hq.js', type: 'text/javascript; charset=utf-8' },
+  '/blocks/forms-001/index.html': { file: 'blocks/forms-001/index.html', type: 'text/html; charset=utf-8' },
+  '/blocks/records-002/index.html': { file: 'blocks/records-002/index.html', type: 'text/html; charset=utf-8' },
+  '/assets/agents/boris-001/avatar-square.png': { file: 'assets/agents/boris-001/avatar-square.png', type: 'image/png' },
+  '/assets/agents/boris-001/avatar-circle.png': { file: 'assets/agents/boris-001/avatar-circle.png', type: 'image/png' },
+  '/assets/agents/boris-001/avatar-app-icon.png': { file: 'assets/agents/boris-001/avatar-app-icon.png', type: 'image/png' },
+  '/assets/agents/boris-001/avatar-brand-sheet.png': { file: 'assets/agents/boris-001/avatar-brand-sheet.png', type: 'image/png' },
+  '/assets/agents/gary-001/placeholder-monogram.svg': { file: 'assets/agents/gary-001/placeholder-monogram.svg', type: 'image/svg+xml' },
+  '/agents/BORIS-001/evals/RECERTIFICATION.md': { file: 'agents/BORIS-001/evals/RECERTIFICATION.md', type: 'text/markdown; charset=utf-8' },
+  '/agents/BORIS-001/evals/BORIS-EXAM-001-diagnosis.md': { file: 'agents/BORIS-001/evals/BORIS-EXAM-001-diagnosis.md', type: 'text/markdown; charset=utf-8' },
+};
 const AVATARS: Record<string, string> = {
   square: 'avatar-square.png',
   circle: 'avatar-circle.png',
@@ -29,6 +56,21 @@ interface Ctx {
   url: URL;
   runtime: Runtime;
   authenticated: boolean;
+}
+
+/**
+ * Cross-origin access is off unless BORIS_ALLOWED_ORIGINS names an origin. There is no wildcard:
+ * a browser page on an unknown origin must not be able to queue work for an agent.
+ */
+function corsHeaders(runtime: Runtime, origin: string | undefined): Record<string, string> {
+  if (!origin || !runtime.config.allowedOrigins.includes(origin)) return {};
+  return {
+    'access-control-allow-origin': origin,
+    'access-control-allow-headers': 'authorization, content-type',
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
+    'access-control-max-age': '600',
+    vary: 'Origin',
+  };
 }
 
 function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void {
@@ -107,6 +149,12 @@ export function createApiServer(runtime: Runtime): Server {
       const authenticated = runtime.config.apiToken !== null && bearer !== ''
         && tokenMatches(bearer, runtime.config.apiToken);
       const ctx: Ctx = { req, res, url, runtime, authenticated };
+      const cors = corsHeaders(runtime, req.headers.origin);
+      for (const [key, value] of Object.entries(cors)) res.setHeader(key, value);
+      if (req.method === 'OPTIONS') {
+        res.writeHead(Object.keys(cors).length ? 204 : 403);
+        return void res.end();
+      }
 
       try {
         await route(ctx, { publicDir, avatarDir, requireAuth });
@@ -128,6 +176,20 @@ async function route(
   const method = req.method ?? 'GET';
 
   // ---------------------------------------------------------------- static
+  const staticRoute = STATIC_ROUTES[path];
+  if (method === 'GET' && staticRoute) {
+    const file = join(runtime.config.repoRoot, staticRoute.file);
+    if (!existsSync(file)) return send(res, 404, { error: `not built: ${staticRoute.file}` });
+    const body = readFileSync(file);
+    res.writeHead(200, {
+      'content-type': staticRoute.type,
+      'content-length': body.length,
+      'x-content-type-options': 'nosniff',
+      ...(staticRoute.type === 'image/png' ? { 'cache-control': 'public, max-age=3600' } : { 'cache-control': 'no-cache' }),
+    });
+    return void res.end(body);
+  }
+
   if (method === 'GET' && (path === '/' || path === '/index.html')) {
     const file = join(deps.publicDir, 'index.html');
     if (!existsSync(file)) return send(res, 404, { error: 'dashboard not built' });
