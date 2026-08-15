@@ -7,6 +7,7 @@ import { AgentStatus, ApprovalRequest, HeartbeatState, ScheduleRecord, Task, Tas
 import { isOutstanding } from './domain/state.js';
 import { EventBus } from './events/bus.js';
 import { BorisIdentity, loadIdentity } from './identity/loader.js';
+import { AgentProfile, DEFAULT_CHARTER, baseAgentId, loadRoster } from './identity/roster.js';
 import { MemoryStore } from './memory/store.js';
 import { createProvider } from './providers/index.js';
 import { ModelProvider } from './providers/types.js';
@@ -49,11 +50,29 @@ export interface Runtime {
   tools: ToolRegistry;
   memory: MemoryStore;
   skills: SkillRegistry;
+  /** The primary agent's identity. Kept for callers that predate the roster. */
   identity: BorisIdentity;
+  /** The primary agent's loop. Equivalent to `agentFor(config.agentId)`. */
   agent: BorisAgent;
+  /** Every agent this runtime can host, keyed by agent id. */
+  roster: Map<string, HostedAgent>;
   logger: Logger;
   startedAt: number;
   heartbeat: HeartbeatState;
+}
+
+/** An agent the runtime can actually execute: his identity, his boundary, and his loop. */
+export interface HostedAgent {
+  profile: AgentProfile;
+  agent: BorisAgent;
+}
+
+/**
+ * Resolves the agent a task is addressed to. Returns null when this runtime cannot host him —
+ * work must never be silently executed by a different agent than the one it names.
+ */
+export function agentFor(runtime: Runtime, assignedAgent: string): HostedAgent | null {
+  return runtime.roster.get(baseAgentId(assignedAgent)) ?? null;
 }
 
 export interface CreateRuntimeOptions {
@@ -81,9 +100,35 @@ export function createRuntime(options: CreateRuntimeOptions = {}): Runtime {
 
   for (const root of config.workspaceRoots) mkdirSync(root, { recursive: true });
 
+  /* One loop per hosted agent, each briefed by his own package and bounded by his own tool
+     allowlist. The primary agent is always present even if his package moved: `identity` is loaded
+     from config.identityDir independently of the roster, so an empty agents/ directory degrades to
+     the single-agent runtime rather than to no runtime at all. */
+  const makeAgent = (forIdentity: BorisIdentity, profile?: AgentProfile): BorisAgent => new BorisAgent({
+    config, storage, bus, provider, tools, memory, skills, identity: forIdentity, logger,
+    ...(profile ? { charter: profile.charter, agentTools: profile.tools } : {}),
+  });
+
+  const roster = new Map<string, HostedAgent>();
+  for (const profile of loadRoster(config.repoRoot)) {
+    roster.set(profile.agentId, { profile, agent: makeAgent(profile.identity, profile) });
+  }
+  const primary = roster.get(config.agentId);
+  const agent = primary ? primary.agent : makeAgent(identity);
+  if (!primary) {
+    roster.set(identity.agentId, {
+      profile: {
+        agentId: identity.agentId, identity, tools: undefined,
+        charter: DEFAULT_CHARTER,
+        toolsReason: 'Full registry.',
+      },
+      agent,
+    });
+  }
+
   const runtime: Runtime = {
     config, storage, bus, provider, tools, memory, skills, identity,
-    agent: new BorisAgent({ config, storage, bus, provider, tools, memory, skills, identity, logger }),
+    agent, roster,
     logger,
     startedAt: Date.now(),
     heartbeat: 'idle',
@@ -108,12 +153,22 @@ export interface SubmitOptions {
   priority?: TaskPriority;
   maxAttempts?: number;
   scheduleId?: string | null;
+  /** Who the work is for. Defaults to the primary agent. */
+  agentId?: string;
 }
 
 export function submitObjective(runtime: Runtime, objective: string, options: SubmitOptions = {}): Task {
   const trimmed = objective.trim();
   if (trimmed.length < 10) throw new Error('objective must be at least 10 characters');
   if (trimmed.length > 8000) throw new Error('objective is too long (8000 character limit)');
+
+  /* Work addressed to an agent this runtime cannot host is refused at submission rather than
+     queued and quietly executed by whoever happens to be running. */
+  const assignedAgent = options.agentId ?? runtime.config.agentId;
+  if (!runtime.roster.has(baseAgentId(assignedAgent))) {
+    const hosted = [...runtime.roster.keys()].join(', ') || 'none';
+    throw new Error(`no runtime hosts ${assignedAgent} (hosted: ${hosted})`);
+  }
 
   const requested = options.workspace ?? runtime.config.workspaceRoots[0] ?? '';
   const resolved = resolveWorkspacePath(
@@ -135,7 +190,7 @@ export function submitObjective(runtime: Runtime, objective: string, options: Su
     updatedAt: now(),
     startedAt: null,
     completedAt: null,
-    assignedAgent: runtime.config.agentId,
+    assignedAgent,
     workspace: resolved.path,
     dependencies: [],
     attempts: 0,
@@ -151,7 +206,9 @@ export function submitObjective(runtime: Runtime, objective: string, options: Su
     failureSignature: null,
   };
   runtime.storage.createTask(task);
-  runtime.bus.emit('task.created', task.title, { taskId: task.id, data: { objective: trimmed, workspace: task.workspace } });
+  runtime.bus.emit('task.created', task.title, {
+    taskId: task.id, data: { objective: trimmed, workspace: task.workspace, agent: assignedAgent },
+  });
   return task;
 }
 

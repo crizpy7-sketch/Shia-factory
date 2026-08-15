@@ -3,7 +3,7 @@
  *
  * Claiming is a single atomic statement in storage, so two workers never execute the same task.
  */
-import { Runtime, recoverOutstandingWork, registerRunningTask, releaseRunningTask } from '../runtime.js';
+import { Runtime, agentFor, recoverOutstandingWork, registerRunningTask, releaseRunningTask } from '../runtime.js';
 import { RunOutcome } from '../agent/loop.js';
 
 export interface WorkerOptions {
@@ -29,13 +29,25 @@ export class WorkerService {
   async runOnce(): Promise<RunOutcome | null> {
     const task = this.runtime.storage.claimNextTask(['queued'], 'planning');
     if (!task) return null;
+
+    /* The task names its agent. If this runtime cannot host him the task is blocked with the
+       reason, never run by whoever happens to be loaded — an answer from the wrong agent is worse
+       than no answer. */
+    const hosted = agentFor(this.runtime, task.assignedAgent);
+    if (!hosted) {
+      const reason = `no runtime here hosts ${task.assignedAgent}`;
+      this.runtime.storage.updateTask(task.id, { status: 'blocked', error: reason });
+      this.runtime.bus.emit('task.blocked', reason, { taskId: task.id, level: 'warn' });
+      return null;
+    }
+
     this.active += 1;
     this.runtime.heartbeat = 'working';
     const controller = registerRunningTask(task.id);
     // The worker's own shutdown signal also aborts the task, so SIGTERM stops work promptly.
     this.options.signal?.addEventListener('abort', () => controller.abort(), { once: true });
     try {
-      return await this.runtime.agent.runTask(task.id, { signal: controller.signal });
+      return await hosted.agent.runTask(task.id, { signal: controller.signal });
     } catch (error) {
       // A crash inside the loop must not lose the task: record it and let the attempt budget decide.
       const message = error instanceof Error ? error.message : String(error);

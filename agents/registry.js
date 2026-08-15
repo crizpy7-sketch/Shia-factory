@@ -101,13 +101,14 @@ const GARY={
     may_create_legal_commitments:false
   },
   invocation_aliases:['Call Gary','Ask Gary','Gary review this','Run this through Gary','Gary launch plan','@Gary'],
-  /* Gary's execution host is the separate Next.js growth application shipped alongside his package.
-     It is not vendored into this zero-build repository, so no runtime here executes Gary. `host`
-     stays null rather than naming a host that is not running. */
+  /* The boris/ runtime hosts Gary as well as Boris: it loads his package, briefs him from his own
+     cognitive model and operating rules, and gives him only the tools his authority covers. That is
+     a second host, not the canonical one — the Gary Vee Growth Agent application still is — and
+     hosting him certifies nothing. `certified` stays false and his passport status is unchanged. */
   runtime:{
-    host:null,
+    host:'Shia agent runtime (boris/)',
     host_is_identity:false,
-    host_note:'Gary\'s execution host is the Gary Vee Growth Agent application (release 1.1.0), which is not part of this repository. This repository holds his identity and policy layer only.',
+    host_note:'Hosted by the Shia agent runtime in boris/, which loads his package and bounds him to read, research and reasoning tools. His canonical execution host remains the separate Gary Vee Growth Agent application (release 1.1.0). Hosting is not certification.',
     certification_status:'IDENTITY_SEEDED_RESEARCH_IN_PROGRESS_RUNTIME_RECERTIFICATION_PENDING',
     certified:false,
     contract:'agents/GARY-001/runtime/runtime_contract.md',

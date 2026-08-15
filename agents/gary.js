@@ -156,7 +156,11 @@ function createSession(options){
       gates,runtime:rt});
   }
 
-  /* The one thing this panel must never soften. */
+  /* The one thing this panel must never soften.
+
+     A runtime now hosts Gary, but it is not this panel: the Inspector runs deterministic code, not
+     the agent loop. So "no runtime answered" stays true here and must keep being said — with the
+     correction that work can be given to him, in the Office, where the runtime actually is. */
   function runtimeState(){
     const rt=agent.runtime||{};
     if(rt.certified===true&&rt.host){
@@ -164,9 +168,13 @@ function createSession(options){
     }
     return {
       connected:false,
-      reason:'No certified Gary runtime answered. This is a routed, gated intake — not a strategy, '
-        +'not a campaign, and not a claim about any market.',
-      detail:rt.host_note||'Gary\'s execution host is not part of this repository.',
+      reason:'No Gary runtime answered this. The Inspector runs deterministic code, not the agent '
+        +'loop — so this is a routed, gated intake, not a strategy, not a campaign, and not a claim '
+        +'about any market.',
+      detail:rt.host
+        ?`To have Gary actually work on it, submit it in the Office: ${rt.host} hosts him. `
+          +'That runtime is not certified as Gary either — hosting is not certification.'
+        :'Gary\'s execution host is not part of this repository.',
       certification:rt.certification_status||'unknown'
     };
   }
@@ -216,7 +224,7 @@ function createSession(options){
     const rt=agent.runtime||{};
     return `<div class="agent-head"><img class="agent-profile-avatar" src="${esc(agent.avatars.circle)}" alt="${esc(agent.display_name)}">`
       +`<div><b>${esc(agent.agent_id)}</b><div class="agent-role">${esc(agent.display_name)} · ${esc(agent.card.subtitle)}</div></div></div>`
-      +`<div class="agent-pills"><span class="agent-pill ok">● ${esc(agent.card.status)}</span><span class="agent-pill warn">NO RUNTIME CONNECTED</span></div>`
+      +`<div class="agent-pills"><span class="agent-pill ok">● ${esc(agent.card.status)}</span><span class="agent-pill warn">NOT A LIVE RUN</span></div>`
       +(agent.avatar_art_supplied===false?`<p class="help">Avatar is a generated placeholder — no brand art shipped with his package.</p>`:'')
       +`<p class="help simulation-notice">${esc(agent.simulation_notice||'')}</p>`
       +`<p class="help">Project · <b>${esc(c.projectName||'Untitled Shia App')}</b></p>`

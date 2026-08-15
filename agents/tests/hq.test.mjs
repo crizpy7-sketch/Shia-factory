@@ -34,18 +34,19 @@ test("each agent's authority is shown as his own package spells it", () => {
   assert.equal(gary.authority.may_generate_campaigns, true);
 });
 
-test('an imported package with no runtime is a distinct state from a missing package', () => {
+test('both agents are hosted, and neither is certified by being hosted', () => {
   const gary = hq.roster(registry).find((a) => a.id === 'GARY-001');
   assert.equal(gary.provisional, false, 'his package arrived');
   assert.equal(gary.packagePath, 'agents/GARY-001');
   assert.equal(gary.packageVersion, '0.4.0-multi-model-research-in-progress');
-  assert.equal(gary.hosted, false, 'nothing in this repository executes him');
-  assert.equal(gary.host, null);
-  assert.match(gary.hostNote, /not part of this repository/i);
+  assert.equal(gary.hosted, true, 'the boris/ runtime loads his package and can execute him');
+  assert.match(gary.host, /Shia agent runtime/);
+  assert.match(gary.hostNote, /Hosting is not certification/i);
+  assert.equal(gary.certified, false);
   assert.equal(gary.status, 'AVAILABLE');
 
   const boris = hq.roster(registry).find((a) => a.id === 'BORIS-001');
-  assert.equal(boris.hosted, true, 'Boris has a runtime — an uncertified one');
+  assert.equal(boris.hosted, true);
   assert.equal(boris.certified, false);
 });
 
@@ -143,8 +144,8 @@ test('the outstanding list names the real gaps, including its own', () => {
   assert.match(boris.what, /recertification/i);
 
   const gary = offline.filter((item) => item.subject === 'Gary');
-  assert.ok(gary.some((i) => /no runtime connected/i.test(i.what)));
-  assert.ok(gary.some((i) => /cannot answer/i.test(i.blocking)));
+  assert.ok(gary.some((i) => /recertification/i.test(i.what)),
+    'an uncertified runtime is outstanding work for him too');
   /* Missing art is listed, and listed as cosmetic — an honest gap is not an inflated one. */
   const art = gary.find((i) => /avatar art/i.test(i.what));
   assert.ok(art, 'the placeholder avatar should be visible as a gap');

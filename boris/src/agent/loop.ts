@@ -10,7 +10,8 @@ import { Config } from '../config.js';
 import { AgentRun, Evidence, HeartbeatState, Task, TaskStatus, emptyUsage } from '../domain/types.js';
 import { assertTransition } from '../domain/state.js';
 import { EventBus } from '../events/bus.js';
-import { BorisIdentity, buildSystemPrompt } from '../identity/loader.js';
+import { AgentCharter, BorisIdentity, buildSystemPrompt } from '../identity/loader.js';
+import { DEFAULT_CHARTER } from '../identity/roster.js';
 import { MemoryStore } from '../memory/store.js';
 import { captureFailure, countPriorOccurrences } from '../memory/learning.js';
 import { addUsage, checkTaskLimits, checkWorkerLimits } from '../policy/limits.js';
@@ -35,6 +36,14 @@ export interface AgentDeps {
   skills: SkillRegistry;
   identity: BorisIdentity;
   logger: Logger;
+  /** How this agent is briefed. Defaults to the engineering charter. */
+  charter?: AgentCharter;
+  /**
+   * The tools this agent may call at all, enforced at authorize time rather than merely hidden
+   * from the prompt. undefined = every registered tool. A delegation's narrower allowlist is
+   * intersected with this, so a subagent can never exceed the agent who spawned it.
+   */
+  agentTools?: string[] | undefined;
 }
 
 export interface RunOptions {
@@ -87,6 +96,18 @@ export class BorisAgent {
 
   private addEvidence(task: Task, evidence: Evidence): Task {
     return this.deps.storage.updateTask(task.id, { evidence: [...task.evidence, evidence] });
+  }
+
+  /**
+   * Intersects a requested tool list with this agent's own allowlist. Returns undefined only when
+   * neither constrains anything, which the registry reads as "every tool".
+   */
+  private boundedTools(requested: string[] | undefined): string[] | undefined {
+    const mine = this.deps.agentTools;
+    if (!mine) return requested;
+    if (!requested) return [...mine];
+    const allowed = new Set(mine);
+    return requested.filter((name) => allowed.has(name));
   }
 
   private permissionContext(task: Task): PermissionContext {
@@ -148,13 +169,16 @@ export class BorisAgent {
     if (!task) throw new Error(`Task not found: ${taskId}`);
 
     const depth = options.depth ?? task.depth;
-    const role = options.role ?? 'principal engineer';
+    const charter = this.deps.charter ?? DEFAULT_CHARTER;
+    /* A run is labelled with the agent's own role. Calling Gary's work "principal engineer" in the
+       activity stream would misreport who did it. */
+    const role = options.role ?? charter.role;
     const maxTurns = Math.min(options.maxTurns ?? config.limits.maxTurnsPerRun, config.limits.maxTurnsPerRun);
 
     const run: AgentRun = storage.createRun({
       id: id('run'),
       taskId,
-      agentId: config.agentId,
+      agentId: this.deps.identity.agentId,
       role,
       status: 'running',
       startedAt: now(),
@@ -213,7 +237,9 @@ export class BorisAgent {
       });
     }
 
-    const allowedTools = options.allowedTools;
+    /* The agent's own boundary always applies. A delegation may narrow it further; it can never
+       widen it, so a subagent cannot reach a tool its parent was never given. */
+    const allowedTools = this.boundedTools(options.allowedTools);
     const toolSpecs = tools.specs(allowedTools);
     const system = buildSystemPrompt(this.deps.identity, {
       workspace: task.workspace,
@@ -222,6 +248,7 @@ export class BorisAgent {
       skills: this.deps.skills.format(selectedSkills),
       objective: task.objective,
       role,
+      charter,
     });
 
     const messages: ModelMessage[] = [{
@@ -766,14 +793,14 @@ export class BorisAgent {
       parentTaskId: parentTask.id,
       title: `[${shape.value.role}] ${shape.value.objective.slice(0, 80)}`,
       objective: `${shape.value.objective}\n\nCompletion criteria: ${shape.value.completionCriteria}`,
-      description: `Delegated by ${config.agentId} from task ${parentTask.id}.`,
+      description: `Delegated by ${this.deps.identity.agentId} from task ${parentTask.id}.`,
       status: 'queued',
       priority: parentTask.priority,
       createdAt: now(),
       updatedAt: now(),
       startedAt: null,
       completedAt: null,
-      assignedAgent: `${config.agentId}:${shape.value.role}`,
+      assignedAgent: `${this.deps.identity.agentId}:${shape.value.role}`,
       workspace: parentTask.workspace,
       dependencies: [],
       attempts: 0,

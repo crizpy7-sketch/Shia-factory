@@ -608,8 +608,10 @@ $('submitBtn').onclick = async () => {
     $('submitNote').textContent = `${assignee ? assignee.name : 'That agent'} has no runtime connected — nothing here can execute the objective.`;
     return;
   }
+  // The runtime checks this too, and refuses rather than substituting a different agent.
+  $('submitNote').textContent = `Submitting to ${assignee.name}…`;
   try {
-    const body = { objective, priority: $('priority').value };
+    const body = { objective, priority: $('priority').value, agentId: assignee.id };
     const workspace = $('workspace').value.trim();
     if (workspace) body.workspace = workspace;
     const res = await fetch(`${ENDPOINT}/api/tasks`, {
@@ -618,7 +620,9 @@ $('submitBtn').onclick = async () => {
       body: JSON.stringify(body),
     });
     const data = await res.json();
-    $('submitNote').textContent = res.ok ? `Queued ${data.task.id}` : `Rejected: ${data.error}`;
+    $('submitNote').textContent = res.ok
+      ? `Queued ${data.task.id} for ${data.task.assignedAgent}`
+      : `Rejected: ${data.error}`;
     if (res.ok) $('objective').value = '';
     refresh();
   } catch (error) { $('submitNote').textContent = `Could not reach the runtime: ${error.message}`; }

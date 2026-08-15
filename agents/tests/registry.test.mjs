@@ -142,14 +142,18 @@ test('Gary sits in the council his own package names', () => {
   assert.ok(registry.council('Influencers Council').members.some(m=>m.agent_id==='BORIS-001'));
 });
 
-test('no runtime in this repository is claimed as Gary', () => {
-  assert.equal(gary.runtime.host, null, 'naming a host that is not running would be a fabrication');
+test('hosting Gary does not certify the host as Gary', () => {
+  /* The boris/ runtime loads his package, so naming it is a fact rather than a claim. What it is
+     not is a certification: that stays exactly where his own passport puts it. */
+  assert.equal(gary.runtime.host, 'Shia agent runtime (boris/)');
+  assert.equal(gary.runtime.host_is_identity, false);
+  assert.match(gary.runtime.host_note, /Hosting is not certification/i);
+  assert.match(gary.runtime.host_note, /canonical execution host remains/i);
   assert.equal(gary.runtime.certified, false);
   assert.equal(gary.runtime.certification_status, garyPassport.certification_status);
   assert.deepEqual(garyPassport.certifications, [], 'no certification may be recorded here');
   assert.equal(garyPassport.required_recognition_tests.length, 10);
   assert.equal(garyManifest.migration_gate, 'RECERTIFICATION_REQUIRED');
-  assert.match(gary.runtime.host_note, /not part of this repository/i);
   /* Boris ships a gate document; Gary does not. One is not authored on his behalf. */
   assert.equal(gary.runtime.recertification, null);
   assert.equal(existsSync(join(root,'agents/GARY-001/evals')), false);

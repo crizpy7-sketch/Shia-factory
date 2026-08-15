@@ -10,13 +10,14 @@ import { WorkerService } from './worker/worker.js';
 import { Scheduler } from './scheduler/scheduler.js';
 import { startApiServer } from './api/server.js';
 
-const USAGE = `BORIS-001 runtime
+const USAGE = `Shia agent runtime
 
 Usage: boris <command> [options]
 
   migrate                     Create or update the database schema
-  bootstrap                   Seed skills and import BORIS's portable identity into memory
-  submit "<objective>"        Queue an objective   [--workspace <dir>] [--priority high]
+  bootstrap                   Seed skills and import the primary agent's portable identity into memory
+  agents                      List the agents this runtime can host
+  submit "<objective>"        Queue an objective   [--agent <ID>] [--workspace <dir>] [--priority high]
   status                      Print agent status
   tasks [status]              List tasks
   task <id>                   Show a task with its evidence and tool calls
@@ -59,11 +60,27 @@ async function main(): Promise<number> {
     case 'submit': {
       const objective = args.find((a) => !a.startsWith('--'));
       if (!objective) { process.stderr.write('submit needs an objective\n'); return 2; }
-      const task = submitObjective(runtime, objective, {
-        ...(flag(args, 'workspace') ? { workspace: flag(args, 'workspace') as string } : {}),
-        ...(flag(args, 'priority') ? { priority: flag(args, 'priority') as 'low' | 'normal' | 'high' | 'critical' } : {}),
-      });
-      process.stdout.write(`${task.id}\t${task.status}\t${task.title}\n`);
+      try {
+        const task = submitObjective(runtime, objective, {
+          ...(flag(args, 'workspace') ? { workspace: flag(args, 'workspace') as string } : {}),
+          ...(flag(args, 'priority') ? { priority: flag(args, 'priority') as 'low' | 'normal' | 'high' | 'critical' } : {}),
+          ...(flag(args, 'agent') ? { agentId: flag(args, 'agent') as string } : {}),
+        });
+        process.stdout.write(`${task.id}\t${task.status}\t${task.assignedAgent}\t${task.title}\n`);
+        return 0;
+      } catch (error) {
+        process.stderr.write(`${(error as Error).message}\n`);
+        return 2;
+      }
+    }
+    case 'agents': {
+      for (const { profile } of runtime.roster.values()) {
+        const tools = profile.tools ? `${profile.tools.length} tools` : 'all tools';
+        const primary = profile.agentId === runtime.config.agentId ? ' (primary)' : '';
+        process.stdout.write(
+          `${profile.agentId}\t${profile.identity.displayName}${primary}\t${tools}\t${profile.identity.certificationStatus}\n`);
+      }
+      process.stdout.write('\nHosting is not certification. No agent above is certified.\n');
       return 0;
     }
     case 'status': {

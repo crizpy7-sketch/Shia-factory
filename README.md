@@ -35,7 +35,7 @@ ledgers, so an empty one reports empty and a full one reports what it holds.
 | Agent | Council | State |
 | --- | --- | --- |
 | **BORIS-001** — Boris | Influencers Council | Systems, reliability, research, red-team challenge. Package transferred and checksum-verified. Executed by the `boris/` runtime. Recertification **PENDING** |
-| **GARY-001** — Gary | Growth Council | Growth, brand, distribution, experiments. Package transferred and imported verbatim. **No runtime here executes him** |
+| **GARY-001** — Gary | Growth Council | Growth, brand, distribution, experiments. Package transferred and imported verbatim. Hosted, bounded to read/research tools. Certification **pending** |
 
 Both are advisory. They challenge, they request rework, and they do not land changes. Cristian is
 final authority.
@@ -48,8 +48,31 @@ window.ShiaFactory.invoke('Gary launch plan — Audience: solo consultants. KPI:
 ```
 
 Boris reviews the graph and returns findings. Gary routes, applies his approval gates and names the
-evidence a growth answer would need — and says on every run that no certified Gary runtime answered,
-because none does.
+evidence a growth answer would need. Neither panel is a live model — the Inspector is deterministic
+code, and says so. To have an agent actually work on something, give him an objective in the Office.
+
+## One runtime, two agents, kept apart
+
+`boris/` hosts both. Each is briefed from his own package — his cognitive model, runtime contract and
+operating rules — and bounded to the tools his declared authority covers:
+
+| | Briefed as | Tools |
+| --- | --- | --- |
+| Boris | Principal agentic software engineer; Read → Plan → Act → Observe → Verify | The full registry |
+| Gary | Growth strategist; diagnose → one KPI → coherent plan → owner approval | Read, search, research, plan, report, request approval, memory |
+
+Gary has no write, shell, git or deploy tool, because his package grants him no authority to change a
+repository. That is enforced when a tool is authorised, not merely omitted from his prompt: if a model
+playing Gary calls `fs_write`, the call is denied and nothing touches the disk.
+
+```sh
+node dist/src/cli.js agents                                  # who can be hosted, and with what
+node dist/src/cli.js submit "Draft the launch brief." --agent GARY-001
+```
+
+Work is addressed to an agent and runs as that agent. An objective for an agent the runtime cannot
+host is refused at submission, and a task naming an unknown agent is blocked rather than quietly
+executed by whoever happens to be loaded.
 
 **GARY-001 is a Shia-owned fictionalised identity.** It may be informed by publicly documented
 marketing principles associated with Gary Vaynerchuk, but it is not him, does not impersonate him,
@@ -86,7 +109,7 @@ node --test agents/tests/*.test.mjs   # the Factory's agent layer
 cd boris && npm run gauntlet          # typecheck, lint, unit, integration, security, e2e
 ```
 
-225 tests, no dependencies beyond Node's own test runner and TypeScript.
+235 tests, no dependencies beyond Node's own test runner and TypeScript.
 
 ## What is not true yet
 
@@ -99,7 +122,7 @@ that does less.
 - **Neither agent is certified.** Boris's recertification gauntlet has not been run with Cristian's
   approval. Gary holds zero of his ten recognition tests. Hosting an agent is not certifying the
   host as that agent.
-- **Gary cannot be given work here.** His execution host is a separate application. This repository
-  holds his identity and his policy layer.
+- **Hosting Gary here is not his canonical runtime.** His own execution host is a separate
+  application. This runtime loads his package and bounds him honestly; it is not certified as him.
 - **Postgres is not implemented, and MCP servers are not wired.** `Storage` is the port and the tool
   registry is the extension point; SQLite is the only adapter shipped.

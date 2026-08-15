@@ -36,6 +36,8 @@ npm run test:security  # adversarial suite
 npm run test:e2e       # real repair, real process kill, real recovery
 npm run gauntlet       # everything, in order
 node dist/src/cli.js run   # API + dashboard + worker + scheduler
+node dist/src/cli.js agents # who this runtime can host, and with which tools
+node dist/src/cli.js submit "<objective>" --agent GARY-001
 ```
 
 ## Headquarters
@@ -58,6 +60,8 @@ Rules for the building:
 - **An agent without a runtime is labelled everywhere too.** His seat says `No runtime connected`,
   his assignee option is disabled, and his panel repeats it on every run. An identity package is not
   a running agent.
+- **The Inspector is not the runtime.** The Factory panels are deterministic code, so they say
+  `NOT A LIVE RUN` and point at the Office. A panel must never read as a model's answer.
 - **Only mapped static files are served.** `STATIC_ROUTES` in `boris/src/api/server.ts` is an
   allowlist; nothing else in the repository is reachable over HTTP.
 - **Cross-origin access is off by default.** `BORIS_ALLOWED_ORIGINS` opts specific origins in. There
@@ -67,12 +71,24 @@ Rules for the building:
 
 | Agent | Council | State |
 | --- | --- | --- |
-| BORIS-001 | Influencers Council | Package transferred and checksum-verified. Hosted by the `boris/` runtime. Runtime recertification **PENDING** |
-| GARY-001 | Growth Council | Package transferred and imported verbatim. **No runtime in this repository executes him.** Certification `IDENTITY_SEEDED_RESEARCH_IN_PROGRESS_RUNTIME_RECERTIFICATION_PENDING` |
+| BORIS-001 | Influencers Council | Package transferred and checksum-verified. Hosted by the `boris/` runtime, full tool registry. Runtime recertification **PENDING** |
+| GARY-001 | Growth Council | Package transferred and imported verbatim. Hosted by the same runtime, bounded to read/research/reasoning tools. Certification `IDENTITY_SEEDED_RESEARCH_IN_PROGRESS_RUNTIME_RECERTIFICATION_PENDING` |
 
 Three states, and the building must keep them distinct: *no package* (provisional), *package but no
-runtime* (Gary), *runtime but no certification* (Boris). Collapsing them is how a registration gets
-mistaken for a working agent.
+runtime*, and *runtime but no certification* — which is where both agents now stand. Collapsing them
+is how a registration gets mistaken for a working agent, or a host for a certification.
+
+**The runtime is multi-agent, and the agents stay distinct inside it.** `boris/src/identity/roster.ts`
+declares who can be hosted, how each is briefed, and which tools each may call. Rules:
+
+- **An agent is briefed from his own package.** Charter, cognitive model, runtime contract, operating
+  rules and simulation notice all come from `agents/<ID>/`. Boris gets the engineering cycle; Gary
+  gets the Growth Operator loop that shipped with him. Neither is briefed as the other.
+- **Tools are bounded per agent and enforced, not suggested.** `AgentDeps.agentTools` is intersected
+  at authorize time, so a tool outside an agent's package cannot touch the disk even if the model
+  calls it. A delegation may narrow the set; it can never widen it.
+- **Work is addressed to an agent and runs as that agent.** `submitObjective` refuses an agent the
+  runtime cannot host, and the worker blocks a task rather than running it as somebody else.
 
 Gary-specific rules:
 
@@ -87,9 +103,10 @@ Gary-specific rules:
   detects later drift; it proves nothing about what happened before the archive arrived.
 - **No avatar art shipped.** `avatar_art_supplied: false`, and a monogram placeholder stands in,
   named as one. Do not generate art and present it as his.
-- **He may not be given work here.** The Office disables his assignee option and the panel states on
-  every run that no certified Gary runtime answered. His execution host is the separate Gary Vee
-  Growth Agent application, which is not vendored into this zero-build repository.
+- **He may be given work, and only within his authority.** The Office can assign him objectives and
+  the runtime executes him — with no write, shell, git or deploy tool, because his package grants no
+  authority to change a repository. His canonical execution host is still the separate Gary Vee
+  Growth Agent application; hosting him here certifies nothing, and his passport still says so.
 
 ## Identity rules
 

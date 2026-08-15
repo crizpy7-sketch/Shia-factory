@@ -46,10 +46,13 @@ test('every run says out loud that no certified Gary runtime answered', () => {
   for(const ctx of [{},{requestText:'Positioning review'},{kind:'experiment'}]){
     const {run,logs}=session().run(ctx);
     assert.equal(run.runtime.connected, false);
-    assert.match(run.runtime.reason, /No certified Gary runtime answered/);
+    assert.match(run.runtime.reason, /No Gary runtime answered this/);
     assert.match(run.runtime.reason, /not a strategy/);
+    /* And it points at where he can actually be given work, rather than implying nowhere. */
+    assert.match(run.runtime.detail, /submit it in the Office/);
+    assert.match(run.runtime.detail, /hosting is not certification/i);
     assert.equal(run.runtime.certification, 'IDENTITY_SEEDED_RESEARCH_IN_PROGRESS_RUNTIME_RECERTIFICATION_PENDING');
-    assert.ok(logs.some(l=>/No certified Gary runtime answered/.test(l.text)),
+    assert.ok(logs.some(l=>/No Gary runtime answered this/.test(l.text)),
       'the console audit trail must carry it too, not only the card');
   }
 });
@@ -131,7 +134,7 @@ test('the panel renders his identity, his notice and his real boundaries', () =>
   const html=session().render({projectName:'Booking App'});
   assert.match(html, /GARY-001/);
   assert.match(html, /Growth • Brand • Distribution • Experiments/);
-  assert.match(html, /NO RUNTIME CONNECTED/);
+  assert.match(html, /NOT A LIVE RUN/, 'the Inspector is deterministic; it is not the agent loop');
   assert.match(html, /is not Gary Vaynerchuk/, 'the simulation notice is not optional chrome');
   assert.match(html, /generated placeholder/, 'the stand-in avatar is named as one');
   assert.match(html, /Booking App/);

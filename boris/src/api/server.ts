@@ -253,6 +253,27 @@ async function route(
     });
   }
 
+  /* Who this runtime can actually execute, and what each of them may call here. The office reads
+     this to decide who can be given work — a name in a registry is not a running agent. */
+  if (method === 'GET' && path === '/api/agents') {
+    const agents = [...runtime.roster.values()].map(({ profile }) => ({
+      agentId: profile.agentId,
+      displayName: profile.identity.displayName,
+      version: profile.identity.version,
+      roles: profile.identity.roles,
+      authority: profile.identity.authority,
+      simulationNotice: profile.identity.simulationNotice,
+      certificationStatus: profile.identity.certificationStatus,
+      // Hosting is not certification. Nothing in this runtime may report an agent as certified.
+      certified: false,
+      canReceiveWork: true,
+      tools: profile.tools ?? runtime.tools.specs().map((t) => t.name),
+      toolsReason: profile.toolsReason,
+      primary: profile.agentId === runtime.config.agentId,
+    }));
+    return send(res, 200, { agents, primary: runtime.config.agentId });
+  }
+
   if (method === 'GET' && path === '/api/tasks') {
     const statusParam = url.searchParams.get('status');
     const status = statusParam && (TASK_STATUSES as readonly string[]).includes(statusParam)
@@ -266,7 +287,7 @@ async function route(
   if (method === 'POST' && path === '/api/tasks') {
     const body = await readBody(req);
     if (!body.ok) return send(res, 400, { error: body.error });
-    const parsed = validate<{ objective: string; title?: string; workspace?: string; priority?: string; description?: string }>(
+    const parsed = validate<{ objective: string; title?: string; workspace?: string; priority?: string; description?: string; agentId?: string }>(
       body.value,
       {
         objective: { type: 'string', required: true, min: 10, max: 8000 },
@@ -274,6 +295,9 @@ async function route(
         description: { type: 'string', max: 4000 },
         workspace: { type: 'string', max: 500 },
         priority: { type: 'string', enum: ['low', 'normal', 'high', 'critical'] },
+        // Validated against the live roster inside submitObjective, which refuses an agent this
+        // runtime cannot host rather than falling back to the primary one.
+        agentId: { type: 'string', max: 64 },
       },
     );
     if (!parsed.ok || !parsed.value) return send(res, 400, { error: parsed.issues.join('; ') });
@@ -283,6 +307,7 @@ async function route(
         ...(parsed.value.description ? { description: parsed.value.description } : {}),
         ...(parsed.value.workspace ? { workspace: parsed.value.workspace } : {}),
         ...(parsed.value.priority ? { priority: parsed.value.priority as 'low' | 'normal' | 'high' | 'critical' } : {}),
+        ...(parsed.value.agentId ? { agentId: parsed.value.agentId } : {}),
       });
       return send(res, 201, { task });
     } catch (error) {
