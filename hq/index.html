@@ -92,6 +92,8 @@ textarea{min-height:80px;resize:vertical}
 .checklist .box.done{color:var(--ok)}
 .mono{font:11.5px ui-monospace,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
 code{background:#060c17;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:11.5px}
+a{color:var(--neon);text-decoration:none;font-weight:700;border-bottom:1px solid transparent}
+a:hover,a:focus-visible{border-bottom-color:var(--neon)}
 .todo{border-left:2px solid var(--warn);padding:2px 0 2px 10px;margin-bottom:10px}
 .todo b{display:block;font-size:12.5px}
 .todo span{color:var(--muted);font-size:11.5px}
@@ -210,6 +212,10 @@ are written to the terminal, not to this page.</p>
         <h2>Ledgers</h2>
         <div id="ledgers"></div>
       </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Documents</h2>
+      <div id="documents"></div>
     </div>
     <div class="grid two" style="margin-top:16px">
       <div class="card">
@@ -446,7 +452,7 @@ async function renderLab() {
   $('exams').innerHTML = exams.map((exam) => `
     <div class="task">
       <b>${esc(exam.title)}</b>
-      <div class="mono" style="margin-top:4px">${esc(exam.agent)} · <a href="${SAME_ORIGIN ? '' : '..'}/agents/BORIS-001/evals/${esc(exam.file)}" target="_blank" rel="noopener">open the document ↗</a></div>
+      <div class="mono" style="margin-top:4px">${esc(exam.agent)} · <a href="${esc(repoPath('agents/BORIS-001/evals/' + exam.file))}" target="_blank" rel="noopener">open the document ↗</a></div>
     </div>`).join('') + `<p class="mono" style="margin-top:8px">Exam history ledger is empty — no exam results have been recorded yet.</p>`;
 }
 
@@ -515,6 +521,39 @@ async function countLedger(path) {
     }
     return { readable: true, total: rows.length, seeds };
   } catch { return { readable: false }; }
+}
+
+/* Only files STATIC_ROUTES actually serves. A link to an unserved path would 404 in the runtime and
+   silently work from file://, which is worse than not offering it — so this list and the allowlist
+   in boris/src/api/server.ts move together. */
+const DOCUMENTS = [
+  { agent: 'Boris', files: [
+    ['Recertification gate', 'agents/BORIS-001/evals/RECERTIFICATION.md'],
+    ['EXAM #001 — runtime handshake loop', 'agents/BORIS-001/evals/BORIS-EXAM-001-diagnosis.md'] ] },
+  { agent: 'Gary', files: [
+    ['Cognitive model', 'agents/GARY-001/identity/cognitive_model.md'],
+    ['Research status', 'agents/GARY-001/knowledge/RESEARCH_STATUS.md'],
+    ['Agent passport', 'agents/GARY-001/identity/agent_passport.json'],
+    ['Import record — what arrived and what did not', 'agents/GARY-001/IMPORT.md'] ] },
+];
+
+/* A document is listed only once it has answered. An unreadable one says so rather than offering a
+   link that goes nowhere. */
+async function renderDocuments() {
+  const blocks = [];
+  for (const group of DOCUMENTS) {
+    const rows = [];
+    for (const [label, path] of group.files) {
+      let reachable = false;
+      try { reachable = (await fetch(repoPath(path), { method: 'GET', cache: 'no-store' })).ok; } catch { /* unreachable */ }
+      rows.push(`<div class="kv"><span>${esc(label)}</span><span>${reachable
+        ? `<a href="${esc(repoPath(path))}" target="_blank" rel="noopener">open ↗</a>`
+        : unknown('not readable from here')}</span></div>`);
+    }
+    blocks.push(`<div class="mono" style="margin:9px 0 3px"><b>${esc(group.agent)}</b></div>${rows.join('')}`);
+  }
+  $('documents').innerHTML = blocks.join('')
+    + `<p class="mono" style="margin-top:9px">These are the identity documents this building is allowed to serve, and nothing else in the repository is reachable over HTTP. Opened over <code>file://</code> some will not load; serve the repository with <code>node dist/src/cli.js run</code> to read them here.</p>`;
 }
 
 async function renderLedgers() {
@@ -615,6 +654,7 @@ locateRuntime().then(() => {
      re-fetched by the five-second refresh. */
   renderLab();
   renderLedgers();
+  renderDocuments();
   refresh();
   setInterval(() => refresh().catch(() => {}), 5000);
 });

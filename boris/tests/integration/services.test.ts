@@ -4,6 +4,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AddressInfo } from 'node:net';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createApiServer } from '../../src/api/server.js';
 import { Scheduler } from '../../src/scheduler/scheduler.js';
 import { createSchedule, submitObjective } from '../../src/runtime.js';
@@ -248,6 +250,28 @@ test('the headquarters, the workbench and their assets are served from one origi
       // regex would quietly reinterpret.
       assert.ok((response.headers.get('content-type') ?? '').startsWith(type as string),
         `${path} served as ${response.headers.get('content-type')}, expected ${type}`);
+    }
+  });
+});
+
+test('every document the Records room offers to open is actually served', async (t) => {
+  const h = makeHarness();
+  t.after(() => h.cleanup());
+
+  // The HQ page keeps its own list of linkable documents. If it and STATIC_ROUTES drift apart the
+  // link 404s under the runtime while still working from file://, which is the worse failure:
+  // silently fine for whoever wrote it, broken for everyone else. So the page is the source here.
+  const page = readFileSync(join(h.runtime.config.repoRoot, 'hq/index.html'), 'utf8');
+  const declaration = /const DOCUMENTS = \[([\s\S]*?)\n\];/.exec(page)?.[1];
+  assert.ok(declaration, 'the Records room no longer declares a DOCUMENTS list');
+  const paths = [...declaration.matchAll(/'(agents\/[^']+)'/g)].map((m) => m[1] as string);
+  assert.ok(paths.length >= 6, `expected the documents list to be populated, found ${paths.length}`);
+
+  await withServer(h, async (base) => {
+    for (const path of paths) {
+      const response = await fetch(`${base}/${path}`);
+      assert.equal(response.status, 200,
+        `Records links ${path}, but STATIC_ROUTES does not serve it (got ${response.status})`);
     }
   });
 });
