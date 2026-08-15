@@ -71,6 +71,8 @@ export interface Config {
   model: string;
   apiKey: string | null;
   anthropicBaseUrl: string;
+  openaiApiKey: string | null;
+  openaiBaseUrl: string;
   apiPort: number;
   apiHost: string;
   apiToken: string | null;
@@ -96,6 +98,8 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     model: str('BORIS_MODEL', 'claude-sonnet-5'),
     apiKey: process.env['ANTHROPIC_API_KEY'] ?? process.env['BORIS_API_KEY'] ?? null,
     anthropicBaseUrl: str('BORIS_ANTHROPIC_BASE_URL', 'https://api.anthropic.com'),
+    openaiApiKey: process.env['OPENAI_API_KEY'] ?? null,
+    openaiBaseUrl: str('BORIS_OPENAI_BASE_URL', 'https://api.openai.com'),
     apiPort: num('BORIS_PORT', 8787),
     apiHost: str('BORIS_HOST', '127.0.0.1'),
     apiToken,

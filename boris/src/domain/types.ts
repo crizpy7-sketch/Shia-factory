@@ -70,6 +70,25 @@ export interface Task {
   usage: UsageTotals;
   scheduleId: string | null;
   depth: number;
+  plan: Plan | null;
+  /** Stable signature of the last failure, used to detect recurrence across attempts. */
+  failureSignature: string | null;
+}
+
+export interface PlanStep {
+  step: string;
+  why: string;
+  verification: string;
+  done: boolean;
+}
+
+/** A plan is recorded before mutation is permitted, so intent is inspectable and auditable. */
+export interface Plan {
+  summary: string;
+  steps: PlanStep[];
+  risks: string[];
+  verificationCommand: string | null;
+  createdAt: string;
 }
 
 export interface Evidence {

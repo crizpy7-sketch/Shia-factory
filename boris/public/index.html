@@ -246,6 +246,11 @@ async function showTask(id) {
     <div class="kv"><span>Tool calls</span><span>${t.usage.toolCalls}</span></div>
     <div class="kv"><span>Workers</span><span>${t.usage.workers}</span></div>
     <div class="kv"><span>Cost</span><span>${anyCost ? '$' + cost.toFixed(4) : unknown('not reported by provider')}</span></div>
+    ${t.plan ? `<h2 style="margin-top:12px">Plan</h2>
+      <div class="mono">${esc(t.plan.summary)}</div>
+      <div class="mono" style="margin-top:6px">${t.plan.steps.map((s, i) => `${i + 1}. ${esc(s.step)}\n   why: ${esc(s.why)}\n   verify: ${esc(s.verification)}`).join('\n')}</div>
+      ${t.plan.risks.length ? `<div class="muted" style="margin-top:6px;font-size:11.5px">risks: ${t.plan.risks.map(esc).join(' · ')}</div>` : ''}`
+      : '<h2 style="margin-top:12px">Plan</h2><p class="unknown">No plan recorded — the workspace stays locked until there is one.</p>'}
     ${t.result ? `<h2 style="margin-top:12px">Result</h2><div class="mono">${esc(t.result)}</div>` : ''}
     ${t.error ? `<h2 style="margin-top:12px">Error</h2><div class="mono" style="color:var(--err)">${esc(t.error)}</div>` : ''}
     <h2 style="margin-top:12px">Evidence (${t.evidence.length})</h2>

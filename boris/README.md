@@ -43,6 +43,30 @@ node dist/src/cli.js worker     # claims and executes queued tasks
 node dist/src/cli.js scheduler  # fires durable schedules
 ```
 
+## Before going live
+
+```sh
+node dist/src/cli.js preflight    # identity, storage, workspaces, tooling, credentials, one live call
+node dist/src/cli.js acceptance   # the full acceptance objective against the configured provider
+```
+
+`preflight` is the only command that spends money, and only one minimal completion. `acceptance`
+copies the fixture project into a fresh workspace, gives BORIS the real objective, and then
+independently re-runs the test suite itself — it exits non-zero unless the repair is genuinely
+verified.
+
+## How he works
+
+1. **Inspect.** Read-only tools are open from the start.
+2. **Plan.** `plan` records steps, reasons, verification and risks. **Nothing that changes the
+   workspace runs until a plan exists** — the gate is in code, not in the prompt.
+3. **Act.** File, shell, git and dev tools, each permission-checked.
+4. **Verify.** A success claim with a verification command is re-run by the runtime itself.
+5. **Repair.** A failed verification returns as a repair cycle, and the failure is captured in
+   memory with a signature. When the same signature recurs, BORIS is told to leave behind a
+   permanent safeguard instead of another one-off fix.
+6. **Deliver.** `git_commit` is available behind human approval. Pushing is not available at all.
+
 ## Verification
 
 ```sh
@@ -60,8 +84,9 @@ npm run gauntlet      # all of the above in order
 | --- | --- |
 | Agent loop, tools, permissions, tasks, memory, skills, workers, scheduler, events, API, dashboard | Implemented and tested |
 | Anthropic provider | Implemented; **untested against a live model in this environment** (no API key available here) |
+| OpenAI provider | Implemented (chat completions + function calling); request/response mapping unit-tested with a stubbed fetch, **not yet exercised against the live API** |
 | Scripted provider | Deterministic test double. Gated behind `BORIS_ALLOW_TEST_PROVIDER=true`, always reported as a test double by the API |
-| OpenAI / Moonshot / xAI / local providers | Not implemented. The abstraction has a place for them; the adapters do not exist |
+| Moonshot / xAI / local providers | Not implemented. The abstraction has a place for them; the adapters do not exist |
 | Postgres storage | Not implemented. `src/storage/types.ts` is the port; SQLite is the only adapter shipped |
 | MCP tool servers | Not implemented. The tool registry is the extension point |
 

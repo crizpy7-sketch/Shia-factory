@@ -12,6 +12,7 @@ import { assertTransition } from '../domain/state.js';
 import { EventBus } from '../events/bus.js';
 import { BorisIdentity, buildSystemPrompt } from '../identity/loader.js';
 import { MemoryStore } from '../memory/store.js';
+import { captureFailure, countPriorOccurrences } from '../memory/learning.js';
 import { addUsage, checkTaskLimits, checkWorkerLimits } from '../policy/limits.js';
 import { PermissionContext, checkCommand, parseCommand } from '../policy/permissions.js';
 import { CompletionRequest, ContentBlock, ModelMessage, ModelProvider, ProviderError } from '../providers/types.js';
@@ -55,6 +56,12 @@ export interface RunOutcome {
   evidence: Evidence[];
   verified: boolean;
 }
+
+/**
+ * Tools that change the workspace. None of them run until a plan exists: inspect, then plan,
+ * then act. Read-only tools stay open so reconnaissance can happen first.
+ */
+const MUTATING_TOOLS = new Set(['fs_write', 'fs_edit', 'fs_move', 'fs_delete', 'git_commit']);
 
 const MAX_CONTEXT_CHARS = 60000;
 const MAX_NUDGES = 2;
@@ -115,6 +122,8 @@ export class BorisAgent {
     const decided = this.deps.storage.listApprovals()
       .filter((a) => a.taskId === task.id && a.state !== 'requested');
     const approvals = decided.map((a) => `- approval "${a.action}" was ${a.state}${a.decisionNote ? ` (${a.decisionNote})` : ''}`);
+    const recurrence = task.failureSignature
+      ? countPriorOccurrences(this.deps.storage, task.failureSignature) : 0;
     if (!task.evidence.length && task.attempts === 0 && !approvals.length) return '';
     const lines = task.evidence.slice(-12).map((e) => `- [${e.kind}${e.ok ? '' : ' FAILED'}] ${e.summary}`);
     return [
@@ -124,6 +133,11 @@ export class BorisAgent {
       ...lines,
       task.error ? `Last error: ${task.error}` : '',
       ...(approvals.length ? ['', '## Approval decisions', ...approvals] : []),
+      ...(recurrence >= 2 ? ['',
+        `## This failure has now happened ${recurrence} times`,
+        'A further one-off repair is the wrong answer. Find the root cause, and leave behind a',
+        'permanent safeguard — a test, a validation rule, or a skill — so it cannot recur silently.',
+      ] : []),
       'Do not repeat work that already succeeded. Verify anything you intend to rely on.',
     ].filter(Boolean).join('\n');
   }
@@ -352,8 +366,25 @@ export class BorisAgent {
           signal: options.signal ?? new AbortController().signal,
         };
 
-        const { tool, input, decision } = tools.authorize(use.name, use.input, ctx, allowedTools);
         const toolCallId = id('tc');
+        if (MUTATING_TOOLS.has(use.name) && !task.plan) {
+          const reason = 'no plan recorded yet — call the plan tool before changing the workspace';
+          storage.recordToolCall({
+            id: toolCallId, taskId, runId: run.id, tool: use.name, input: (use.input ?? {}),
+            status: 'denied', startedAt: now(), endedAt: now(), durationMs: 0, ok: false,
+            output: null, error: reason,
+          });
+          bus.emit('tool.denied', `${use.name} denied: ${reason}`, {
+            taskId, runId: run.id, toolCallId, level: 'warn', data: { tool: use.name, reason },
+          });
+          resultBlocks.push({
+            type: 'tool_result', toolUseId: use.id, isError: true,
+            content: `DENIED: ${reason}. Inspect what you need, then call plan with steps, verification and risks.`,
+          });
+          continue;
+        }
+
+        const { tool, input, decision } = tools.authorize(use.name, use.input, ctx, allowedTools);
 
         if (!tool || decision.kind === 'deny') {
           storage.recordToolCall({
@@ -411,6 +442,51 @@ export class BorisAgent {
             terminal = finish('awaiting_approval', false,
               `Paused for approval ${approval.id}: ${String(input['action'])}`, false, turns);
             break;
+          }
+
+          if (use.name === 'plan') {
+            const steps = (input['steps'] as Array<Record<string, unknown>>).map((step) => ({
+              step: String(step['step'] ?? ''),
+              why: String(step['why'] ?? ''),
+              verification: String(step['verification'] ?? ''),
+              done: false,
+            })).filter((step) => step.step.length > 0);
+            if (!steps.length) {
+              resultBlocks.push({
+                type: 'tool_result', toolUseId: use.id, isError: true,
+                content: 'DENIED: a plan needs at least one step with a description.',
+              });
+              continue;
+            }
+            const recorded = {
+              summary: String(input['summary']),
+              steps,
+              risks: ((input['risks'] as string[] | undefined) ?? []).map(String),
+              verificationCommand: typeof input['verificationCommand'] === 'string'
+                ? input['verificationCommand'] : null,
+              createdAt: now(),
+            };
+            task = storage.updateTask(taskId, { plan: recorded });
+            storage.recordToolCall({
+              id: toolCallId, taskId, runId: run.id, tool: 'plan', input,
+              status: 'completed', startedAt: now(), endedAt: now(), durationMs: null,
+              ok: true, output: `${steps.length} steps`, error: null,
+            });
+            bus.emit('plan.created', `${steps.length}-step plan: ${truncate(recorded.summary, 160)}`, {
+              taskId, runId: run.id, data: { steps: steps.length, risks: recorded.risks.length },
+            });
+            task = this.addEvidence(task, {
+              kind: 'plan',
+              summary: `plan recorded: ${truncate(recorded.summary, 160)}`,
+              detail: steps.map((step, index) => `${index + 1}. ${step.step}\n   why: ${step.why}\n   verify: ${step.verification}`).join('\n'),
+              createdAt: now(), ok: true,
+            });
+            this.setHeartbeat(run, 'planning', 'plan recorded');
+            resultBlocks.push({
+              type: 'tool_result', toolUseId: use.id, isError: false,
+              content: `Plan recorded (${steps.length} steps). Workspace changes are now permitted. Follow the plan and verify each step.`,
+            });
+            continue;
           }
 
           if (use.name === 'delegate') {
@@ -481,6 +557,19 @@ export class BorisAgent {
           }
           if (verification.needsCommand) verificationPrompts += 1;
 
+          const learned = captureFailure({ storage, memory: this.deps.memory }, task, {
+            kind: 'verification',
+            summary: verification.summary,
+            detail: verification.detail,
+            rootCause: 'the reported repair did not satisfy the verification command',
+          });
+          task = storage.updateTask(taskId, { failureSignature: learned.signature });
+          bus.emit('memory.created', learned.recurring
+            ? `recurring failure recorded (${learned.occurrences} occurrences)`
+            : 'failure recorded in memory', {
+            taskId, runId: run.id, level: learned.recurring ? 'warn' : 'info',
+            data: { memoryId: learned.record.id, signature: learned.signature, occurrences: learned.occurrences },
+          });
           this.setHeartbeat(run, 'bug_found', 'verification failed');
           bus.emit('verification.failed', verification.summary, {
             taskId, runId: run.id, level: 'warn', data: { detail: truncate(verification.detail, 1000) },
@@ -548,7 +637,14 @@ export class BorisAgent {
     const turnsRun = Math.min(turns, maxTurns);
     const reason = `turn budget exhausted after ${maxTurns} turns without a report`;
     bus.emit('task.failed', reason, { taskId, runId: run.id, level: 'warn' });
-    const current = storage.getTask(taskId) as Task;
+    let current = storage.getTask(taskId) as Task;
+    const exhausted = captureFailure({ storage, memory: this.deps.memory }, current, {
+      kind: 'task',
+      summary: reason,
+      detail: current.evidence.slice(-6).map((e) => `${e.ok ? 'ok' : 'FAILED'} ${e.kind}: ${e.summary}`).join('\n'),
+      rootCause: 'the objective was not reached inside the turn budget',
+    });
+    current = storage.updateTask(taskId, { failureSignature: exhausted.signature });
     this.transition(current, current.attempts >= current.maxAttempts ? 'failed' : 'blocked', {
       error: reason,
       ...(current.attempts >= current.maxAttempts ? { completedAt: now() } : {}),
@@ -689,6 +785,8 @@ export class BorisAgent {
       usage: emptyUsage(),
       scheduleId: null,
       depth,
+      plan: null,
+      failureSignature: null,
     });
 
     storage.updateTask(parentTask.id, {

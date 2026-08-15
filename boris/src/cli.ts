@@ -2,6 +2,9 @@
 /**
  * BORIS command line. One binary drives migration, submission, inspection and the services.
  */
+import { cpSync, existsSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { join, resolve } from 'node:path';
 import { createRuntime, bootstrap, submitObjective, agentStatus, decideApproval, cancelTask, recoverOutstandingWork } from './runtime.js';
 import { WorkerService } from './worker/worker.js';
 import { Scheduler } from './scheduler/scheduler.js';
@@ -24,6 +27,8 @@ Usage: boris <command> [options]
   serve                       Run the API and dashboard
   run                         Run API + worker + scheduler in one process (local development)
   recover                     Requeue work interrupted by a restart
+  preflight                   Check identity, storage, workspaces, tooling and the live provider
+  acceptance                  Run the full acceptance objective against the configured provider
 `;
 
 function flag(args: string[], name: string): string | undefined {
@@ -110,6 +115,101 @@ async function main(): Promise<number> {
       process.stdout.write(`interrupted runs: ${result.runs}; requeued tasks: ${result.tasks.length}\n`);
       return 0;
     }
+    case 'preflight': {
+      // Everything that must be true before BORIS is given real work, checked rather than assumed.
+      const checks: Array<{ name: string; ok: boolean; detail: string }> = [];
+      const record = (name: string, ok: boolean, detail: string): void => { checks.push({ name, ok, detail }); };
+
+      record('identity', runtime.identity.agentId === 'BORIS-001',
+        `${runtime.identity.agentId} v${runtime.identity.version} from ${runtime.identity.sourceDir}`);
+      record('certification', true,
+        `${runtime.identity.certificationStatus} · recertification ${agentStatus(runtime).recertification}`);
+      try {
+        runtime.storage.listTasks({ limit: 1 });
+        record('storage', true, runtime.config.dbPath);
+      } catch (error) {
+        record('storage', false, (error as Error).message);
+      }
+      record('workspaces', runtime.config.workspaceRoots.every((root) => existsSync(root)),
+        runtime.config.workspaceRoots.join(', '));
+      const git = spawnSync('git', ['--version'], { encoding: 'utf8' });
+      record('git', git.status === 0, (git.stdout || git.stderr || 'not found').trim());
+      const node = process.versions.node.split('.').map(Number);
+      record('node', (node[0] ?? 0) > 22 || ((node[0] ?? 0) === 22 && (node[1] ?? 0) >= 5),
+        `v${process.versions.node} (needs >= 22.5 for node:sqlite)`);
+
+      const availability = runtime.provider.available();
+      record('provider credentials', availability.ok, `${runtime.provider.name}/${runtime.provider.model}: ${availability.reason}`);
+      if (runtime.provider.isTestDouble) {
+        record('provider is real', false, 'a test double is configured; live work needs BORIS_PROVIDER=anthropic or openai');
+      }
+
+      // The only check that costs money: a single minimal completion, to prove the credentials work.
+      if (availability.ok && !runtime.provider.isTestDouble) {
+        try {
+          const started = Date.now();
+          const probe = await runtime.provider.complete({
+            system: 'Reply with the single word: ready',
+            messages: [{ role: 'user', content: [{ type: 'text', text: 'ready check' }] }],
+            tools: [], maxOutputTokens: 16, timeoutMs: 30000,
+          });
+          record('live model call', true,
+            `${probe.model} replied in ${Date.now() - started}ms · ${probe.usage.inputTokens}+${probe.usage.outputTokens} tokens · cost ${probe.costUsd === null ? 'not reported' : `$${probe.costUsd.toFixed(6)}`}`);
+        } catch (error) {
+          record('live model call', false, (error as Error).message);
+        }
+      }
+
+      for (const check of checks) {
+        process.stdout.write(`${check.ok ? 'PASS' : 'FAIL'}  ${check.name.padEnd(20)} ${check.detail}\n`);
+      }
+      const failed = checks.filter((c) => !c.ok);
+      process.stdout.write(failed.length
+        ? `\n${failed.length} check(s) failed. BORIS is not ready for live work.\n`
+        : '\nAll checks passed. BORIS is ready for live work.\n');
+      return failed.length ? 1 : 0;
+    }
+
+    case 'acceptance': {
+      // The same objective as the automated acceptance test, run against whatever provider is
+      // configured — the honest way to find out whether a live model can do this work.
+      const fixture = resolve(runtime.config.repoRoot, 'boris', 'fixtures', 'broken-calc');
+      if (!existsSync(fixture)) { process.stderr.write('fixture not found\n'); return 1; }
+      const root = runtime.config.workspaceRoots[0] as string;
+      const workspace = join(root, `acceptance-${Date.now()}`);
+      cpSync(fixture, workspace, { recursive: true });
+      bootstrap(runtime);
+
+      const objective = 'Inspect this codebase. Determine its architecture. Identify the failing behaviour. '
+        + 'Develop a repair plan. Implement the repair. Run the relevant tests. If the tests fail, diagnose and '
+        + 'continue repairing until the defined verification criteria pass. Return a concise engineering report with evidence.';
+      const task = submitObjective(runtime, objective, { title: 'Acceptance run', workspace, priority: 'high' });
+      process.stdout.write(`workspace: ${workspace}\ntask: ${task.id}\nprovider: ${runtime.provider.name}/${runtime.provider.model}`
+        + `${runtime.provider.isTestDouble ? ' (TEST DOUBLE — this is not a live-model result)' : ''}\n\n`);
+
+      const { WorkerService } = await import('./worker/worker.js');
+      const outcome = await new WorkerService(runtime, { maxTasks: 1 }).runOnce();
+      const finalTask = runtime.storage.getTask(task.id);
+
+      process.stdout.write(`status: ${outcome?.status ?? 'no outcome'} · verified: ${outcome?.verified ?? false}\n`);
+      process.stdout.write(`turns: ${outcome?.turns ?? 0} · model calls: ${finalTask?.usage.modelCalls ?? 0} · tool calls: ${finalTask?.usage.toolCalls ?? 0}\n`);
+      process.stdout.write(`plan: ${finalTask?.plan ? `${finalTask.plan.steps.length} steps` : 'none recorded'}\n\nevidence:\n`);
+      for (const item of finalTask?.evidence ?? []) {
+        process.stdout.write(`  ${item.ok ? 'ok  ' : 'FAIL'} [${item.kind}] ${item.summary.slice(0, 140)}\n`);
+      }
+
+      // Independent check: this process runs the suite itself rather than trusting the report.
+      const verify = spawnSync('npm', ['test'], {
+        cwd: workspace, encoding: 'utf8',
+        env: { PATH: process.env['PATH'] ?? '', HOME: process.env['HOME'] ?? '/tmp' },
+      });
+      const repaired = readFileSync(join(workspace, 'src', 'stats.js'), 'utf8');
+      process.stdout.write(`\nindependent verification: npm test exited ${verify.status}\n`);
+      process.stdout.write(`workspace file changed: ${repaired.includes('% 2 === 0') ? 'yes' : 'no'}\n`);
+      process.stdout.write(`\nreport:\n${finalTask?.result ?? finalTask?.error ?? '(none)'}\n`);
+      return outcome?.verified && verify.status === 0 ? 0 : 1;
+    }
+
     case 'worker': {
       const controller = new AbortController();
       const worker = new WorkerService(runtime, { signal: controller.signal });

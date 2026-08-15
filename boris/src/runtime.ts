@@ -21,6 +21,26 @@ import { Logger } from './util/log.js';
 import { resolveWorkspacePath } from './policy/permissions.js';
 import { mkdirSync } from 'node:fs';
 
+/**
+ * Live cancellation. A task that is merely marked cancelled in the database would keep burning
+ * budget until its next turn; the controller lets the operator interrupt the work in flight.
+ */
+const runningTasks = new Map<string, AbortController>();
+
+export function registerRunningTask(taskId: string): AbortController {
+  const controller = new AbortController();
+  runningTasks.set(taskId, controller);
+  return controller;
+}
+
+export function releaseRunningTask(taskId: string): void {
+  runningTasks.delete(taskId);
+}
+
+export function isTaskRunningHere(taskId: string): boolean {
+  return runningTasks.has(taskId);
+}
+
 export interface Runtime {
   config: Config;
   storage: Storage;
@@ -127,6 +147,8 @@ export function submitObjective(runtime: Runtime, objective: string, options: Su
     usage: emptyUsage(),
     scheduleId: options.scheduleId ?? null,
     depth: 0,
+    plan: null,
+    failureSignature: null,
   };
   runtime.storage.createTask(task);
   runtime.bus.emit('task.created', task.title, { taskId: task.id, data: { objective: trimmed, workspace: task.workspace } });
@@ -200,7 +222,13 @@ export function cancelTask(runtime: Runtime, taskId: string): Task {
     throw new Error(`task is already ${task.status} and cannot be cancelled`);
   }
   const updated = runtime.storage.updateTask(taskId, { status: 'cancelled', completedAt: now() });
-  runtime.bus.emit('task.cancelled', 'cancelled by operator', { taskId, level: 'warn' });
+  // If this process is executing the task, interrupt it now rather than at its next turn.
+  const controller = runningTasks.get(taskId);
+  const interrupted = Boolean(controller);
+  controller?.abort();
+  runtime.bus.emit('task.cancelled', interrupted
+    ? 'cancelled by operator; the running task was interrupted'
+    : 'cancelled by operator', { taskId, level: 'warn', data: { interrupted } });
   return updated;
 }
 

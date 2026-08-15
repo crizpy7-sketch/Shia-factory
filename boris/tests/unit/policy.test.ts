@@ -128,7 +128,7 @@ function task(over: Partial<Task> = {}): Task {
     priority: 'normal', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     startedAt: new Date().toISOString(), completedAt: null, assignedAgent: 'BORIS-001',
     workspace, dependencies: [], attempts: 1, maxAttempts: 3, result: null, evidence: [],
-    error: null, approvalState: 'none', usage: emptyUsage(), scheduleId: null, depth: 0, ...over,
+    error: null, approvalState: 'none', usage: emptyUsage(), scheduleId: null, depth: 0, plan: null, failureSignature: null, ...over,
   };
 }
 

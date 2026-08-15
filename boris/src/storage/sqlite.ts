@@ -38,8 +38,13 @@ const MIGRATIONS: string[] = [
      approval_state TEXT NOT NULL DEFAULT 'none',
      usage TEXT NOT NULL,
      schedule_id TEXT,
-     depth INTEGER NOT NULL DEFAULT 0
+     depth INTEGER NOT NULL DEFAULT 0,
+     plan TEXT,
+     failure_signature TEXT
    );`,
+  // Additive migrations for databases created before these columns existed.
+  `ALTER TABLE tasks ADD COLUMN plan TEXT;`,
+  `ALTER TABLE tasks ADD COLUMN failure_signature TEXT;`,
   `CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status, priority, created_at);`,
   `CREATE TABLE IF NOT EXISTS runs (
      id TEXT PRIMARY KEY,
@@ -196,7 +201,15 @@ export class SqliteStorage implements Storage {
   }
 
   migrate(): void {
-    for (const sql of MIGRATIONS) this.db.exec(sql);
+    for (const sql of MIGRATIONS) {
+      try {
+        this.db.exec(sql);
+      } catch (error) {
+        // Re-running an additive ALTER on an already-migrated database is expected and harmless;
+        // anything else is a real migration failure and must surface.
+        if (!/duplicate column name/i.test((error as Error).message)) throw error;
+      }
+    }
     const row = this.db.prepare('SELECT version FROM schema_version LIMIT 1').get() as Row | undefined;
     if (!row) this.db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(MIGRATIONS.length);
     else this.db.prepare('UPDATE schema_version SET version = ?').run(MIGRATIONS.length);
@@ -233,6 +246,8 @@ export class SqliteStorage implements Storage {
       usage: json<UsageTotals>(row['usage'], emptyUsage()),
       scheduleId: strOrNull(row, 'schedule_id'),
       depth: int(row, 'depth'),
+      plan: json<Task['plan']>(row['plan'], null),
+      failureSignature: strOrNull(row, 'failure_signature'),
     };
   }
 
@@ -240,13 +255,14 @@ export class SqliteStorage implements Storage {
     this.db.prepare(`INSERT INTO tasks (
       id, parent_task_id, title, objective, description, status, priority, created_at, updated_at,
       started_at, completed_at, assigned_agent, workspace, dependencies, attempts, max_attempts,
-      result, evidence, error, approval_state, usage, schedule_id, depth
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+      result, evidence, error, approval_state, usage, schedule_id, depth, plan, failure_signature
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
       task.id, task.parentTaskId, task.title, task.objective, task.description, task.status,
       task.priority, task.createdAt, task.updatedAt, task.startedAt, task.completedAt,
       task.assignedAgent, task.workspace, JSON.stringify(task.dependencies), task.attempts,
       task.maxAttempts, task.result, JSON.stringify(task.evidence), task.error,
       task.approvalState, JSON.stringify(task.usage), task.scheduleId, task.depth,
+      task.plan ? JSON.stringify(task.plan) : null, task.failureSignature,
     );
     return task;
   }
@@ -283,13 +299,15 @@ export class SqliteStorage implements Storage {
     this.db.prepare(`UPDATE tasks SET
       parent_task_id=?, title=?, objective=?, description=?, status=?, priority=?, updated_at=?,
       started_at=?, completed_at=?, assigned_agent=?, workspace=?, dependencies=?, attempts=?,
-      max_attempts=?, result=?, evidence=?, error=?, approval_state=?, usage=?, schedule_id=?, depth=?
+      max_attempts=?, result=?, evidence=?, error=?, approval_state=?, usage=?, schedule_id=?, depth=?,
+      plan=?, failure_signature=?
       WHERE id=?`).run(
       next.parentTaskId, next.title, next.objective, next.description, next.status, next.priority,
       next.updatedAt, next.startedAt, next.completedAt, next.assignedAgent, next.workspace,
       JSON.stringify(next.dependencies), next.attempts, next.maxAttempts, next.result,
       JSON.stringify(next.evidence), next.error, next.approvalState, JSON.stringify(next.usage),
-      next.scheduleId, next.depth, id,
+      next.scheduleId, next.depth,
+      next.plan ? JSON.stringify(next.plan) : null, next.failureSignature, id,
     );
     return next;
   }

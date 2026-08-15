@@ -4,7 +4,7 @@
  * Retrieval is selective by design — the whole store is never pushed into a prompt. Every record
  * carries provenance, a timestamp and a confidence, and can be superseded rather than deleted.
  */
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { MemoryCategory, MemoryRecord } from '../domain/types.js';
@@ -68,8 +68,10 @@ export class MemoryStore {
   }): MemoryRecord {
     const timestamp = now();
     const record: MemoryRecord = {
+      // Non-stable records must never collide: two identical failures captured inside the same
+      // millisecond are two occurrences, and collapsing them would undercount recurrence.
       id: input.stable === false
-        ? `mem_${createHash('sha256').update(`${input.source}${input.title}${timestamp}`).digest('hex').slice(0, 20)}`
+        ? `mem_${createHash('sha256').update(`${input.source}${input.title}${timestamp}${randomUUID()}`).digest('hex').slice(0, 20)}`
         : MemoryStore.stableId(input.source, input.title),
       category: input.category,
       title: input.title.slice(0, 300),

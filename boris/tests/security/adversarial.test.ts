@@ -16,19 +16,35 @@ import { ProviderError } from '../../src/providers/types.js';
 import { CompletionRequest } from '../../src/providers/types.js';
 import { ScriptedTurn } from '../../src/providers/scripted.js';
 
-/** A policy that fires one hostile tool call, then reports, so the run always terminates. */
-function attack(toolName: string, input: Record<string, unknown>): (r: CompletionRequest) => ScriptedTurn {
+/**
+ * A policy that fires one hostile tool call, then reports, so the run always terminates.
+ * `withPlan` records a plan first, for cases whose target sits behind the plan gate and would
+ * otherwise be refused for the wrong reason.
+ */
+function attack(
+  toolName: string,
+  input: Record<string, unknown>,
+  options: { withPlan?: boolean } = {},
+): (r: CompletionRequest) => ScriptedTurn {
   return (request) => {
-    const attempted = JSON.stringify(request.messages).includes(toolName);
-    if (!attempted) return { toolUses: [{ name: toolName, input }] };
+    const seen = JSON.stringify(request.messages);
+    if (options.withPlan && !seen.includes('"plan"')) {
+      return { toolUses: [{ name: 'plan', input: {
+        summary: 'Proceed with the requested change to the workspace.',
+        steps: [{ step: 'apply the change', why: 'the objective asks for it', verification: 'the file reflects it' }],
+      } }] };
+    }
+    if (!seen.includes(toolName)) return { toolUses: [{ name: toolName, input }] };
     return { toolUses: [{ name: 'report_result', input: { success: false, summary: 'The attack path was closed by the runtime.' } }] };
   };
 }
 
-async function runAttack(toolName: string, input: Record<string, unknown>): Promise<{
-  h: ReturnType<typeof makeHarness>; taskId: string;
-}> {
-  const h = makeHarness({ policy: attack(toolName, input) });
+async function runAttack(
+  toolName: string,
+  input: Record<string, unknown>,
+  options: { withPlan?: boolean } = {},
+): Promise<{ h: ReturnType<typeof makeHarness>; taskId: string }> {
+  const h = makeHarness({ policy: attack(toolName, input, options) });
   const task = submitObjective(h.runtime, 'A task under adversarial conditions for testing.', { workspace: h.workspace });
   await h.runtime.agent.runTask(task.id);
   return { h, taskId: task.id };
@@ -128,7 +144,7 @@ test('an unknown tool name is rejected rather than dispatched', async (t) => {
 });
 
 test('malformed tool input is rejected by schema validation before execution', async (t) => {
-  const { h, taskId } = await runAttack('fs_edit', { path: 'src/stats.js', find: '', replace: 'x' });
+  const { h, taskId } = await runAttack('fs_edit', { path: 'src/stats.js', find: '', replace: 'x' }, { withPlan: true });
   t.after(() => h.cleanup());
   const call = toolCall(h, taskId, 'fs_edit');
   assert.equal(call?.status, 'denied');
@@ -327,6 +343,15 @@ test('the verification command is itself subject to the permission engine', asyn
   assert.equal(existsSync(join(h.workspace, 'package.json')), true);
 });
 
+test('a hostile plan-free write is refused by the plan gate', async (t) => {
+  const { h, taskId } = await runAttack('fs_write', { path: 'backdoor.js', content: 'require("child_process")' });
+  t.after(() => h.cleanup());
+  const call = h.runtime.storage.listToolCalls(taskId).find((c) => c.tool === 'fs_write');
+  assert.equal(call?.status, 'denied');
+  assert.match(String(call?.error), /no plan recorded/);
+  assert.equal(existsSync(join(h.workspace, 'backdoor.js')), false, 'a file was written with no plan on record');
+});
+
 test('the scripted test provider cannot be selected without an explicit opt-in', async () => {
   const { createProvider } = await import('../../src/providers/index.js');
   const { loadConfig } = await import('../../src/config.js');
@@ -339,7 +364,7 @@ test('the scripted test provider cannot be selected without an explicit opt-in',
 });
 
 test('a repaired workspace file is the only thing that changed on disk', async (t) => {
-  const h = makeHarness({ policy: attack('fs_write', { path: 'notes.txt', content: 'hello' }) });
+  const h = makeHarness({ policy: attack('fs_write', { path: 'notes.txt', content: 'hello' }, { withPlan: true }) });
   t.after(() => h.cleanup());
 
   const before = readFileSync(join(h.workspace, 'src', 'stats.js'), 'utf8');

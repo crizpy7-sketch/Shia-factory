@@ -16,7 +16,7 @@ function task(over: Partial<Task> = {}): Task {
     status: 'queued', priority: 'normal', createdAt: now(), updatedAt: now(), startedAt: null,
     completedAt: null, assignedAgent: 'BORIS-001', workspace: '/tmp/ws', dependencies: [],
     attempts: 0, maxAttempts: 3, result: null, evidence: [], error: null, approvalState: 'none',
-    usage: emptyUsage(), scheduleId: null, depth: 0, ...over,
+    usage: emptyUsage(), scheduleId: null, depth: 0, plan: null, failureSignature: null, ...over,
   };
 }
 

@@ -10,7 +10,7 @@ import { SkillRegistry } from '../skills/registry.js';
 import { ToolDefinition } from './registry.js';
 import { MemoryCategory } from '../domain/types.js';
 
-export const CONTROL_TOOLS = ['report_result', 'request_approval', 'delegate'] as const;
+export const CONTROL_TOOLS = ['plan', 'report_result', 'request_approval', 'delegate'] as const;
 export type ControlTool = (typeof CONTROL_TOOLS)[number];
 
 export function isControlTool(name: string): name is ControlTool {
@@ -22,6 +22,44 @@ const handledByLoop = async (): Promise<never> => {
 };
 
 export function createAgentTools(deps: { memory: MemoryStore; skills: SkillRegistry }): ToolDefinition[] {
+  const plan: ToolDefinition = {
+    name: 'plan',
+    description:
+      'Record the plan before changing anything. State the steps, why each one is needed, how each ' +
+      'is verified, and the risks. Nothing that mutates the workspace is permitted until a plan ' +
+      'exists — inspect first, then plan, then act. Call it again to revise the plan.',
+    sensitivity: 'safe',
+    schema: {
+      summary: { type: 'string', required: true, min: 15, max: 2000 },
+      steps: { type: 'array', of: 'object', required: true, max: 20 },
+      risks: { type: 'array', of: 'string', max: 12 },
+      verificationCommand: { type: 'string', max: 400 },
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string', description: 'The approach in two or three sentences, grounded in what you inspected.' },
+        steps: {
+          type: 'array',
+          description: 'Ordered steps.',
+          items: {
+            type: 'object',
+            properties: {
+              step: { type: 'string' },
+              why: { type: 'string' },
+              verification: { type: 'string', description: 'How you will know this step worked.' },
+            },
+            required: ['step', 'why', 'verification'],
+          },
+        },
+        risks: { type: 'array', items: { type: 'string' }, description: 'What could go wrong, honestly.' },
+        verificationCommand: { type: 'string', description: 'The command that will prove the whole objective is met.' },
+      },
+      required: ['summary', 'steps'],
+    },
+    execute: handledByLoop,
+  };
+
   const reportResult: ToolDefinition = {
     name: 'report_result',
     description:
@@ -221,5 +259,5 @@ export function createAgentTools(deps: { memory: MemoryStore; skills: SkillRegis
     },
   };
 
-  return [reportResult, requestApproval, delegate, memoryWrite, memorySearch, skillCreate];
+  return [plan, reportResult, requestApproval, delegate, memoryWrite, memorySearch, skillCreate];
 }

@@ -49,6 +49,18 @@ export const fixtureRepairPolicy: ScriptPolicy = (request): ScriptedTurn => {
     return { text: 'Observing the real failure before changing anything.',
       toolUses: [{ name: 'dev', input: { action: 'test' } }] };
   }
+  if (countToolUses(request, 'plan') === 0) {
+    return { text: 'Recording the plan before touching the implementation.',
+      toolUses: [{ name: 'plan', input: {
+        summary: 'The even-length branch of median() is wrong. Correct it in src/stats.js and prove it with the existing suite.',
+        steps: [
+          { step: 'Correct the even-length branch of median()', why: 'It returns a middle sample instead of the mean of the two middle samples', verification: 'npm test exits 0 with 4 passing' },
+          { step: 'Re-run the suite', why: 'A repair is not a repair until the command says so', verification: 'exit code 0' },
+        ],
+        risks: ['An index-only fix looks plausible but does not satisfy the even-length case'],
+        verificationCommand: 'npm test',
+      } }] };
+  }
   if (edits === 0) {
     // A plausible but wrong repair: off-by-one on the middle index.
     return { text: 'The even-length branch is wrong. Adjusting the index.',
