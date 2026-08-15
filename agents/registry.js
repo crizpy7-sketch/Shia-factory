@@ -67,55 +67,71 @@ const BORIS={
   }
 };
 
-/* GARY-001 is registered so the headquarters has a real second seat, but his identity package has
-   not arrived yet. Everything below is registration metadata supplied by Cristian — not transferred
-   state, not a reconstructed identity, and deliberately not a cognitive model. `provisional: true`
-   is what the UI reads to say so out loud. When Gary's files arrive they are imported verbatim,
-   exactly as BORIS-001's were, and this record is replaced by what they contain. */
+/* GARY-001's identity package arrived on 2026-08-15 and was imported verbatim to agents/GARY-001.
+   Everything below restates that package for the UI; agents/tests/registry.test.mjs fails if the
+   two drift. What his package does not contain is not filled in here: he shipped no avatar art and
+   no recertification gate document, and neither has been invented. See agents/GARY-001/IMPORT.md
+   for the full import record, including why his provenance is weaker than Boris's. */
 const GARY={
   agent_id:'GARY-001',
   display_name:'Gary',
   class:'portable_named_agent',
-  origin:'Influencers Council',
-  package:null,
-  package_version:null,
-  provisional:true,
-  provisional_note:'Awaiting Gary\'s identity package. Discipline supplied by Cristian; cognitive model, authority detail, ledgers and avatar assets are not yet transferred and have not been invented.',
-  status:'registered_pending_identity_package',
-  roles:['marketing strategy','positioning and messaging','campaign design','audience research','copy and creative direction','growth analysis'],
-  /* Held at the strictest setting until his own package states otherwise. */
+  origin:'Shia App Factory',
+  package:'agents/GARY-001',
+  package_version:'0.4.0-multi-model-research-in-progress',
+  status:'active_identity_seed_multi_model_research_in_progress',
+  /* Carried from identity.json so every surface that renders Gary can render this with him. */
+  simulation_notice:'Shia-owned growth agent with a distinct fictionalized operating identity. It may be informed by verified public marketing principles associated with Gary Vaynerchuk, but it is not Gary Vaynerchuk, does not impersonate him, and must not imply endorsement, affiliation, or personal access.',
+  roles:['growth strategy','brand positioning','content and distribution strategy','audience development','campaign architecture','organic acquisition','marketing experimentation','launch planning','conversion and retention analysis'],
+  /* Verbatim from identity.json. Gary declares more capabilities than Boris and more refusals with
+     them; the extra keys are the point, so they are not flattened to Boris's shape. */
   authority:{
     advisory:true,
     challenge_rights:true,
     may_request_rework:true,
-    may_merge:false,
-    may_deploy:false,
-    may_access_secrets:false,
-    final_authority:'Cristian'
+    may_generate_campaigns:true,
+    may_generate_content_drafts:true,
+    may_recommend_budget:true,
+    may_run_read_only_analysis_when_authorized:true,
+    may_publish_without_owner_approval:false,
+    may_spend_money:false,
+    may_access_secrets_directly:false,
+    may_bypass_platform_rules:false,
+    final_authority:'Cristian',
+    may_create_legal_commitments:false
   },
-  invocation_aliases:['Call Gary','Ask Gary','Run this through Gary','Gary review this','@Gary'],
+  invocation_aliases:['Call Gary','Ask Gary','Gary review this','Run this through Gary','Gary launch plan','@Gary'],
+  /* Gary's execution host is the separate Next.js growth application shipped alongside his package.
+     It is not vendored into this zero-build repository, so no runtime here executes Gary. `host`
+     stays null rather than naming a host that is not running. */
   runtime:{
     host:null,
     host_is_identity:false,
-    certification_status:'NO_PACKAGE_RECEIVED',
+    host_note:'Gary\'s execution host is the Gary Vee Growth Agent application (release 1.1.0), which is not part of this repository. This repository holds his identity and policy layer only.',
+    certification_status:'IDENTITY_SEEDED_RESEARCH_IN_PROGRESS_RUNTIME_RECERTIFICATION_PENDING',
     certified:false,
-    contract:null,
+    contract:'agents/GARY-001/runtime/runtime_contract.md',
+    /* No recertification gate document shipped. Boris has one; Gary's passport carries the test
+       list instead. A document is not authored on his behalf. */
     recertification:null,
-    migration_manifest:null
+    passport:'agents/GARY-001/identity/agent_passport.json',
+    migration_manifest:'agents/GARY-001/runtime/migration_manifest.json'
   },
   council:{
-    council:'Influencers Council',
-    role:'Marketing, positioning and growth',
+    council:'Growth Council',
+    role:'Growth, brand, distribution and experimentation',
     authority:'advisory',
-    activation:['positioning','messaging','campaign','audience','pricing-narrative','launch','council-debate']
+    activation:['positioning','messaging','campaign','audience','distribution','launch','experiment','retention','council-debate']
   },
   card:{
-    subtitle:'Marketing • Positioning • Campaigns • Growth',
-    status:'AWAITING IDENTITY PACKAGE',
-    badge:'Influencers Council',
+    subtitle:'Growth • Brand • Distribution • Experiments',
+    status:'AVAILABLE',
+    badge:'Growth Council',
     action_label:'CALL GARY'
   },
-  /* A monogram placeholder, clearly generated. Gary's real brand art replaces it on arrival. */
+  /* No avatar art of any kind shipped in Gary's archive. The monogram is a generated stand-in and
+     says so; `avatar_art_supplied` is what the UI reads to avoid presenting it as his brand art. */
+  avatar_art_supplied:false,
   avatars:{
     square:'assets/agents/gary-001/placeholder-monogram.svg',
     circle:'assets/agents/gary-001/placeholder-monogram.svg',
@@ -125,7 +141,13 @@ const GARY={
 };
 
 const agents=[BORIS,GARY];
-const councils=[{name:'Influencers Council',members:['BORIS-001','GARY-001']}];
+/* Each agent's council seat is the one his own package declares. Boris's council-membership.json
+   says Influencers Council; Gary's agent-card.json says Growth Council. Neither was moved to make
+   a tidier roster. */
+const councils=[
+  {name:'Influencers Council',members:['BORIS-001']},
+  {name:'Growth Council',members:['GARY-001']}
+];
 
 return {
   version:'1.0.0',

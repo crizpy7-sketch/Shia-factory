@@ -179,6 +179,10 @@ code{background:#060c17;border:1px solid var(--line);border-radius:6px;padding:1
         <div id="cert"></div>
       </div>
       <div class="card">
+        <h2>Certification — GARY-001</h2>
+        <div id="certGary"><p class="unknown">Loading…</p></div>
+      </div>
+      <div class="card">
         <h2>How to run the gauntlet</h2>
         <p class="mono">The lab reports evidence; it does not fabricate it. Run these and the results
 are written to the terminal, not to this page.</p>
@@ -288,10 +292,17 @@ window.addEventListener('hashchange', () => openRoom(location.hash.replace('#', 
 function renderStaff(runtime) {
   const staff = HQ.roster(REGISTRY);
   $('staffPill').textContent = `${staff.length} on staff`;
-  $('staffPill').className = 'pill' + (staff.some((a) => a.provisional) ? ' warn' : ' live');
+  $('staffPill').className = 'pill' + (staff.every((a) => a.certified) ? ' live' : ' warn');
+
+  /* Each agent's boundaries are listed as his own package spells them — Boris declares five, Gary
+     declares twelve with different names. Forcing both into one checklist would hide the ones the
+     shared shape has no slot for. */
+  const boundaries = (authority) => Object.entries(authority)
+    .filter(([key]) => key !== 'final_authority' && key !== 'advisory')
+    .map(([key, value]) => `<li><b class="${value ? 'yes' : 'no'}">${value ? '✓' : '✗'}</b><span>${
+      esc(key.replace(/^may_/, '').replace(/_/g, ' '))}</span></li>`).join('');
 
   $('staff').innerHTML = staff.map((agent) => {
-    const yes = (v, label) => `<li><b class="${v ? 'yes' : 'no'}">${v ? '✓' : '✗'}</b><span>${esc(label)}</span></li>`;
     const live = runtime.online && runtime.fields.some((f) => f.label === 'Agent' && f.value.includes(agent.id));
     return `
       <div class="agent ${agent.provisional ? 'provisional' : ''}">
@@ -305,22 +316,28 @@ function renderStaff(runtime) {
             ${live ? `<span class="badge working">${esc(runtime.heartbeat)}</span>` : ''}</b>
           <div class="sub">${esc(agent.subtitle)}</div>
           <div class="rolelist">${agent.roles.map(esc).join(' · ')}</div>
+          ${agent.simulationNotice ? `<div class="note">${esc(agent.simulationNotice)}</div>` : ''}
           <ul class="auth">
-            ${yes(agent.authority.challenge_rights, 'challenge')}
-            ${yes(agent.authority.may_request_rework, 'request rework')}
-            ${yes(agent.authority.may_merge, 'merge')}
-            ${yes(agent.authority.may_deploy, 'deploy')}
-            ${yes(agent.authority.may_access_secrets, 'secrets')}
+            ${boundaries(agent.authority)}
             <li><b>·</b><span>final authority: ${esc(agent.authority.final_authority || 'unknown')}</span></li>
           </ul>
-          ${agent.provisional ? `<div class="note"><b>${esc(agent.status)}</b><br>${esc(agent.provisionalNote)}</div>` : ''}
+          ${agent.provisional
+            ? `<div class="note"><b>${esc(agent.status)}</b><br>${esc(agent.provisionalNote)}</div>`
+            : !agent.hosted
+              ? `<div class="note"><b>No runtime connected</b><br>${esc(agent.hostNote || '')}
+                 He can be routed and gated from here; he cannot answer.</div>`
+              : ''}
+          ${agent.avatarArtSupplied ? '' : '<div class="mono">Avatar is a generated placeholder — no brand art shipped with his package.</div>'}
         </div>
       </div>`;
   }).join('');
 
-  $('assignee').innerHTML = staff.map((agent) =>
-    `<option value="${esc(agent.id)}" ${agent.provisional ? 'disabled' : ''}>${esc(agent.name)}${agent.provisional ? ' — no package yet' : ''}</option>`
-  ).join('');
+  /* Only an agent with a runtime can be given work. Offering Gary here and quietly queueing the
+     objective on Boris's runtime would be a button that lies about who is answering. */
+  $('assignee').innerHTML = staff.map((agent) => {
+    const why = agent.provisional ? ' — no package yet' : agent.hosted ? '' : ' — no runtime connected';
+    return `<option value="${esc(agent.id)}" ${why ? 'disabled' : ''}>${esc(agent.name)}${esc(why)}</option>`;
+  }).join('');
 }
 
 // ---------------------------------------------------------------- runtime
@@ -398,12 +415,13 @@ function renderOutstanding(runtime) {
 }
 
 // -------------------------------------------------------------------- lab
+/* Repository files are same-origin when the runtime is serving HQ, and one level up otherwise. */
+const repoPath = (p) => (SAME_ORIGIN ? '/' : '../') + p;
+
 async function renderLab() {
   let text = '';
   try {
-    const res = await fetch(SAME_ORIGIN
-      ? '/agents/BORIS-001/evals/RECERTIFICATION.md'
-      : '../agents/BORIS-001/evals/RECERTIFICATION.md');
+    const res = await fetch(repoPath('agents/BORIS-001/evals/RECERTIFICATION.md'));
     if (res.ok) text = await res.text();
   } catch { /* file:// or missing — reported as unavailable below */ }
 
@@ -420,6 +438,8 @@ async function renderLab() {
        <p class="mono">Serve the repository over http to read it here, or open
        <code>agents/BORIS-001/evals/RECERTIFICATION.md</code> directly.</p>`;
 
+  await renderGaryCertification();
+
   const exams = [
     { file: 'BORIS-EXAM-001-diagnosis.md', title: 'EXAM #001 — runtime handshake loop', agent: 'BORIS-001' },
   ];
@@ -430,24 +450,88 @@ async function renderLab() {
     </div>`).join('') + `<p class="mono" style="margin-top:8px">Exam history ledger is empty — no exam results have been recorded yet.</p>`;
 }
 
+/* Gary ships no recertification document — his passport carries the test list instead. A box is
+   ticked only when the passport's own `certifications` array names that test. It is empty, so all
+   ten render unticked, and this page has no other way to tick one. */
+async function renderGaryCertification() {
+  let passport = null;
+  try {
+    const res = await fetch(repoPath('agents/GARY-001/identity/agent_passport.json'), { cache: 'no-store' });
+    if (res.ok) passport = await res.json();
+  } catch { /* file:// or missing — reported as unavailable below */ }
+
+  if (!passport) {
+    $('certGary').innerHTML = `<p class="unknown">Gary's passport could not be read from here.</p>
+      <p class="mono">Serve the repository over http to read it, or open
+      <code>agents/GARY-001/identity/agent_passport.json</code> directly.</p>`;
+    return;
+  }
+  const certified = new Set(passport.certifications || []);
+  const progress = passport.research_progress || {};
+  $('certGary').innerHTML = `
+    <div class="kv"><span>Status</span><span><b>${esc(passport.certification_status)}</b></span></div>
+    <div class="kv"><span>Certifications held</span><span>${certified.size}</span></div>
+    <div class="kv"><span>Research packets</span><span>${esc(String(progress.packets_ingested ?? 'unknown'))} ingested · ${
+      esc(String(progress.attributed_packets ?? 'unknown'))} attributed</span></div>
+    <ul class="checklist">${(passport.required_recognition_tests || []).map((t) =>
+      `<li><span class="box ${certified.has(t) ? 'done' : ''}">${certified.has(t) ? '☑' : '☐'}</span><span>${
+        esc(t.replace(/_/g, ' '))}</span></li>`).join('')}</ul>
+    <p class="mono" style="margin-top:9px">${esc(passport.migration_rule)}</p>`;
+}
+
 // ---------------------------------------------------------------- records
 function renderProvenance() {
   const staff = HQ.roster(REGISTRY);
   $('provenance').innerHTML = staff.map((agent) => `
     <div class="kv"><span>${esc(agent.name)}</span><span>${agent.packagePath
-      ? `<code>${esc(agent.packagePath)}</code>` : unknown('no package received')}</span></div>
-    <div class="kv"><span>Certification</span><span>${esc(agent.certification)}</span></div>`).join('')
-    + `<p class="mono" style="margin-top:9px">A package is transferred state with a checksum manifest.
-A registration without one is a name and a role, and is shown as provisional everywhere in this building.</p>`;
+      ? `<code>${esc(agent.packagePath)}</code> ${esc(agent.packageVersion || '')}` : unknown('no package received')}</span></div>
+    <div class="kv"><span>Certification</span><span>${esc(agent.certification)}</span></div>
+    <div class="kv"><span>Runtime</span><span>${agent.hosted ? esc(agent.host) : unknown('none connected here')}</span></div>`).join('')
+    /* .mono is pre-wrap, so these paragraphs are single source lines on purpose. */
+    + `<p class="mono" style="margin-top:9px">Boris arrived with a publisher-signed SHA256 manifest, so a change made before transfer would be detectable. Gary arrived without one; his manifest was taken at import, which detects changes from that moment on but proves nothing about what came before. See <code>agents/GARY-001/IMPORT.md</code>.</p>`;
 }
 
-function renderLedgers() {
-  $('ledgers').innerHTML = `
-    <div class="kv"><span>Failure library</span><span>empty — not reconstructed</span></div>
-    <div class="kv"><span>Research ledger</span><span>empty — not reconstructed</span></div>
-    <div class="kv"><span>Exam history</span><span>empty — no exams recorded</span></div>
-    <p class="mono" style="margin-top:9px">These arrived empty in BORIS-001's transfer. They stay empty until the
-originals are recovered, and are then merged by provenance. Nothing here is guessed to fill a gap.</p>`;
+/* Ledger counts are read from the files themselves. Nothing here is asserted from memory: an empty
+   ledger reports empty because it is empty, and a populated one reports what it actually holds. */
+const LEDGERS = [
+  { agent: 'Boris', files: [
+    ['Failure library', 'agents/BORIS-001/knowledge/failure_library.jsonl'],
+    ['Research ledger', 'agents/BORIS-001/knowledge/research_ledger.jsonl'],
+    ['Exam history', 'agents/BORIS-001/evals/exam_history.jsonl'] ] },
+  { agent: 'Gary', files: [
+    ['Failure library', 'agents/GARY-001/knowledge/failure_library.jsonl'],
+    ['Research ledger', 'agents/GARY-001/knowledge/research_ledger.jsonl'],
+    ['Changed beliefs', 'agents/GARY-001/knowledge/changed_beliefs.jsonl'] ] },
+];
+
+async function countLedger(path) {
+  try {
+    const res = await fetch(repoPath(path), { cache: 'no-store' });
+    if (!res.ok) return { readable: false };
+    const rows = (await res.text()).split('\n').map((l) => l.trim()).filter(Boolean);
+    let seeds = 0;
+    for (const row of rows) {
+      try { if (JSON.parse(row).status === 'placeholder') seeds += 1; } catch { /* counted as a record */ }
+    }
+    return { readable: true, total: rows.length, seeds };
+  } catch { return { readable: false }; }
+}
+
+async function renderLedgers() {
+  const blocks = [];
+  for (const group of LEDGERS) {
+    const rows = [];
+    for (const [label, path] of group.files) {
+      const count = await countLedger(path);
+      const value = !count.readable ? unknown('unreadable from here')
+        : count.total === 0 ? 'empty — not reconstructed'
+        : `${count.total} record${count.total === 1 ? '' : 's'}${count.seeds ? ` (${count.seeds} seed placeholder${count.seeds === 1 ? '' : 's'})` : ''}`;
+      rows.push(`<div class="kv"><span>${esc(label)}</span><span>${value}</span></div>`);
+    }
+    blocks.push(`<div class="mono" style="margin:9px 0 3px"><b>${esc(group.agent)}</b></div>${rows.join('')}`);
+  }
+  $('ledgers').innerHTML = blocks.join('')
+    + `<p class="mono" style="margin-top:9px">Boris's ledgers arrived empty and stay empty until the originals are recovered and merged by provenance. Gary's arrived populated and were imported unchanged — including the packet whose provenance was missing, which promoted nothing. Nothing on this page is guessed to fill a gap.</p>`;
 }
 
 async function renderKnowledge(online) {
@@ -480,6 +564,11 @@ async function renderKnowledge(online) {
 $('submitBtn').onclick = async () => {
   const objective = $('objective').value.trim();
   if (objective.length < 10) { $('submitNote').textContent = 'An objective needs at least 10 characters.'; return; }
+  const assignee = HQ.roster(REGISTRY).find((a) => a.id === $('assignee').value);
+  if (!assignee || !assignee.hosted) {
+    $('submitNote').textContent = `${assignee ? assignee.name : 'That agent'} has no runtime connected — nothing here can execute the objective.`;
+    return;
+  }
   try {
     const body = { objective, priority: $('priority').value };
     const workspace = $('workspace').value.trim();
@@ -516,14 +605,16 @@ async function refresh() {
   renderStream(events);
   renderOutstanding(runtime);
   renderProvenance();
-  renderLedgers();
   await renderKnowledge(runtime.online);
 }
 
 locateRuntime().then(() => {
   $('workshopLink').href = FACTORY_URL;
   openRoom(current);
+  /* Repository documents do not change while the page is open, so they are read once rather than
+     re-fetched by the five-second refresh. */
   renderLab();
+  renderLedgers();
   refresh();
   setInterval(() => refresh().catch(() => {}), 5000);
 });

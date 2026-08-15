@@ -81,33 +81,125 @@ test('the host runtime is not certified as Boris by integration alone', () => {
   assert.equal(/- \[x\]/i.test(recert), false, 'a recertification gate was ticked without running the gauntlet');
 });
 
-test('Gary holds a council seat and is marked provisional until his package arrives', () => {
-  const gary=registry.byId('GARY-001');
-  assert.ok(gary, 'GARY-001 should be registered');
-  assert.equal(gary.provisional, true, 'a registration without a transferred package must say so');
-  assert.equal(gary.package, null, 'no package path may be claimed before one exists');
-  assert.equal(gary.runtime.certification_status, 'NO_PACKAGE_RECEIVED');
-  assert.ok(registry.council('Influencers Council').members.some(m=>m.agent_id==='GARY-001'));
-  assert.ok(registry.provisional().some(a=>a.agent_id==='GARY-001'));
-  assert.ok(registry.established().every(a=>a.agent_id!=='GARY-001'));
+/* ── GARY-001 ─────────────────────────────────────────────────────────────────────────────── */
+
+const gary=registry.byId('GARY-001');
+const garyIdentity=readJson('agents/GARY-001/identity/identity.json');
+const garyPassport=readJson('agents/GARY-001/identity/agent_passport.json');
+const garyCard=readJson('agents/GARY-001/integration/shia-app-factory/agent-card.json');
+const garyManifest=readJson('agents/GARY-001/runtime/migration_manifest.json');
+
+test('GARY-001 is registered from his transferred package, not from a description of it', () => {
+  assert.ok(gary, 'GARY-001 missing from registry');
+  assert.equal(gary.agent_id, garyIdentity.agent_id);
+  assert.equal(gary.display_name, garyIdentity.display_name);
+  assert.equal(gary.class, garyIdentity.class);
+  assert.equal(gary.package, 'agents/GARY-001');
+  assert.equal(gary.package_version, garyIdentity.version);
+  assert.equal(gary.package_version, garyPassport.package_version);
+  assert.equal(gary.package_version, garyManifest.package_version);
+  assert.notEqual(gary.provisional, true, 'the package arrived; the provisional flag must be gone');
+  assert.ok(registry.established().some(a=>a.agent_id==='GARY-001'));
+  assert.deepEqual(registry.provisional(), []);
 });
 
-test('Gary is held at the strictest authority until his own package states otherwise', () => {
-  const gary=registry.byId('GARY-001');
-  assert.equal(gary.authority.may_merge, false);
-  assert.equal(gary.authority.may_deploy, false);
-  assert.equal(gary.authority.may_access_secrets, false);
+test("Gary's identity is preserved, not flattened to Boris's shape", () => {
+  assert.deepEqual(gary.roles, garyIdentity.roles);
+  assert.deepEqual(gary.invocation_aliases, garyIdentity.invocation_aliases);
+  assert.equal(gary.invocation_aliases.length, 6, 'Gary declares six aliases, one more than Boris');
+  assert.equal(gary.status, garyIdentity.status);
+  assert.deepEqual(gary.authority, garyIdentity.authority,
+    'every declared boundary is carried, including the ones Boris does not have');
+});
+
+test("the simulation notice travels with Gary wherever he is rendered", () => {
+  assert.equal(gary.simulation_notice, garyIdentity.simulation_notice);
+  assert.match(gary.simulation_notice, /is not Gary Vaynerchuk/);
+  assert.match(gary.simulation_notice, /must not imply endorsement/);
+});
+
+test("Gary's approval gates are recorded as gates, not as permissions", () => {
+  assert.equal(gary.authority.may_publish_without_owner_approval, false);
+  assert.equal(gary.authority.may_spend_money, false);
+  assert.equal(gary.authority.may_access_secrets_directly, false);
+  assert.equal(gary.authority.may_bypass_platform_rules, false);
+  assert.equal(gary.authority.may_create_legal_commitments, false);
   assert.equal(gary.authority.final_authority, 'Cristian');
+  /* And the things he may do are not quietly withheld either. */
+  assert.equal(gary.authority.may_generate_campaigns, true);
+  assert.equal(gary.authority.may_recommend_budget, true);
 });
 
-test('nothing about Gary is fabricated: no cognitive model, no ledgers, no invented art', () => {
-  const gary=registry.byId('GARY-001');
+test('Gary sits in the council his own package names', () => {
+  assert.equal(gary.council.council, 'Growth Council');
+  assert.equal(gary.card.badge, garyCard.badge);
+  assert.equal(gary.card.subtitle, garyCard.subtitle);
+  assert.equal(gary.card.status, garyCard.status);
+  assert.equal(gary.card.action_label, garyCard.action_label);
+  const council=registry.council('Growth Council');
+  assert.ok(council&&council.members.some(m=>m.agent_id==='GARY-001'));
+  /* Boris's seat was not moved to make the roster tidier. */
+  assert.ok(registry.council('Influencers Council').members.some(m=>m.agent_id==='BORIS-001'));
+});
+
+test('no runtime in this repository is claimed as Gary', () => {
+  assert.equal(gary.runtime.host, null, 'naming a host that is not running would be a fabrication');
+  assert.equal(gary.runtime.certified, false);
+  assert.equal(gary.runtime.certification_status, garyPassport.certification_status);
+  assert.deepEqual(garyPassport.certifications, [], 'no certification may be recorded here');
+  assert.equal(garyPassport.required_recognition_tests.length, 10);
+  assert.equal(garyManifest.migration_gate, 'RECERTIFICATION_REQUIRED');
+  assert.match(gary.runtime.host_note, /not part of this repository/i);
+  /* Boris ships a gate document; Gary does not. One is not authored on his behalf. */
+  assert.equal(gary.runtime.recertification, null);
+  assert.equal(existsSync(join(root,'agents/GARY-001/evals')), false);
+});
+
+test('Gary shipped no art, so none is invented for him', () => {
+  assert.equal(gary.avatar_art_supplied, false);
   assert.equal(gary.avatars.brand_sheet, null, 'no brand sheet may be claimed');
   assert.match(gary.avatars.square, /placeholder/, 'the stand-in must be named as a placeholder');
   assert.ok(existsSync(join(root, gary.avatars.square)), 'the placeholder asset should exist');
-  assert.match(gary.provisional_note, /have not been invented/i);
-  assert.equal(existsSync(join(root, 'agents', 'GARY-001')), false,
-    'no identity package directory may be conjured for Gary before his files arrive');
+});
+
+test("Gary's knowledge arrived non-empty and was not rewritten", () => {
+  const lines=p=>readFileSync(join(root,'agents/GARY-001',p),'utf8').trim().split('\n').filter(Boolean);
+  const ledger=lines('knowledge/research_ledger.jsonl').map(l=>JSON.parse(l));
+  assert.equal(ledger.length, 6, 'one seed placeholder plus five ingested packets');
+  assert.deepEqual(ledger.slice(1).map(r=>r.packet_id),
+    ['GARY-GEMINI-001','GARY-GROK-002','GARY-QWEN-003','GARY-PERPLEXITY-004','GARY-UNATTRIBUTED-005']);
+  assert.equal(lines('knowledge/changed_beliefs.jsonl').length, 5);
+  /* Every attributed packet has its verification report, and the unattributed one is still marked. */
+  for(const id of ['GARY-GEMINI-001','GARY-GROK-002','GARY-QWEN-003','GARY-PERPLEXITY-004','GARY-UNATTRIBUTED-005']){
+    assert.ok(existsSync(join(root,`agents/GARY-001/knowledge/research_packets/${id}.md`)), `packet missing: ${id}`);
+    assert.ok(existsSync(join(root,`agents/GARY-001/knowledge/verification/${id}_VERIFICATION.md`)), `verification missing: ${id}`);
+  }
+  const unattributed=ledger.find(r=>r.packet_id==='GARY-UNATTRIBUTED-005');
+  assert.equal(unattributed.status, 'discovery_only_provenance_missing');
+  assert.deepEqual(unattributed.accepted_high_value, [], 'a packet without provenance promotes nothing');
+});
+
+test("Gary's failure library holds its single seed and is not backfilled", () => {
+  const entries=readFileSync(join(root,'agents/GARY-001/knowledge/failure_library.jsonl'),'utf8')
+    .trim().split('\n').filter(Boolean).map(l=>JSON.parse(l));
+  assert.equal(entries.length, 1, 'invented failures are indistinguishable from remembered ones');
+  assert.equal(entries[0].status, 'placeholder');
+});
+
+test("Gary's imported package still matches the manifest taken at import", () => {
+  const manifest=readJson('agents/GARY-001/SHA256_MANIFEST.json');
+  const entries=Object.entries(manifest);
+  assert.equal(entries.length, 28);
+  for(const [rel,expected] of entries){
+    const file=join(root,'agents/GARY-001',rel);
+    assert.ok(existsSync(file), `package file missing: ${rel}`);
+    const actual=createHash('sha256').update(readFileSync(file)).digest('hex');
+    assert.equal(actual, expected, `package file modified: ${rel}`);
+  }
+  /* The import record must keep saying that this manifest is weaker evidence than Boris's. */
+  const record=readFileSync(join(root,'agents/GARY-001/IMPORT.md'),'utf8');
+  assert.match(record, /generated\s+\*?at import time\*?/i);
+  assert.match(record, /cannot prove the files were unaltered/i);
 });
 
 test('the transferred package still matches its SHA256 manifest', () => {

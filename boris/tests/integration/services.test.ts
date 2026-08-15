@@ -235,6 +235,12 @@ test('the headquarters, the workbench and their assets are served from one origi
       ['/blocks/forms-001/index.html', 'text/html'],
       ['/assets/agents/gary-001/placeholder-monogram.svg', 'image/svg+xml'],
       ['/agents/BORIS-001/evals/RECERTIFICATION.md', 'text/markdown'],
+      ['/agents/gary.js', 'text/javascript'],
+      // The Lab reads Gary's certification from his passport, and Records counts his ledgers from
+      // the files themselves rather than restating a number from memory.
+      ['/agents/GARY-001/identity/agent_passport.json', 'application/json'],
+      ['/agents/GARY-001/knowledge/research_ledger.jsonl', 'application/jsonl'],
+      ['/agents/BORIS-001/knowledge/failure_library.jsonl', 'application/jsonl'],
     ]) {
       const response = await fetch(`${base}${path}`);
       assert.equal(response.status, 200, `${path} should be served`);
@@ -253,6 +259,9 @@ test('only the mapped static files are served — nothing else in the repository
   await withServer(h, async (base) => {
     for (const path of [
       '/agents/BORIS-001/identity/identity.json',
+      '/agents/GARY-001/identity/identity.json',
+      '/agents/GARY-001/SHA256_MANIFEST.json',
+      '/agents/GARY-001/host-application/evals/cases.jsonl',
       '/boris/src/config.ts',
       '/boris/data/boris.db',
       '/CLAUDE.md',

@@ -16,24 +16,45 @@ test('the roster carries both agents with their authority intact', () => {
   const roster = hq.roster(registry);
   assert.deepEqual(roster.map((a) => a.id).sort(), ['BORIS-001', 'GARY-001']);
   for (const agent of roster) {
-    assert.equal(agent.authority.may_deploy, false);
-    assert.equal(agent.authority.may_access_secrets, false);
     assert.equal(agent.authority.final_authority, 'Cristian');
+    assert.equal(agent.certified, false);
     assert.ok(agent.avatar, 'every seat needs something to display');
+    assert.ok(agent.packagePath, 'both identity packages are imported');
   }
 });
 
-test('a provisional agent is labelled as one everywhere the office looks', () => {
+test("each agent's authority is shown as his own package spells it", () => {
+  const [boris, gary] = ['BORIS-001', 'GARY-001'].map((id) => hq.roster(registry).find((a) => a.id === id));
+  assert.equal(boris.authority.may_deploy, false);
+  assert.equal(boris.authority.may_access_secrets, false);
+  /* Gary declares neither of those keys and four the other one does not have. The office shows
+     what each package says rather than forcing both into one shape. */
+  assert.equal(gary.authority.may_access_secrets_directly, false);
+  assert.equal(gary.authority.may_publish_without_owner_approval, false);
+  assert.equal(gary.authority.may_generate_campaigns, true);
+});
+
+test('an imported package with no runtime is a distinct state from a missing package', () => {
   const gary = hq.roster(registry).find((a) => a.id === 'GARY-001');
-  assert.equal(gary.provisional, true);
-  assert.equal(gary.packagePath, null);
-  assert.equal(gary.certified, false);
-  assert.match(gary.provisionalNote, /not yet transferred|not been invented/i);
-  assert.match(gary.status, /AWAITING/i);
+  assert.equal(gary.provisional, false, 'his package arrived');
+  assert.equal(gary.packagePath, 'agents/GARY-001');
+  assert.equal(gary.packageVersion, '0.4.0-multi-model-research-in-progress');
+  assert.equal(gary.hosted, false, 'nothing in this repository executes him');
+  assert.equal(gary.host, null);
+  assert.match(gary.hostNote, /not part of this repository/i);
+  assert.equal(gary.status, 'AVAILABLE');
 
   const boris = hq.roster(registry).find((a) => a.id === 'BORIS-001');
-  assert.equal(boris.provisional, false);
-  assert.match(boris.packagePath, /agents\/BORIS-001/);
+  assert.equal(boris.hosted, true, 'Boris has a runtime — an uncertified one');
+  assert.equal(boris.certified, false);
+});
+
+test("Gary's simulation notice reaches the office, and his placeholder art is flagged", () => {
+  const gary = hq.roster(registry).find((a) => a.id === 'GARY-001');
+  assert.match(gary.simulationNotice, /is not Gary Vaynerchuk/);
+  assert.equal(gary.avatarArtSupplied, false);
+  const boris = hq.roster(registry).find((a) => a.id === 'BORIS-001');
+  assert.equal(boris.avatarArtSupplied, true, 'Boris shipped real art; nothing to flag');
 });
 
 test('an unreachable runtime is reported as offline, with the command to start it', () => {
@@ -114,13 +135,20 @@ test('the board counts only tasks the runtime returned', () => {
 test('the outstanding list names the real gaps, including its own', () => {
   const offline = hq.outstandingWork(registry, hq.describeRuntime(null, {}));
   const subjects = offline.map((item) => item.subject);
-  assert.ok(subjects.includes('Gary'), 'a missing identity package is outstanding work');
+  assert.ok(subjects.includes('Gary'), 'an agent with no runtime is outstanding work');
   assert.ok(subjects.includes('Boris'), 'an uncertified runtime is outstanding work');
   assert.ok(subjects.includes('Runtime'), 'an offline runtime is outstanding work');
 
-  const gary = offline.find((item) => item.subject === 'Gary');
-  assert.match(gary.what, /identity package/i);
-  assert.match(gary.blocking, /cannot be given work/i);
+  const boris = offline.find((item) => item.subject === 'Boris');
+  assert.match(boris.what, /recertification/i);
+
+  const gary = offline.filter((item) => item.subject === 'Gary');
+  assert.ok(gary.some((i) => /no runtime connected/i.test(i.what)));
+  assert.ok(gary.some((i) => /cannot answer/i.test(i.blocking)));
+  /* Missing art is listed, and listed as cosmetic — an honest gap is not an inflated one. */
+  const art = gary.find((i) => /avatar art/i.test(i.what));
+  assert.ok(art, 'the placeholder avatar should be visible as a gap');
+  assert.match(art.blocking, /Cosmetic only/i);
 });
 
 test('a healthy live runtime drops off the outstanding list', () => {

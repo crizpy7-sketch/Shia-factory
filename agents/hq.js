@@ -70,9 +70,19 @@ function agentCard(agent){
     provisional,
     provisionalNote:provisional?agent.provisional_note||'Identity package not yet received.':null,
     packagePath:agent.package||null,
+    packageVersion:agent.package_version||null,
     /* An agent with no package has no certification to report — that is a fact, not a gap to fill. */
     certification:agent.runtime&&agent.runtime.certification_status?agent.runtime.certification_status:'unknown',
     certified:Boolean(agent.runtime&&agent.runtime.certified),
+    /* An agent whose package is here but whose execution host is not is a third state, distinct
+       from "provisional" and from "hosted but uncertified". The office must not blur them. */
+    host:agent.runtime&&agent.runtime.host?agent.runtime.host:null,
+    hostNote:agent.runtime&&agent.runtime.host_note?agent.runtime.host_note:null,
+    hosted:Boolean(agent.runtime&&agent.runtime.host),
+    /* Carried so no surface can render Gary without the notice his own package insists on. */
+    simulationNotice:agent.simulation_notice||null,
+    /* False only when the package explicitly shipped no art; absent means "not declared". */
+    avatarArtSupplied:agent.avatar_art_supplied!==false,
     council:agent.council||null,
     status:agent.card&&agent.card.status?agent.card.status:'unknown',
   };
@@ -197,12 +207,27 @@ function outstandingWork(registry,runtime){
         detail:agent.provisionalNote,
         blocking:`${agent.name} cannot be given work until his package is imported.`,
       });
+    }else if(!agent.hosted){
+      items.push({
+        subject:agent.name,
+        what:'no runtime connected',
+        detail:agent.hostNote||`${agent.name}'s identity is imported, but nothing in this repository executes him.`,
+        blocking:`${agent.name} can be routed and gated here, but he cannot answer. Connect his host, or run him where it lives.`,
+      });
     }else if(!agent.certified){
       items.push({
         subject:agent.name,
         what:`runtime recertification ${agent.certification}`,
         detail:'Hosting an agent is not the same as certifying the host as that agent.',
         blocking:'Run the recertification gauntlet and record the evidence.',
+      });
+    }
+    if(!agent.provisional&&!agent.avatarArtSupplied){
+      items.push({
+        subject:agent.name,
+        what:'no avatar art supplied',
+        detail:`${agent.name}'s package shipped no image of any kind. The seat shows a generated monogram.`,
+        blocking:'Cosmetic only — nothing is blocked. Drop his art into assets/agents/ and the placeholder retires.',
       });
     }
   }

@@ -1,0 +1,33 @@
+{
+  "agent_id": "GARY-001",
+  "package_version": "0.4.0-multi-model-research-in-progress",
+  "certification_status": "IDENTITY_SEEDED_RESEARCH_IN_PROGRESS_RUNTIME_RECERTIFICATION_PENDING",
+  "certifications": [],
+  "migration_rule": "Loading GARY-001 files into a new model does not automatically certify that runtime as Gary.",
+  "required_recognition_tests": [
+    "identity_and_personality_fidelity",
+    "growth_strategy",
+    "brand_positioning",
+    "channel_native_content",
+    "measurement_and_experimentation",
+    "claim_and_evidence_discipline",
+    "owner_approval_compliance",
+    "platform_policy_and_customer_trust",
+    "failure_library_regression",
+    "blind_runtime_comparison"
+  ],
+  "research_gate": "Gemini, Grok, Qwen and Perplexity packets have been ingested; one additional unattributed packet was retained as discovery-only. High-value claims are source-reconciled before promotion. Cognitive model remains under failure/criticism, measurement and final biography/source audit.",
+  "research_progress": {
+    "packets_ingested": 5,
+    "attributed_packets": 4,
+    "models_represented": [
+      "Gemini",
+      "Grok",
+      "Qwen / Internal Knowledge Base",
+      "Perplexity AI"
+    ],
+    "unattributed_packets": 1,
+    "last_packet": "GARY-UNATTRIBUTED-005",
+    "status": "MULTI_MODEL_PARTIAL_PRIMARY_SOURCE_VERIFICATION"
+  }
+}

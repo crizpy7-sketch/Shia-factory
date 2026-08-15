@@ -33,6 +33,7 @@ const STATIC_ROUTES: Record<string, { file: string; type: string }> = {
   '/agents/advisory.js': { file: 'agents/advisory.js', type: 'text/javascript; charset=utf-8' },
   '/agents/panel.js': { file: 'agents/panel.js', type: 'text/javascript; charset=utf-8' },
   '/agents/hq.js': { file: 'agents/hq.js', type: 'text/javascript; charset=utf-8' },
+  '/agents/gary.js': { file: 'agents/gary.js', type: 'text/javascript; charset=utf-8' },
   '/blocks/forms-001/index.html': { file: 'blocks/forms-001/index.html', type: 'text/html; charset=utf-8' },
   '/blocks/records-002/index.html': { file: 'blocks/records-002/index.html', type: 'text/html; charset=utf-8' },
   '/assets/agents/boris-001/avatar-square.png': { file: 'assets/agents/boris-001/avatar-square.png', type: 'image/png' },
@@ -42,6 +43,18 @@ const STATIC_ROUTES: Record<string, { file: string; type: string }> = {
   '/assets/agents/gary-001/placeholder-monogram.svg': { file: 'assets/agents/gary-001/placeholder-monogram.svg', type: 'image/svg+xml' },
   '/agents/BORIS-001/evals/RECERTIFICATION.md': { file: 'agents/BORIS-001/evals/RECERTIFICATION.md', type: 'text/markdown; charset=utf-8' },
   '/agents/BORIS-001/evals/BORIS-EXAM-001-diagnosis.md': { file: 'agents/BORIS-001/evals/BORIS-EXAM-001-diagnosis.md', type: 'text/markdown; charset=utf-8' },
+  /* Read-only identity and ledger files the Records and Lab rooms display. Named one by one: the
+     allowlist is the boundary, so a directory is never opened wholesale. */
+  '/agents/BORIS-001/knowledge/failure_library.jsonl': { file: 'agents/BORIS-001/knowledge/failure_library.jsonl', type: 'application/jsonl; charset=utf-8' },
+  '/agents/BORIS-001/knowledge/research_ledger.jsonl': { file: 'agents/BORIS-001/knowledge/research_ledger.jsonl', type: 'application/jsonl; charset=utf-8' },
+  '/agents/BORIS-001/evals/exam_history.jsonl': { file: 'agents/BORIS-001/evals/exam_history.jsonl', type: 'application/jsonl; charset=utf-8' },
+  '/agents/GARY-001/identity/agent_passport.json': { file: 'agents/GARY-001/identity/agent_passport.json', type: 'application/json; charset=utf-8' },
+  '/agents/GARY-001/identity/cognitive_model.md': { file: 'agents/GARY-001/identity/cognitive_model.md', type: 'text/markdown; charset=utf-8' },
+  '/agents/GARY-001/knowledge/RESEARCH_STATUS.md': { file: 'agents/GARY-001/knowledge/RESEARCH_STATUS.md', type: 'text/markdown; charset=utf-8' },
+  '/agents/GARY-001/knowledge/failure_library.jsonl': { file: 'agents/GARY-001/knowledge/failure_library.jsonl', type: 'application/jsonl; charset=utf-8' },
+  '/agents/GARY-001/knowledge/research_ledger.jsonl': { file: 'agents/GARY-001/knowledge/research_ledger.jsonl', type: 'application/jsonl; charset=utf-8' },
+  '/agents/GARY-001/knowledge/changed_beliefs.jsonl': { file: 'agents/GARY-001/knowledge/changed_beliefs.jsonl', type: 'application/jsonl; charset=utf-8' },
+  '/agents/GARY-001/IMPORT.md': { file: 'agents/GARY-001/IMPORT.md', type: 'text/markdown; charset=utf-8' },
 };
 const AVATARS: Record<string, string> = {
   square: 'avatar-square.png',
