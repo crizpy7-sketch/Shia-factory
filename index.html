@@ -122,6 +122,14 @@ window.addEventListener('message',event=>{
 });
 
 document.getElementById('exit').onclick=()=>document.getElementById('preview').classList.remove('open');
-const f={id:'booking-form',type:'forms',x:120,y:180,title:'Customer Booking'},r={id:'appointment-records',type:'records',x:500,y:240,title:'Appointment Records'};project.blocks=[f,r];project.connections=[{id:'starter',from:f.id,fromPort:'submitted',to:r.id,toPort:'addRecord',type:'Record'}];recordsByInstance[r.id]=[];renderCouncil();render();log('Factory v0.4.0 initialized','ok');log('Real block runtime mounting enabled','ok');const councilRoster=agentRegistry&&agentRegistry.council('Influencers Council');log(councilRoster?`Influencers Council: ${councilRoster.members.map(a=>esc(a.agent_id)).join(', ')} registered (advisory)`:'Influencers Council registry not loaded',councilRoster?'ok':'err')})();
+const f={id:'booking-form',type:'forms',x:120,y:180,title:'Customer Booking'},r={id:'appointment-records',type:'records',x:500,y:240,title:'Appointment Records'};project.blocks=[f,r];project.connections=[{id:'starter',from:f.id,fromPort:'submitted',to:r.id,toPort:'addRecord',type:'Record'}];recordsByInstance[r.id]=[];renderCouncil();render();log('Factory v0.4.0 initialized','ok');log('Real block runtime mounting enabled','ok');/* Every council is announced, not just the first one. An agent missing from the boot log reads as
+   an agent who is not there. Agents with no runtime say so here too — the console is the audit
+   trail, and it should not imply anyone can be given work. */
+if(!agentRegistry){log('Agent registry not loaded — council seats unavailable','err')}else{
+  (agentRegistry.councils||[]).forEach(c=>{
+    const seated=agentRegistry.council(c.name);
+    log(`${esc(c.name)}: ${seated.members.map(a=>esc(a.agent_id)).join(', ')} registered (advisory)`,'ok')});
+  agentRegistry.established().filter(a=>!a.runtime||!a.runtime.host).forEach(a=>
+    log(`${esc(a.display_name)} ▸ identity imported, no runtime connected in this repository`,'warn'))}})();
 </script>
 </body></html>
