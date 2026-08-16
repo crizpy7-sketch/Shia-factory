@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Shia HQ — Workshop · Lab · Office</title>
+<title>Shia HQ — Office · Workshop · Lab · Boardroom · Records</title>
 <style>
 :root{
   --bg:#04070f;--panel:#0a1120;--panel2:#0d1626;--line:#16263f;--text:#dbe7ff;--muted:#7f93b5;
@@ -94,6 +94,18 @@ textarea{min-height:80px;resize:vertical}
 code{background:#060c17;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:11.5px}
 a{color:var(--neon);text-decoration:none;font-weight:700;border-bottom:1px solid transparent}
 a:hover,a:focus-visible{border-bottom-color:var(--neon)}
+.meeting{border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:9px;background:#070d1a;cursor:pointer}
+.meeting:hover{border-color:var(--neon)}
+.meeting.selected{border-color:var(--neon);box-shadow:0 0 0 1px var(--neon) inset}
+.meeting b{display:block;font-size:13px}
+.seat{display:inline-flex;gap:6px;align-items:center;margin:0 12px 6px 0;font-size:12px;color:var(--muted)}
+.said{border-left:2px solid var(--line);padding:2px 0 2px 11px;margin:0 0 12px}
+.said .who{font-weight:800;font-size:12.5px;color:var(--text)}
+.said .line{font-size:12px;color:var(--muted);margin-top:3px}
+.said .line.challenge{color:var(--warn)}
+.said .line.agree{color:var(--ok)}
+.said .line.owner{color:var(--neon)}
+.roundhead{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;font-weight:850}
 .todo{border-left:2px solid var(--warn);padding:2px 0 2px 10px;margin-bottom:10px}
 .todo b{display:block;font-size:12.5px}
 .todo span{color:var(--muted);font-size:11.5px}
@@ -103,7 +115,7 @@ a:hover,a:focus-visible{border-bottom-color:var(--neon)}
 <body>
 <header>
   <div class="mark">◆</div>
-  <div class="brand">SHIA HEADQUARTERS<small>WORKSHOP · LAB · OFFICE · RECORDS</small></div>
+  <div class="brand">SHIA HEADQUARTERS<small>OFFICE · WORKSHOP · LAB · BOARDROOM · RECORDS</small></div>
   <div class="spacer"></div>
   <span class="pill" id="staffPill">staff…</span>
   <span class="pill" id="runtimePill">runtime…</span>
@@ -197,6 +209,45 @@ are written to the terminal, not to this page.</p>
     <div class="card" style="margin-top:16px">
       <h2>Exam records</h2>
       <div id="exams"><p class="unknown">Loading…</p></div>
+    </div>
+  </section>
+
+
+  <!-- ---------------------------------------------------------- BOARDROOM -->
+  <section class="room" id="room-boardroom">
+    <div class="roomhead"><h1>Boardroom</h1><p>Where the agents meet. They read each other, they are allowed to disagree, and nothing they say takes effect — the record comes to you.</p></div>
+    <div class="grid office">
+      <div>
+        <div class="card">
+          <h2>Meetings</h2>
+          <div id="meetings"><p class="unknown">Runtime offline — meetings live in the runtime.</p></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>Convene a meeting</h2>
+          <input id="meetTopic" placeholder="Should we launch the booking app in March?">
+          <div class="row"><textarea id="meetAgenda" placeholder="What you want out of the room. Optional."></textarea></div>
+          <div class="row">
+            <select id="meetRounds">
+              <option value="2">2 rounds — positions, then responses</option>
+              <option value="1">1 round — opening positions only</option>
+              <option value="3">3 rounds</option>
+            </select>
+          </div>
+          <div id="meetSeats" class="mono">Loading the roster…</div>
+          <div class="row"><button class="act primary" id="meetBtn">Convene</button></div>
+          <p class="mono" id="meetNote">Everyone hosted is seated unless you choose otherwise. A meeting needs two.</p>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h2>Board</h2>
+          <div id="boardroomBoard"><p class="unknown">Runtime offline.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Minutes</h2>
+      <div id="minutes"><p class="unknown">Select a meeting to read its record.</p></div>
     </div>
   </section>
 
@@ -411,8 +462,8 @@ function renderStream(events) {
     </div>`).join('');
 }
 
-function renderOutstanding(runtime) {
-  const items = HQ.outstandingWork(REGISTRY, runtime);
+function renderOutstanding(runtime, meetings) {
+  const items = HQ.outstandingWork(REGISTRY, runtime, meetings);
   $('outstanding').innerHTML = items.length ? items.map((item) => `
     <div class="todo">
       <b>${esc(item.subject)} — ${esc(item.what)}</b>
@@ -599,7 +650,166 @@ async function renderKnowledge(online) {
   } catch { /* left as offline text */ }
 }
 
+
+// -------------------------------------------------------------- boardroom
+let MEETINGS = [];
+let SELECTED_MEETING = null;
+/** What the minutes pane is currently showing, so a concluding meeting refreshes exactly once. */
+let SHOWN_MINUTES = '';
+let SEATS = null;   // null = "everyone hosted", which is what the runtime defaults to
+
+/** The seat picker is built from the live roster, not the registry: only a hosted agent can sit. */
+function renderSeats(agents) {
+  const hosted = agents ?? [];
+  if (!hosted.length) {
+    $('meetSeats').innerHTML = unknown('Runtime offline — the roster is unknown, so no meeting can be convened.');
+    $('meetBtn').disabled = true;
+    return;
+  }
+  $('meetBtn').disabled = false;
+  const chosen = SEATS ?? hosted.map((a) => a.agentId);
+  $('meetSeats').innerHTML = hosted.map((a) => `
+    <label class="seat"><input type="checkbox" style="width:auto" data-seat="${esc(a.agentId)}"
+      ${chosen.includes(a.agentId) ? 'checked' : ''}> ${esc(a.displayName)} <span class="badge">${esc(a.agentId)}</span></label>`).join('');
+  for (const box of $('meetSeats').querySelectorAll('input[data-seat]')) {
+    box.onchange = () => {
+      SEATS = [...$('meetSeats').querySelectorAll('input[data-seat]')]
+        .filter((b) => b.checked).map((b) => b.dataset.seat);
+      $('meetNote').textContent = SEATS.length < 2
+        ? 'A meeting needs at least two hosted agents.'
+        : `${SEATS.length} seated.`;
+    };
+  }
+}
+
+function renderMeetings(meetings) {
+  MEETINGS = (meetings ?? []).map((m) => HQ.meetingCard(m));
+  const summary = HQ.boardroomSummary(meetings ?? []);
+  $('boardroomBoard').innerHTML = [
+    ['Meetings held', summary.concluded],
+    ['In session', summary.running],
+    ['Blocked', summary.blocked],
+    ['Open disagreements', summary.openDisagreements],
+    ['Waiting on you', summary.awaitingYou],
+  ].map(([label, value]) => `<div class="kv"><span>${esc(label)}</span><span>${value}</span></div>`).join('');
+
+  if (!MEETINGS.length) {
+    $('meetings').innerHTML = '<p class="unknown">No meetings yet. Convene one and both agents will speak on the record.</p>';
+    return;
+  }
+  $('meetings').innerHTML = MEETINGS.map((m) => `
+    <div class="meeting ${SELECTED_MEETING === m.id ? 'selected' : ''}" data-meeting="${esc(m.id)}">
+      <b>${esc(m.topic)}</b>
+      <div class="row" style="gap:6px;margin-top:5px;flex-wrap:wrap">
+        <span class="badge ${esc(m.status === 'concluded' ? 'completed' : m.status === 'blocked' ? 'failed' : 'working')}">${esc(m.status)}</span>
+        <span class="mono">${esc(m.participants.join(' · '))} · ${m.roundsCompleted}/${m.rounds} rounds</span>
+      </div>
+      ${m.concluded
+        ? `<div class="mono" style="margin-top:5px">${m.agreedCount} agreed · ${m.unresolvedCount} unresolved · ${m.forOwnerCount} for you</div>`
+        : m.error ? `<div class="mono" style="margin-top:5px">${esc(m.error)}</div>`
+        : '<div class="mono" style="margin-top:5px">in session — no minutes until it concludes</div>'}
+    </div>`).join('');
+  for (const el of $('meetings').querySelectorAll('.meeting')) {
+    el.onclick = () => openMinutes(el.dataset.meeting);
+  }
+
+  /* A meeting convened from here is selected immediately, but has no record until it concludes.
+     Re-open it once — and only once — when its status changes, so the pane is never left saying
+     "select a meeting" about a meeting that has already finished. */
+  const selected = MEETINGS.find((m) => m.id === SELECTED_MEETING);
+  if (selected) {
+    const stamp = `${selected.id}:${selected.status}:${selected.roundsCompleted}`;
+    if (stamp !== SHOWN_MINUTES) {
+      SHOWN_MINUTES = stamp;
+      void openMinutes(selected.id);
+    }
+  }
+}
+
+/** The transcript, then the record. Everything attributed; nothing merged into an unowned voice. */
+async function openMinutes(meetingId) {
+  SELECTED_MEETING = meetingId;
+  const chosen = MEETINGS.find((m) => m.id === meetingId);
+  if (chosen) SHOWN_MINUTES = `${chosen.id}:${chosen.status}:${chosen.roundsCompleted}`;
+  $('minutes').innerHTML = '<p class="unknown">Loading…</p>';
+  let data;
+  try {
+    data = await api(`/api/meetings/${encodeURIComponent(meetingId)}`);
+  } catch (error) {
+    $('minutes').innerHTML = `<p class="unknown">Could not read the meeting: ${esc(error.message)}</p>`;
+    return;
+  }
+  const { meeting, contributions } = data;
+  const name = (id) => (HQ.roster(REGISTRY).find((a) => a.id === id)?.name ?? id);
+
+  let transcript = '';
+  let round = 0;
+  for (const c of contributions) {
+    if (c.round !== round) { round = c.round; transcript += `<div class="roundhead">Round ${round}</div>`; }
+    transcript += `<div class="said">
+      <div class="who">${esc(name(c.agentId))} <span class="badge">${esc(c.role)}</span></div>
+      <div class="line">${esc(c.position)}</div>
+      ${c.agreements.map((a) => `<div class="line agree">agrees${a.withAgent ? ` with ${esc(name(a.withAgent))}` : ''}: ${esc(a.point)}</div>`).join('')}
+      ${c.challenges.map((ch) => `<div class="line challenge">challenges ${esc(name(ch.toAgent))}: ${esc(ch.point)}<br><i>would change his mind: ${esc(ch.wouldChangeMyMind)}</i></div>`).join('')}
+      ${c.evidenceGaps.map((g) => `<div class="line">evidence gap: ${esc(g)}</div>`).join('')}
+      ${c.needsOwner.map((o) => `<div class="line owner">for you: ${esc(o)}</div>`).join('')}
+    </div>`;
+  }
+
+  const m = meeting.minutes;
+  const list = (items, cls = '') => (items.length
+    ? `<ul style="margin:4px 0 0;padding-left:18px">${items.map((i) => `<li class="${cls}" style="font-size:12.5px;margin:3px 0">${i}</li>`).join('')}</ul>`
+    : '<p class="unknown">none</p>');
+
+  $('minutes').innerHTML = `
+    <h2 style="font-size:15px;text-transform:none;letter-spacing:0;color:var(--text);margin:0 0 4px">${esc(meeting.topic)}</h2>
+    <p class="mono">${esc(meeting.status)} · convened by ${esc(meeting.convenedBy)} · ${esc(meeting.participants.join(', '))}</p>
+    ${meeting.agenda ? `<p class="mono"><b>Agenda</b> — ${esc(meeting.agenda)}</p>` : ''}
+    ${transcript || '<p class="unknown">Nothing was said.</p>'}
+    ${m ? `
+      <div class="roundhead">Agreed (as stated)</div>
+      ${list(m.agreed.map((a) => `${esc(name(a.from))}${a.withAgent ? ` ${a.reciprocated ? '↔' : '→'} ${esc(name(a.withAgent))}` : ''}: ${esc(a.point)}${a.reciprocated ? ' <span class="badge completed">both agreed</span>' : ''}`))}
+      <div class="roundhead">Unresolved</div>
+      ${list(m.unresolved.map((u) => `${esc(name(u.from))} → ${esc(name(u.to))}: ${esc(u.point)}<br><i class="mono">settled by: ${esc(u.wouldChangeMyMind)}</i>`))}
+      <div class="roundhead">For you to settle</div>
+      ${list(m.forOwner.map(esc))}
+      <div class="roundhead">Evidence gaps</div>
+      ${list(m.evidenceGaps.map(esc))}
+      <p class="mono" style="margin-top:12px">These minutes are assembled from what was said, not summarised by a model. Nothing here is a decision: the agents advise, and every item above is yours to settle.</p>`
+      : `<p class="mono" style="margin-top:12px">${esc(meeting.error ?? 'No minutes: this meeting has not concluded.')}</p>`}`;
+}
+
+$('meetBtn').onclick = async () => {
+  const topic = $('meetTopic').value.trim();
+  if (topic.length < 8) { $('meetNote').textContent = 'A topic needs at least 8 characters.'; return; }
+  if (SEATS && SEATS.length < 2) { $('meetNote').textContent = 'A meeting needs at least two hosted agents.'; return; }
+  $('meetBtn').disabled = true;
+  $('meetNote').textContent = 'Convening — each agent speaks in turn, so this takes a moment.';
+  try {
+    const body = { topic, rounds: Number($('meetRounds').value) };
+    const agenda = $('meetAgenda').value.trim();
+    if (agenda) body.agenda = agenda;
+    if (SEATS) body.participants = SEATS;
+    const res = await fetch(`${ENDPOINT}/api/meetings`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) { $('meetNote').textContent = `Rejected: ${data.error}`; return; }
+    $('meetNote').textContent = `In session: ${data.meeting.id}. The room is running; minutes appear when it concludes.`;
+    $('meetTopic').value = '';
+    SELECTED_MEETING = data.meeting.id;
+    refresh();
+  } catch (error) {
+    $('meetNote').textContent = `Could not reach the runtime: ${error.message}`;
+  } finally {
+    $('meetBtn').disabled = false;
+  }
+};
+
 // ------------------------------------------------------------------ submit
+
 $('submitBtn').onclick = async () => {
   const objective = $('objective').value.trim();
   if (objective.length < 10) { $('submitNote').textContent = 'An objective needs at least 10 characters.'; return; }
@@ -630,13 +840,15 @@ $('submitBtn').onclick = async () => {
 
 // ----------------------------------------------------------------- refresh
 async function refresh() {
-  let status = null, tasks = null, approvals = null, events = null;
+  let status = null, tasks = null, approvals = null, events = null, meetings = null, agents = null;
   try {
     status = await api('/api/status');
-    [tasks, approvals, events] = await Promise.all([
+    [tasks, approvals, events, meetings, agents] = await Promise.all([
       api('/api/tasks?limit=25').then((d) => d.tasks).catch(() => null),
       api('/api/approvals?state=requested').then((d) => d.approvals).catch(() => null),
       api('/api/events?limit=60').then((d) => d.events).catch(() => null),
+      api('/api/meetings?limit=25').then((d) => d.meetings).catch(() => null),
+      api('/api/agents').then((d) => d.agents).catch(() => null),
     ]);
   } catch { /* offline: every renderer below handles null honestly */ }
 
@@ -646,8 +858,10 @@ async function refresh() {
   renderBoard(tasks);
   renderApprovals(approvals);
   renderStream(events);
-  renderOutstanding(runtime);
+  renderOutstanding(runtime, meetings);
   renderProvenance();
+  renderMeetings(meetings);
+  renderSeats(agents);
   await renderKnowledge(runtime.online);
 }
 

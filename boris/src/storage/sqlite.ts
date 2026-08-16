@@ -4,6 +4,7 @@
  * Schema is intentionally plain: TEXT/INTEGER/REAL columns with JSON in TEXT, so the same
  * migrations port to Postgres with only type-name changes.
  */
+import { Contribution, Meeting, MeetingStatus, Minutes } from '../domain/meetings.js';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -171,6 +172,35 @@ const MIGRATIONS: string[] = [
      ok INTEGER NOT NULL DEFAULT 1
    );`,
   `CREATE INDEX IF NOT EXISTS idx_usage_task ON usage(task_id);`,
+  `CREATE TABLE IF NOT EXISTS meetings (
+     id TEXT PRIMARY KEY,
+     topic TEXT NOT NULL,
+     agenda TEXT NOT NULL DEFAULT '',
+     convened_by TEXT NOT NULL,
+     participants TEXT NOT NULL,
+     status TEXT NOT NULL,
+     rounds INTEGER NOT NULL DEFAULT 1,
+     rounds_completed INTEGER NOT NULL DEFAULT 0,
+     created_at TEXT NOT NULL,
+     started_at TEXT,
+     ended_at TEXT,
+     minutes TEXT,
+     error TEXT
+   );`,
+  `CREATE TABLE IF NOT EXISTS contributions (
+     id TEXT PRIMARY KEY,
+     meeting_id TEXT NOT NULL,
+     round INTEGER NOT NULL,
+     agent_id TEXT NOT NULL,
+     role TEXT NOT NULL DEFAULT '',
+     position TEXT NOT NULL,
+     agreements TEXT NOT NULL DEFAULT '[]',
+     challenges TEXT NOT NULL DEFAULT '[]',
+     evidence_gaps TEXT NOT NULL DEFAULT '[]',
+     needs_owner TEXT NOT NULL DEFAULT '[]',
+     created_at TEXT NOT NULL
+   );`,
+  `CREATE INDEX IF NOT EXISTS idx_contributions_meeting ON contributions(meeting_id, round);`,
 ];
 
 type Row = Record<string, unknown>;
@@ -747,4 +777,94 @@ export class SqliteStorage implements Storage {
       ok: bool(row, 'ok'),
     }));
   }
+
+  // ------------------------------------------------------------------ meetings
+
+  createMeeting(meeting: Meeting): Meeting {
+    this.db.prepare(`INSERT INTO meetings (
+      id, topic, agenda, convened_by, participants, status, rounds, rounds_completed,
+      created_at, started_at, ended_at, minutes, error
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+      meeting.id, meeting.topic, meeting.agenda, meeting.convenedBy,
+      JSON.stringify(meeting.participants), meeting.status, meeting.rounds, meeting.roundsCompleted,
+      meeting.createdAt, meeting.startedAt, meeting.endedAt,
+      meeting.minutes ? JSON.stringify(meeting.minutes) : null, meeting.error,
+    );
+    return meeting;
+  }
+
+  getMeeting(id: string): Meeting | null {
+    const row = this.db.prepare('SELECT * FROM meetings WHERE id = ?').get(id) as Row | undefined;
+    return row ? rowToMeeting(row) : null;
+  }
+
+  listMeetings(limit = 50): Meeting[] {
+    const rows = this.db.prepare(
+      'SELECT * FROM meetings ORDER BY created_at DESC LIMIT ?',
+    ).all(Math.max(1, Math.min(limit, 200))) as Row[];
+    return rows.map(rowToMeeting);
+  }
+
+  updateMeeting(id: string, patch: Partial<Meeting>): Meeting {
+    const current = this.getMeeting(id);
+    if (!current) throw new Error(`Meeting not found: ${id}`);
+    const next: Meeting = { ...current, ...patch };
+    this.db.prepare(`UPDATE meetings SET topic=?, agenda=?, convened_by=?, participants=?, status=?,
+      rounds=?, rounds_completed=?, started_at=?, ended_at=?, minutes=?, error=? WHERE id=?`).run(
+      next.topic, next.agenda, next.convenedBy, JSON.stringify(next.participants), next.status,
+      next.rounds, next.roundsCompleted, next.startedAt, next.endedAt,
+      next.minutes ? JSON.stringify(next.minutes) : null, next.error, id,
+    );
+    return next;
+  }
+
+  addContribution(contribution: Contribution): Contribution {
+    this.db.prepare(`INSERT INTO contributions (
+      id, meeting_id, round, agent_id, role, position, agreements, challenges,
+      evidence_gaps, needs_owner, created_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
+      contribution.id, contribution.meetingId, contribution.round, contribution.agentId,
+      contribution.role, contribution.position, JSON.stringify(contribution.agreements),
+      JSON.stringify(contribution.challenges), JSON.stringify(contribution.evidenceGaps),
+      JSON.stringify(contribution.needsOwner), contribution.createdAt,
+    );
+    return contribution;
+  }
+
+  listContributions(meetingId: string): Contribution[] {
+    const rows = this.db.prepare(
+      'SELECT * FROM contributions WHERE meeting_id = ? ORDER BY round ASC, created_at ASC',
+    ).all(meetingId) as Row[];
+    return rows.map((row) => ({
+      id: str(row, 'id'),
+      meetingId: str(row, 'meeting_id'),
+      round: int(row, 'round'),
+      agentId: str(row, 'agent_id'),
+      role: str(row, 'role'),
+      position: str(row, 'position'),
+      agreements: json(row['agreements'], []),
+      challenges: json(row['challenges'], []),
+      evidenceGaps: json(row['evidence_gaps'], []),
+      needsOwner: json(row['needs_owner'], []),
+      createdAt: str(row, 'created_at'),
+    }));
+  }
+}
+
+function rowToMeeting(row: Row): Meeting {
+  return {
+    id: str(row, 'id'),
+    topic: str(row, 'topic'),
+    agenda: str(row, 'agenda'),
+    convenedBy: str(row, 'convened_by'),
+    participants: json<string[]>(row['participants'], []),
+    status: str(row, 'status') as MeetingStatus,
+    rounds: int(row, 'rounds'),
+    roundsCompleted: int(row, 'rounds_completed'),
+    createdAt: str(row, 'created_at'),
+    startedAt: strOrNull(row, 'started_at'),
+    endedAt: strOrNull(row, 'ended_at'),
+    minutes: row['minutes'] ? (JSON.parse(String(row['minutes'])) as Minutes) : null,
+    error: strOrNull(row, 'error'),
+  };
 }

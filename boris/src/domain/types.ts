@@ -150,7 +150,9 @@ export type EventType =
   | 'skill.loaded' | 'skill.created'
   | 'limit.reached'
   | 'heartbeat.changed'
-  | 'schedule.fired';
+  | 'schedule.fired'
+  | 'meeting.started' | 'meeting.contribution' | 'meeting.absent'
+  | 'meeting.concluded' | 'meeting.blocked';
 
 export interface AgentEvent {
   id: string;

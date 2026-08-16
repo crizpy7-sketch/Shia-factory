@@ -33,6 +33,12 @@ const ROOMS=[
     icon:'⚗',
   },
   {
+    id:'boardroom',
+    name:'Boardroom',
+    tagline:'Where the agents meet, disagree on the record, and send you what only you can settle.',
+    icon:'⌬',
+  },
+  {
     id:'records',
     name:'Records',
     tagline:'Identity, memory, skills, ledgers and provenance.',
@@ -197,8 +203,27 @@ function queueSummary(tasks){
  * What the headquarters is missing. Shown in the office so the gaps are visible in the building
  * itself rather than only in a report someone has to remember to read.
  */
-function outstandingWork(registry,runtime){
+function outstandingWork(registry,runtime,meetings){
   const items=[];
+  /* Decisions the boardroom routed to Cristian are outstanding work in the office too: a record
+     nobody reads is the same as no record. Only concluded meetings can have produced any. */
+  const board=boardroomSummary(meetings);
+  if(board.awaitingYou>0){
+    items.push({
+      subject:'Boardroom',
+      what:`${board.awaitingYou} decision${board.awaitingYou===1?'':'s'} waiting on you`,
+      detail:`From ${board.concluded} concluded meeting${board.concluded===1?'':'s'}. The agents advise; they do not decide.`,
+      blocking:'Read the minutes in the Boardroom and settle them.',
+    });
+  }
+  if(board.openDisagreements>0){
+    items.push({
+      subject:'Boardroom',
+      what:`${board.openDisagreements} unresolved disagreement${board.openDisagreements===1?'':'s'}`,
+      detail:'Each one names the evidence that would settle it.',
+      blocking:'Not blocking — an open disagreement is a record, not a failure.',
+    });
+  }
   for(const agent of roster(registry)){
     if(agent.provisional){
       items.push({
@@ -249,5 +274,52 @@ function outstandingWork(registry,runtime){
   return items;
 }
 
-return {ROOMS,SPRITE_FOR_STATE,portraitStyle,agentCard,roster,describeRuntime,certificationState,queueSummary,outstandingWork};
+/**
+ * What a meeting looks like on the board. Every count comes from the record; a meeting that has
+ * not concluded reports no minutes rather than an optimistic zero.
+ */
+function meetingCard(meeting){
+  const m=meeting||{};
+  const minutes=m.minutes||null;
+  return {
+    id:m.id||'unknown',
+    topic:m.topic||'(no topic)',
+    agenda:m.agenda||'',
+    status:m.status||'unknown',
+    participants:Array.isArray(m.participants)?m.participants:[],
+    rounds:typeof m.rounds==='number'?m.rounds:0,
+    roundsCompleted:typeof m.roundsCompleted==='number'?m.roundsCompleted:0,
+    convenedBy:m.convenedBy||'unknown',
+    createdAt:m.createdAt||null,
+    endedAt:m.endedAt||null,
+    error:m.error||null,
+    concluded:m.status==='concluded',
+    running:m.status==='in_session'||m.status==='scheduled',
+    minutes,
+    /* Counts are null — not 0 — until there are minutes, so "nothing outstanding" is never
+       displayed for a meeting that simply has not finished. */
+    agreedCount:minutes?minutes.agreed.length:null,
+    unresolvedCount:minutes?minutes.unresolved.length:null,
+    forOwnerCount:minutes?minutes.forOwner.length:null,
+  };
+}
+
+/** The boardroom board: what is running, what concluded, and what is waiting on Cristian. */
+function boardroomSummary(meetings){
+  const list=Array.isArray(meetings)?meetings.map(meetingCard):[];
+  const concluded=list.filter(m=>m.concluded);
+  return {
+    total:list.length,
+    running:list.filter(m=>m.running).length,
+    concluded:concluded.length,
+    blocked:list.filter(m=>m.status==='blocked').length,
+    /* Only concluded meetings can have decisions waiting; an unfinished one has produced none. */
+    awaitingYou:concluded.reduce((n,m)=>n+(m.forOwnerCount||0),0),
+    openDisagreements:concluded.reduce((n,m)=>n+(m.unresolvedCount||0),0),
+    meetings:list,
+  };
+}
+
+return {ROOMS,SPRITE_FOR_STATE,portraitStyle,agentCard,roster,describeRuntime,certificationState,
+  queueSummary,outstandingWork,meetingCard,boardroomSummary};
 });

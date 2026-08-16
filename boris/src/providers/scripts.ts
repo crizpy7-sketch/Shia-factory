@@ -165,7 +165,83 @@ export const approvalPolicy: ScriptPolicy = (request): ScriptedTurn => {
   } }] };
 };
 
+/**
+ * A meeting between two agents, played deterministically.
+ *
+ * This is a **test double**, not a simulation of what Boris or Gary would actually say. It exists
+ * so the boardroom can be exercised — two disciplines, a real disagreement, a decision routed to
+ * the owner — without a provider credential. The runtime reports `isTestDouble: true` throughout,
+ * and every surface that renders a meeting held this way says so.
+ *
+ * It answers as whichever agent the system prompt says is speaking, and takes the position that
+ * agent's discipline would take on a launch-date question. It never claims to be their reasoning.
+ */
+export const boardroomPolicy: ScriptPolicy = (request): ScriptedTurn => {
+  const speaking = /You are \w+ \((?<id>[A-Z]+-\d+)\)/.exec(request.system)?.groups?.['id'] ?? '';
+  const heardOthers = /What has been said so far/.test(JSON.stringify(request.messages));
+
+  if (speaking === 'GARY-001') {
+    return {
+      toolUses: [{
+        name: 'contribute',
+        input: heardOthers
+          ? {
+            position:
+              'I hold the window, and I accept the constraint. Launch when the refund path is '
+              + 'verified, and hold the seasonal creative ready so nothing is lost by the wait.',
+            agreements: [{ withAgent: 'BORIS-001', point: 'An unverified refund path is not launchable.' }],
+            challenges: [{
+              toAgent: 'BORIS-001',
+              point: 'Verifying every path before any launch would forfeit the window entirely.',
+              wouldChangeMyMind: 'A dated test plan showing the refund suite green inside three weeks.',
+            }],
+            needsOwner: ['Approve the launch date once the refund suite is green.'],
+          }
+          : {
+            position:
+              'March is the seasonal window; slipping it costs the quarter. One audience, one offer, '
+              + 'one KPI: confirmed bookings. I would launch narrow rather than late.',
+            agreements: [{ point: 'The offer itself is clear enough to take to market.' }],
+            evidenceGaps: ['No baseline conversion rate exists for the booking flow.'],
+            needsOwner: ['Approval of any spend on seasonal creative.'],
+          },
+      }],
+    };
+  }
+
+  return {
+    toolUses: [{
+      name: 'contribute',
+      input: heardOthers
+        ? {
+          position:
+            'The window is a real constraint and I am not dismissing it. My position is unchanged: '
+            + 'a date announced before the refund path is verified is a date we will miss publicly.',
+          agreements: [{ withAgent: 'GARY-001', point: 'A narrow launch is better than a late one, once it is verifiable.' }],
+          challenges: [{
+            toAgent: 'GARY-001',
+            point: 'Announcing a date before the refund suite is green converts a technical risk into a public one.',
+            wouldChangeMyMind: 'A green end-to-end run of the refund suite against the live booking flow.',
+          }],
+          evidenceGaps: ['No load test exists for the booking endpoint.'],
+          needsOwner: ['Whether to hold the date or announce with a known gap.'],
+        }
+        : {
+          position:
+            'The booking flow has an unverified failure path on refunds. Until that is proven, a '
+            + 'March date is a claim rather than a plan.',
+          evidenceGaps: [
+            'No end-to-end run of the refund suite exists.',
+            'No load test exists for the booking endpoint.',
+          ],
+          needsOwner: ['Whether to hold the date or ship with a known gap.'],
+        },
+    }],
+  };
+};
+
 const NAMED: Record<string, ScriptPolicy> = {
+  boardroom: boardroomPolicy,
   'fixture-repair': fixtureRepairPolicy,
   delegation: delegationPolicy,
   approval: approvalPolicy,

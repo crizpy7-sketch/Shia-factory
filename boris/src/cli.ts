@@ -5,7 +5,9 @@
 import { cpSync, existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
-import { createRuntime, bootstrap, submitObjective, agentStatus, decideApproval, cancelTask, recoverOutstandingWork } from './runtime.js';
+import { createRuntime, bootstrap, submitObjective, agentStatus, convene, decideApproval, cancelTask, meetingService, recoverOutstandingWork } from './runtime.js';
+import { Minutes } from './domain/meetings.js';
+import { renderTranscript } from './meetings/service.js';
 import { WorkerService } from './worker/worker.js';
 import { Scheduler } from './scheduler/scheduler.js';
 import { startApiServer } from './api/server.js';
@@ -17,6 +19,9 @@ Usage: boris <command> [options]
   migrate                     Create or update the database schema
   bootstrap                   Seed skills and import the primary agent's portable identity into memory
   agents                      List the agents this runtime can host
+  meet "<topic>"              Convene a meeting  [--with A,B] [--rounds 2] [--agenda "..."]
+  meetings                    List meetings
+  minutes <meetingId>         Print a meeting's transcript and minutes
   submit "<objective>"        Queue an objective   [--agent <ID>] [--workspace <dir>] [--priority high]
   status                      Print agent status
   tasks [status]              List tasks
@@ -31,6 +36,24 @@ Usage: boris <command> [options]
   preflight                   Check identity, storage, workspaces, tooling and the live provider
   acceptance                  Run the full acceptance objective against the configured provider
 `;
+
+/** Prints the minutes as the record they are: agreement, disagreement, and what needs the owner. */
+function renderMinutes(minutes: Minutes): string {
+  const section = (title: string, items: string[]): string =>
+    (items.length ? `\n## ${title}\n${items.map((i) => `- ${i}`).join('\n')}\n` : `\n## ${title}\n- none\n`);
+  return [
+    `\n# Minutes — ${minutes.topic}`,
+    `${minutes.participants.join(', ')} · ${minutes.rounds} round(s)`,
+    section('Agreed (as stated)', minutes.agreed.map(
+      (a) => `${a.from}${a.withAgent ? ` ${a.reciprocated ? '↔' : '→'} ${a.withAgent}` : ''}: ${a.point}`
+        + (a.reciprocated ? ' [both agreed]' : ''))),
+    section('Unresolved', minutes.unresolved.map(
+      (u) => `${u.from} → ${u.to}: ${u.point} (settled by: ${u.wouldChangeMyMind})`)),
+    section('For Cristian', minutes.forOwner),
+    section('Evidence gaps', minutes.evidenceGaps),
+    section('Final positions', minutes.positions.map((p) => `${p.agentId}: ${p.position}`)),
+  ].join('\n');
+}
 
 function flag(args: string[], name: string): string | undefined {
   const index = args.indexOf(`--${name}`);
@@ -72,6 +95,46 @@ async function main(): Promise<number> {
         process.stderr.write(`${(error as Error).message}\n`);
         return 2;
       }
+    }
+    case 'meet': {
+      const topic = args.find((a) => !a.startsWith('--'));
+      if (!topic) { process.stderr.write('meet needs a topic\n'); return 2; }
+      try {
+        const withFlag = flag(args, 'with');
+        const meeting = convene(runtime, topic, {
+          ...(withFlag ? { participants: withFlag.split(',').map((s) => s.trim()).filter(Boolean) } : {}),
+          ...(flag(args, 'rounds') ? { rounds: Number(flag(args, 'rounds')) } : {}),
+          ...(flag(args, 'agenda') ? { agenda: flag(args, 'agenda') as string } : {}),
+        });
+        process.stdout.write(`${meeting.id}\t${meeting.participants.join(', ')}\t${meeting.rounds} round(s)\n`);
+        const held = await meetingService(runtime).run(meeting.id);
+        process.stdout.write(`${held.status}\n`);
+        if (held.minutes) process.stdout.write(renderMinutes(held.minutes));
+        if (held.error) process.stderr.write(`${held.error}\n`);
+        return held.status === 'concluded' ? 0 : 1;
+      } catch (error) {
+        process.stderr.write(`${(error as Error).message}\n`);
+        return 2;
+      }
+    }
+    case 'meetings': {
+      for (const m of runtime.storage.listMeetings(25)) {
+        process.stdout.write(`${m.id}\t${m.status}\t${m.participants.join(',')}\t${m.topic}\n`);
+      }
+      return 0;
+    }
+    case 'minutes': {
+      const meetingId = args.find((a) => !a.startsWith('--'));
+      if (!meetingId) { process.stderr.write('minutes needs a meeting id\n'); return 2; }
+      const meeting = runtime.storage.getMeeting(meetingId);
+      if (!meeting) { process.stderr.write('meeting not found\n'); return 2; }
+      process.stdout.write(`# ${meeting.topic}\n${meeting.status} · ${meeting.participants.join(', ')}\n\n`);
+      process.stdout.write(renderTranscript(runtime.storage.listContributions(meeting.id),
+        [...runtime.roster.values()].map((h) => h.profile)));
+      process.stdout.write('\n\n');
+      if (meeting.minutes) process.stdout.write(renderMinutes(meeting.minutes));
+      else process.stdout.write('No minutes: this meeting has not concluded.\n');
+      return 0;
     }
     case 'agents': {
       for (const { profile } of runtime.roster.values()) {

@@ -7,13 +7,13 @@ import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 
 /**
- * Walks up from the compiled module until it finds the directory that owns agents/BORIS-001,
- * so the runtime works the same from src/ and from dist/.
+ * Walks up from the compiled module until it finds a directory that owns an agents/ package, so
+ * the runtime works the same from src/, from dist/, and from an image that ships only one agent.
  */
 function findRepoRoot(start: string): string {
   let dir = start;
   for (let i = 0; i < 8; i++) {
-    if (existsSync(resolve(dir, 'agents', 'BORIS-001', 'identity', 'identity.json'))) return dir;
+    if (existsSync(resolve(dir, 'agents'))) return dir;
     const parent = resolve(dir, '..');
     if (parent === dir) break;
     dir = parent;
@@ -54,6 +54,8 @@ export interface Limits {
   maxCostUsdPerTask: number;
   maxOutputTokens: number;
   shellTimeoutMs: number;
+  /** How long one model completion may take. Also bounds a meeting participant's turn. */
+  modelTimeoutMs: number;
   maxShellOutputBytes: number;
   maxFileBytes: number;
   maxConcurrentTasks: number;
@@ -61,7 +63,13 @@ export interface Limits {
 
 export interface Config {
   bootId: string;
+  /** The primary agent: the one a bare `submit` addresses and the one status reports as "the" agent. */
   agentId: string;
+  /**
+   * Which agents this runtime hosts. Empty = every package on disk, which is what the shared
+   * headquarters wants. A solo deployment sets BORIS_AGENTS to one id and hosts only him.
+   */
+  hostedAgents: string[];
   repoRoot: string;
   /** Directories the agent may touch. Anything outside is denied deterministically. */
   workspaceRoots: string[];
@@ -88,13 +96,16 @@ export interface Config {
 
 export function loadConfig(overrides: Partial<Config> = {}): Config {
   const repoRoot = resolve(str('BORIS_REPO_ROOT', findRepoRoot(import.meta.dirname)));
+  const primaryAgent = str('BORIS_AGENT_ID', 'BORIS-001');
   const apiToken = process.env['BORIS_API_TOKEN'] ?? null;
   const cfg: Config = {
     bootId: randomUUID(),
-    agentId: str('BORIS_AGENT_ID', 'BORIS-001'),
+    agentId: primaryAgent,
+    hostedAgents: list('BORIS_AGENTS', []),
     repoRoot,
     workspaceRoots: list('BORIS_WORKSPACE_ROOTS', [resolve(repoRoot, 'boris', 'workspaces')]).map((p) => resolve(p)),
-    identityDir: resolve(str('BORIS_IDENTITY_DIR', resolve(repoRoot, 'agents', 'BORIS-001'))),
+    /* Follows the primary agent, so BORIS_AGENT_ID=GARY-001 needs no second variable. */
+    identityDir: resolve(str('BORIS_IDENTITY_DIR', resolve(repoRoot, 'agents', primaryAgent))),
     dbPath: resolve(str('BORIS_DB_PATH', resolve(repoRoot, 'boris', 'data', 'boris.db'))),
     provider: str('BORIS_PROVIDER', 'anthropic'),
     model: str('BORIS_MODEL', 'claude-sonnet-5'),
@@ -122,6 +133,7 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
       maxCostUsdPerTask: num('BORIS_MAX_COST_USD', 5),
       maxOutputTokens: num('BORIS_MAX_OUTPUT_TOKENS', 4096),
       shellTimeoutMs: num('BORIS_SHELL_TIMEOUT_MS', 120000),
+      modelTimeoutMs: num('BORIS_MODEL_TIMEOUT_MS', 120000),
       maxShellOutputBytes: num('BORIS_MAX_SHELL_OUTPUT', 200000),
       maxFileBytes: num('BORIS_MAX_FILE_BYTES', 1000000),
       maxConcurrentTasks: num('BORIS_MAX_CONCURRENT_TASKS', 2),

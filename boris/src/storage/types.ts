@@ -3,6 +3,7 @@
  * The SQLite adapter is the reference implementation; a Postgres adapter can be added by
  * implementing this interface without touching the runtime.
  */
+import { Contribution, Meeting } from '../domain/meetings.js';
 import {
   AgentEvent, AgentRun, ApprovalRequest, MemoryRecord, MemoryCategory, ScheduleRecord,
   Skill, Task, TaskStatus, ToolCallRecord, UsageRecord,
@@ -82,4 +83,11 @@ export interface Storage {
 
   recordUsage(usage: UsageRecord): UsageRecord;
   usageForTask(taskId: string): UsageRecord[];
+
+  createMeeting(meeting: Meeting): Meeting;
+  getMeeting(id: string): Meeting | null;
+  listMeetings(limit?: number): Meeting[];
+  updateMeeting(id: string, patch: Partial<Meeting>): Meeting;
+  addContribution(contribution: Contribution): Contribution;
+  listContributions(meetingId: string): Contribution[];
 }

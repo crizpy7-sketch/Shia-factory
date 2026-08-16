@@ -298,7 +298,7 @@ export class BorisAgent {
         messages: this.trim(messages),
         tools: toolSpecs.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
         maxOutputTokens: config.limits.maxOutputTokens,
-        timeoutMs: 120000,
+        timeoutMs: config.limits.modelTimeoutMs,
       };
       bus.emit('model.requested', `turn ${turns}`, { taskId, runId: run.id, level: 'debug' });
 

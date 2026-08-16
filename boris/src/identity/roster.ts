@@ -21,6 +21,13 @@ export interface AgentProfile {
   agentId: string;
   identity: AgentIdentity;
   charter: AgentCharter;
+  /**
+   * How this agent relates to the others, in his own package's words. Gary's cognitive model
+   * states the BORIS relationship explicitly and his operating rules name him twice; Boris's says
+   * he may disagree with other agents and councils. Neither sentence is written here — the
+   * quotations are lifted from the packages so the runtime cannot invent a rapport.
+   */
+  colleagueNote: string;
   /** The tool allowlist enforced at authorize time. undefined = the full registry. */
   tools: string[] | undefined;
   /** Why the allowlist is what it is, quoted to the operator and the API. */
@@ -30,6 +37,7 @@ export interface AgentProfile {
 interface ProfileTemplate {
   dir: string;
   charter: AgentCharter;
+  colleagueNote: string;
   tools: string[] | undefined;
   toolsReason: string;
 }
@@ -56,6 +64,10 @@ const BORIS: ProfileTemplate = {
   },
   tools: undefined,
   toolsReason: 'Full registry. His package grants engineering authority; merge, deploy and secrets are refused by the permission engine.',
+  colleagueNote:
+    'His cognitive model: "Boris is allowed to disagree with other agents and councils. He is not '
+    + 'allowed to pretend uncertainty is proof." He presses colleagues for truth, feasibility, '
+    + 'reliability, security and verification.',
 };
 
 /**
@@ -95,6 +107,11 @@ const GARY: ProfileTemplate = {
     'plan', 'report_result', 'request_approval', 'delegate', 'memory_write', 'memory_search', 'skill_create',
   ],
   toolsReason: 'Read, research and reasoning only. His package grants no authority to change a repository, so no write, shell, git or deploy tool is offered to him.',
+  colleagueNote:
+    'His cognitive model: "BORIS: Gary pressures for customer relevance, positioning, speed, '
+    + 'distribution and market learning. BORIS pressures Gary for truth, feasibility, reliability, '
+    + 'security and verification." His operating rules require him to challenge BORIS when growth '
+    + 'is being ignored, and to accept challenge when evidence is weak.',
 };
 
 const TEMPLATES: ProfileTemplate[] = [BORIS, GARY];
@@ -106,7 +123,7 @@ export const DEFAULT_CHARTER: AgentCharter = BORIS.charter;
  * Builds the roster from the packages that are actually on disk. An agent whose package is absent
  * is absent from the roster — the runtime never reports an agent it could not load.
  */
-export function loadRoster(repoRoot: string): AgentProfile[] {
+export function loadRoster(repoRoot: string, hosted: string[] = []): AgentProfile[] {
   const profiles: AgentProfile[] = [];
   for (const template of TEMPLATES) {
     const dir = join(repoRoot, 'agents', template.dir);
@@ -118,9 +135,32 @@ export function loadRoster(repoRoot: string): AgentProfile[] {
       charter: template.charter,
       tools: template.tools,
       toolsReason: template.toolsReason,
+      colleagueNote: template.colleagueNote,
     });
   }
-  return profiles;
+  /* An explicit selection hosts exactly those agents, in that order — that is how a solo VPS
+     deployment runs one agent from the same image. An empty selection hosts everything found. */
+  if (!hosted || hosted.length === 0) return profiles;
+  const wanted = new Set(hosted);
+  return profiles.filter((p) => wanted.has(p.agentId));
+}
+
+/**
+ * What one agent is told about the others sharing his runtime. Only ever descriptive: who they
+ * are, what they are for, and what their own package says about working with colleagues. It never
+ * tells an agent what another will conclude.
+ */
+export function describeColleagues(profile: AgentProfile, roster: AgentProfile[]): string[] {
+  const others = roster.filter((p) => p.agentId !== profile.agentId);
+  if (!others.length) return [];
+  return [
+    '## Colleagues in this runtime',
+    ...others.map((other) => `- **${other.identity.displayName} (${other.agentId})** — ${
+      other.identity.roles.slice(0, 4).join(', ')}. ${other.colleagueNote}`),
+    profile.colleagueNote,
+    'You may disagree with them. Do it on evidence, name what would change your mind, and never',
+    'speak for a colleague or predict his conclusion. None of you decides: Cristian does.',
+  ];
 }
 
 /**

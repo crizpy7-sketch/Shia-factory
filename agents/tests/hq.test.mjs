@@ -7,9 +7,73 @@ const require = createRequire(import.meta.url);
 const registry = require('../registry.js');
 const hq = require('../hq.js');
 
-test('the headquarters has four real rooms', () => {
-  assert.deepEqual(hq.ROOMS.map((r) => r.id), ['office', 'workshop', 'lab', 'records']);
+test('the headquarters has five real rooms', () => {
+  assert.deepEqual(hq.ROOMS.map((r) => r.id), ['office', 'workshop', 'lab', 'boardroom', 'records']);
   assert.ok(hq.ROOMS.every((r) => r.name && r.tagline && r.icon));
+});
+
+/* the boardroom */
+
+const CONCLUDED = {
+  id: 'meeting_1', topic: 'Should we launch in March?', agenda: 'Decide the date.',
+  convenedBy: 'Cristian', participants: ['BORIS-001', 'GARY-001'], status: 'concluded',
+  rounds: 2, roundsCompleted: 2, createdAt: 't0', endedAt: 't1', error: null,
+  minutes: {
+    topic: 'Should we launch in March?', participants: ['BORIS-001', 'GARY-001'], rounds: 2,
+    agreed: [{ from: 'GARY-001', withAgent: 'BORIS-001', point: 'Refunds first.', reciprocated: true }],
+    unresolved: [
+      { from: 'BORIS-001', to: 'GARY-001', point: 'Not before verification.', wouldChangeMyMind: 'A green suite.' },
+      { from: 'GARY-001', to: 'BORIS-001', point: 'The window closes.', wouldChangeMyMind: 'A dated plan.' },
+    ],
+    forOwner: ['BORIS-001: hold or ship?', 'GARY-001: approve the date'],
+    evidenceGaps: ['BORIS-001: no load test'], positions: [], assembledAt: 't1',
+  },
+};
+
+test('a meeting still in session reports no counts rather than zero', () => {
+  const card = hq.meetingCard({ id: 'm', topic: 'T', status: 'in_session', rounds: 2, roundsCompleted: 1 });
+  assert.equal(card.running, true);
+  assert.equal(card.concluded, false);
+  assert.equal(card.minutes, null);
+  assert.equal(card.agreedCount, null, 'zero would read as "they agreed on nothing"');
+  assert.equal(card.unresolvedCount, null);
+  assert.equal(card.forOwnerCount, null);
+});
+
+test('the board counts only what concluded meetings actually recorded', () => {
+  const summary = hq.boardroomSummary([
+    CONCLUDED,
+    { id: 'm2', status: 'in_session', participants: [], minutes: null },
+    { id: 'm3', status: 'blocked', participants: [], minutes: null, error: 'nobody could be reached' },
+  ]);
+  assert.equal(summary.total, 3);
+  assert.equal(summary.concluded, 1);
+  assert.equal(summary.running, 1);
+  assert.equal(summary.blocked, 1);
+  assert.equal(summary.openDisagreements, 2);
+  assert.equal(summary.awaitingYou, 2, 'an unfinished meeting contributes nothing to your list');
+});
+
+test('a blocked meeting carries its reason and produces no minutes', () => {
+  const card = hq.meetingCard({ id: 'm', status: 'blocked', error: 'No participant could be reached.' });
+  assert.equal(card.concluded, false);
+  assert.equal(card.minutes, null);
+  assert.match(card.error, /No participant could be reached/);
+});
+
+test('a concluded meeting keeps its disagreements as records, not prose', () => {
+  const card = hq.meetingCard(CONCLUDED);
+  assert.equal(card.concluded, true);
+  assert.equal(card.unresolvedCount, 2);
+  assert.equal(card.minutes.unresolved[0].wouldChangeMyMind, 'A green suite.');
+  assert.equal(card.minutes.agreed[0].reciprocated, true);
+});
+
+test('an empty or malformed meeting list never throws', () => {
+  assert.equal(hq.boardroomSummary(null).total, 0);
+  assert.equal(hq.boardroomSummary([]).awaitingYou, 0);
+  assert.equal(hq.meetingCard({}).topic, '(no topic)');
+  assert.equal(hq.meetingCard({}).status, 'unknown');
 });
 
 test('the roster carries both agents with their authority intact', () => {
@@ -150,6 +214,20 @@ test('the outstanding list names the real gaps, including its own', () => {
   const art = gary.find((i) => /avatar art/i.test(i.what));
   assert.ok(art, 'the placeholder avatar should be visible as a gap');
   assert.match(art.blocking, /Cosmetic only/i);
+});
+
+test('decisions the boardroom routed to you appear as outstanding work in the office', () => {
+  const items = hq.outstandingWork(registry, hq.describeRuntime(null, {}), [CONCLUDED]);
+  const board = items.filter((i) => i.subject === 'Boardroom');
+  assert.ok(board.some((i) => /2 decisions waiting on you/.test(i.what)));
+  const disagreement = board.find((i) => /unresolved disagreement/.test(i.what));
+  assert.ok(disagreement);
+  assert.match(disagreement.blocking, /not a failure/i,
+    'an open disagreement is a record, not something to be cleared');
+
+  /* No meetings, nothing added — the office does not invent a boardroom backlog. */
+  assert.equal(hq.outstandingWork(registry, hq.describeRuntime(null, {}))
+    .some((i) => i.subject === 'Boardroom'), false);
 });
 
 test('a healthy live runtime drops off the outstanding list', () => {

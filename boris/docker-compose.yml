@@ -1,7 +1,11 @@
-# BORIS-001 production topology.
+# The headquarters: both agents, one address.
 #
 #   reverse proxy (yours)  ->  boris-api  ->  shared state (volume)
 #                              boris-worker  ->  workspaces (volume)
+#
+# This stack hosts every agent whose package is in the image, which is what the Office, the
+# Boardroom and the Factory all expect. To run one agent alone on his own VPS, with his own
+# database and no colleague, use docker-compose.solo.yml instead.
 #
 # The API and the worker are separate processes so a stuck task cannot take the dashboard down.
 # Both share the database volume; the worker is the only one that executes tasks.
@@ -14,7 +18,7 @@ services:
     build:
       context: ..
       dockerfile: boris/Dockerfile
-    image: boris-runtime:latest
+    image: shia-agent-runtime:latest
     command: ["node", "dist/src/cli.js", "serve"]
     restart: unless-stopped
     ports:
@@ -28,6 +32,8 @@ services:
       BORIS_PROVIDER: ${BORIS_PROVIDER:-anthropic}
       BORIS_MODEL: ${BORIS_MODEL:-claude-sonnet-5}
       BORIS_LOG_LEVEL: ${BORIS_LOG_LEVEL:-info}
+      # Unset = host every package in the image. Name ids here to seat a subset.
+      BORIS_AGENTS: ${BORIS_AGENTS:-}
     volumes:
       - boris-data:/app/boris/data
       - boris-workspaces:/app/boris/workspaces
@@ -39,7 +45,7 @@ services:
       start_period: 10s
 
   boris-worker:
-    image: boris-runtime:latest
+    image: shia-agent-runtime:latest
     build:
       context: ..
       dockerfile: boris/Dockerfile
@@ -55,13 +61,14 @@ services:
       BORIS_LOG_LEVEL: ${BORIS_LOG_LEVEL:-info}
       BORIS_MAX_CONCURRENT_TASKS: ${BORIS_MAX_CONCURRENT_TASKS:-2}
       BORIS_MAX_COST_USD: ${BORIS_MAX_COST_USD:-5}
+      BORIS_AGENTS: ${BORIS_AGENTS:-}
     volumes:
       - boris-data:/app/boris/data
       - boris-workspaces:/app/boris/workspaces
     stop_grace_period: 30s
 
   boris-scheduler:
-    image: boris-runtime:latest
+    image: shia-agent-runtime:latest
     build:
       context: ..
       dockerfile: boris/Dockerfile

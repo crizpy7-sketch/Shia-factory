@@ -13,7 +13,7 @@ blocks) and **BORIS-001** (a portable named agent, and the runtime that executes
 | `agents/*.js`, `agents/tests/` | The Factory's agent layer (registry, routing, advisory, panels) | Plain scripts, no build step, tested with `node --test` |
 | `assets/agents/boris-001/` | Avatar assets served by the Factory and the dashboard | Byte-identical to the package originals |
 | `boris/` | The BORIS runtime: TypeScript, strict, Node 22 | Where all agent execution lives |
-| `hq/` | The Headquarters: Office, Workshop, Lab, Records | Zero-build HTML. It reports state; it never invents it |
+| `hq/` | The Headquarters: Office, Workshop, Lab, Boardroom, Records | Zero-build HTML. It reports state; it never invents it |
 | `agents/hq.js` | The HQ data layer | Pure functions over the registry and live runtime, tested with `node --test` |
 
 ## Commands
@@ -38,15 +38,24 @@ npm run gauntlet       # everything, in order
 node dist/src/cli.js run   # API + dashboard + worker + scheduler
 node dist/src/cli.js agents # who this runtime can host, and with which tools
 node dist/src/cli.js submit "<objective>" --agent GARY-001
+node dist/src/cli.js meet "<topic>" --with BORIS-001,GARY-001 --rounds 2
+node dist/src/cli.js minutes <meetingId>
+```
+
+Deploying one agent alone (his own VPS, his own database, no colleague):
+
+```sh
+BORIS_AGENTS=GARY-001 BORIS_AGENT_ID=GARY-001 node dist/src/cli.js run
+docker compose -f boris/docker-compose.solo.yml --profile gary up -d
 ```
 
 ## Headquarters
 
-The building has four rooms and one address. `node dist/src/cli.js run` serves all of it:
+The building has five rooms and one address. `node dist/src/cli.js run` serves all of it:
 
 | Route | Room |
 | --- | --- |
-| `/hq` | Office · Workshop · Lab · Records |
+| `/hq` | Office · Workshop · Lab · Boardroom · Records |
 | `/factory` | The block workbench, unchanged |
 | `/` | The BORIS Control Center |
 
@@ -60,6 +69,12 @@ Rules for the building:
 - **An agent without a runtime is labelled everywhere too.** His seat says `No runtime connected`,
   his assignee option is disabled, and his panel repeats it on every run. An identity package is not
   a running agent.
+- **The boardroom records, it never decides.** Minutes are assembled from contributions in
+  `boris/src/domain/meetings.ts` — no model is asked to summarise a meeting, because a summary is
+  where disagreement disappears. Every line is attributed. A meeting that nobody attended is
+  `blocked`, not `concluded` with an empty record, and silence is never rendered as assent.
+- **A meeting is speech, not action.** Participants are offered exactly one tool, `contribute`. No
+  file, shell, git or network tool is reachable from a session.
 - **The Inspector is not the runtime.** The Factory panels are deterministic code, so they say
   `NOT A LIVE RUN` and point at the Office. A panel must never read as a model's answer.
 - **Only mapped static files are served.** `STATIC_ROUTES` in `boris/src/api/server.ts` is an

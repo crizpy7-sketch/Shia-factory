@@ -8,6 +8,8 @@ import { isOutstanding } from './domain/state.js';
 import { EventBus } from './events/bus.js';
 import { BorisIdentity, loadIdentity } from './identity/loader.js';
 import { AgentProfile, DEFAULT_CHARTER, baseAgentId, loadRoster } from './identity/roster.js';
+import { Meeting, MEETING_STATUSES } from './domain/meetings.js';
+import { MeetingService } from './meetings/service.js';
 import { MemoryStore } from './memory/store.js';
 import { createProvider } from './providers/index.js';
 import { ModelProvider } from './providers/types.js';
@@ -110,7 +112,7 @@ export function createRuntime(options: CreateRuntimeOptions = {}): Runtime {
   });
 
   const roster = new Map<string, HostedAgent>();
-  for (const profile of loadRoster(config.repoRoot)) {
+  for (const profile of loadRoster(config.repoRoot, config.hostedAgents)) {
     roster.set(profile.agentId, { profile, agent: makeAgent(profile.identity, profile) });
   }
   const primary = roster.get(config.agentId);
@@ -121,6 +123,7 @@ export function createRuntime(options: CreateRuntimeOptions = {}): Runtime {
         agentId: identity.agentId, identity, tools: undefined,
         charter: DEFAULT_CHARTER,
         toolsReason: 'Full registry.',
+        colleagueNote: '',
       },
       agent,
     });
@@ -211,6 +214,70 @@ export function submitObjective(runtime: Runtime, objective: string, options: Su
   });
   return task;
 }
+
+export interface ConveneOptions {
+  agenda?: string;
+  participants?: string[];
+  rounds?: number;
+  convenedBy?: string;
+}
+
+/**
+ * Books a meeting. Refuses anything the room could not actually hold: an agent nobody hosts, a
+ * single-seat "meeting", or more rounds than anyone would read.
+ */
+export function convene(runtime: Runtime, topic: string, options: ConveneOptions = {}): Meeting {
+  const trimmed = topic.trim();
+  if (trimmed.length < 8) throw new Error('a meeting topic must be at least 8 characters');
+  if (trimmed.length > 300) throw new Error('a meeting topic is too long (300 character limit)');
+
+  const requested = options.participants?.length ? options.participants : [...runtime.roster.keys()];
+  const seats = [...new Set(requested)];
+  for (const agentId of seats) {
+    if (!runtime.roster.has(agentId)) {
+      throw new Error(`no runtime hosts ${agentId} (hosted: ${[...runtime.roster.keys()].join(', ') || 'none'})`);
+    }
+  }
+  /* One agent talking to himself is a task, not a meeting, and calling it one would put a
+     single opinion into a record that reads like a room agreed. */
+  if (seats.length < 2) throw new Error('a meeting needs at least two hosted agents');
+
+  const rounds = Math.max(1, Math.min(Math.floor(options.rounds ?? 2), 4));
+  const meeting: Meeting = {
+    id: id('meeting'),
+    topic: trimmed,
+    agenda: (options.agenda ?? '').slice(0, 4000),
+    convenedBy: options.convenedBy ?? 'Cristian',
+    participants: seats,
+    status: 'scheduled',
+    rounds,
+    roundsCompleted: 0,
+    createdAt: now(),
+    startedAt: null,
+    endedAt: null,
+    minutes: null,
+    error: null,
+  };
+  runtime.storage.createMeeting(meeting);
+  runtime.bus.emit('meeting.started', `scheduled: ${meeting.topic}`, {
+    data: { meetingId: meeting.id, participants: seats, rounds },
+  });
+  return meeting;
+}
+
+/** The boardroom service, wired to whatever this runtime hosts. */
+export function meetingService(runtime: Runtime): MeetingService {
+  return new MeetingService({
+    storage: runtime.storage,
+    bus: runtime.bus,
+    provider: runtime.provider,
+    logger: runtime.logger,
+    roster: [...runtime.roster.values()].map((h) => h.profile),
+    turnTimeoutMs: runtime.config.limits.modelTimeoutMs,
+  });
+}
+
+export { MEETING_STATUSES };
 
 /**
  * Restart recovery. Runs owned by a previous boot are marked interrupted and their tasks are

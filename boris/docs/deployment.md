@@ -1,4 +1,50 @@
-# Deploying BORIS-001
+# Deploying the agents
+
+There are two shapes, and the difference is only which agents a runtime hosts:
+
+| Shape | What it is | File |
+| --- | --- | --- |
+| **Headquarters** | Both agents, one address. The Office assigns work, the Boardroom convenes meetings, the Factory is served from the same origin | `docker-compose.yml` |
+| **Solo** | One agent on his own VPS, his own database, his own port, no colleague and no headquarters | `docker-compose.solo.yml` |
+
+Same image, same code. An agent is hosted when `BORIS_AGENTS` names him **and** his package is on
+disk; leaving `BORIS_AGENTS` unset hosts everything the image carries. There is no build variant and
+no second codebase — which is the point: an agent you can only run inside the Factory is not
+portable, and portability is what his package is for.
+
+## One agent alone on a VPS
+
+```sh
+cp boris/.env.example boris/.env
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   BORIS_API_TOKEN=$(openssl rand -hex 32)     # Boris's stack
+#   GARY_API_TOKEN=$(openssl rand -hex 32)      # Gary's stack
+
+docker compose -f boris/docker-compose.solo.yml --env-file boris/.env --profile boris up -d
+docker compose -f boris/docker-compose.solo.yml --env-file boris/.env --profile gary  up -d
+```
+
+Boris answers on `127.0.0.1:8787`, Gary on `127.0.0.1:8788`, with separate volumes. Neither knows
+the other exists: a solo runtime refuses work addressed to an absent colleague rather than running
+it as whoever is loaded, and it cannot convene a meeting because a meeting needs two.
+
+Verify who a stack is hosting:
+
+```sh
+docker compose -f boris/docker-compose.solo.yml exec gary-api node dist/src/cli.js agents
+# GARY-001  Gary (primary)  11 tools  IDENTITY_SEEDED_..._RECERTIFICATION_PENDING
+```
+
+Without Docker, the same thing runs directly:
+
+```sh
+BORIS_AGENTS=GARY-001 BORIS_AGENT_ID=GARY-001 node dist/src/cli.js run
+```
+
+`BORIS_AGENT_ID` sets the primary agent — the one a bare `submit` addresses and the one `status`
+reports. `identityDir` follows it, so no second variable is needed.
+
+## Both agents together — the headquarters
 
 ## Docker Compose (recommended)
 
@@ -15,7 +61,8 @@ docker compose -f boris/docker-compose.yml --env-file boris/.env up -d
 docker compose -f boris/docker-compose.yml exec boris-api node dist/src/cli.js bootstrap
 ```
 
-Three services from one image:
+This stack is what the headquarters expects: the Office can assign work to either agent, and the
+Boardroom can seat both. Three services from one image:
 
 | Service | Command | Role |
 | --- | --- | --- |

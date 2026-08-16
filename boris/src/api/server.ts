@@ -10,7 +10,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import {
-  Runtime, agentStatus, cancelTask, createSchedule, decideApproval, submitObjective,
+  Runtime, agentStatus, cancelTask, convene, createSchedule, decideApproval, meetingService,
+  submitObjective,
 } from '../runtime.js';
 import { TaskStatus, TASK_STATUSES } from '../domain/types.js';
 import { validate } from '../util/validate.js';
@@ -272,6 +273,54 @@ async function route(
       primary: profile.agentId === runtime.config.agentId,
     }));
     return send(res, 200, { agents, primary: runtime.config.agentId });
+  }
+
+  // ------------------------------------------------------------------ boardroom
+
+  if (method === 'GET' && path === '/api/meetings') {
+    const limit = Math.min(Number(url.searchParams.get('limit') ?? 25) || 25, 100);
+    return send(res, 200, { meetings: runtime.storage.listMeetings(limit) });
+  }
+
+  if (method === 'POST' && path === '/api/meetings') {
+    const body = await readBody(req);
+    if (!body.ok) return send(res, 400, { error: body.error });
+    const parsed = validate<{ topic: string; agenda?: string; participants?: string[]; rounds?: number }>(
+      body.value,
+      {
+        topic: { type: 'string', required: true, min: 8, max: 300 },
+        agenda: { type: 'string', max: 4000 },
+        participants: { type: 'array', of: 'string', max: 8 },
+        rounds: { type: 'number', min: 1, max: 4 },
+      },
+    );
+    if (!parsed.ok || !parsed.value) return send(res, 400, { error: parsed.issues.join('; ') });
+    try {
+      const meeting = convene(runtime, parsed.value.topic, {
+        ...(parsed.value.agenda ? { agenda: parsed.value.agenda } : {}),
+        ...(parsed.value.participants?.length ? { participants: parsed.value.participants } : {}),
+        ...(parsed.value.rounds ? { rounds: parsed.value.rounds } : {}),
+      });
+      /* The session runs in the background: a meeting is several model turns and holding the
+         request open for it would time out the browser. The room is polled like everything else. */
+      void meetingService(runtime).run(meeting.id).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        runtime.logger.error('meeting failed', { meetingId: meeting.id, error: message });
+        runtime.storage.updateMeeting(meeting.id, {
+          status: 'blocked', endedAt: new Date().toISOString(), error: message,
+        });
+      });
+      return send(res, 201, { meeting });
+    } catch (error) {
+      return send(res, 400, { error: (error as Error).message });
+    }
+  }
+
+  const meetingMatch = /^\/api\/meetings\/([A-Za-z0-9_]+)$/.exec(path);
+  if (method === 'GET' && meetingMatch) {
+    const meeting = runtime.storage.getMeeting(meetingMatch[1] as string);
+    if (!meeting) return send(res, 404, { error: 'meeting not found' });
+    return send(res, 200, { meeting, contributions: runtime.storage.listContributions(meeting.id) });
   }
 
   if (method === 'GET' && path === '/api/tasks') {

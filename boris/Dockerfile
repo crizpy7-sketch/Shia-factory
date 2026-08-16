@@ -1,6 +1,14 @@
-# BORIS-001 runtime image.
+# Shia agent runtime image.
 #
-# One image runs every role (api, worker, scheduler); the command selects which.
+# One image runs every role (api, worker, scheduler) and every roster: the command selects the
+# role, and BORIS_AGENTS selects who is hosted.
+#
+#   headquarters (both)   BORIS_AGENTS unset
+#   Boris alone           BORIS_AGENTS=BORIS-001 BORIS_AGENT_ID=BORIS-001
+#   Gary alone            BORIS_AGENTS=GARY-001  BORIS_AGENT_ID=GARY-001
+#
+# An agent whose package is not on disk is simply absent from the roster, so a slimmer image that
+# ships one agents/ directory is a valid solo deployment with no code change.
 FROM node:22-alpine AS build
 WORKDIR /app/boris
 COPY boris/package.json boris/package-lock.json* ./
@@ -15,10 +23,18 @@ FROM node:22-alpine AS runtime
 RUN apk add --no-cache git tini && addgroup -S boris && adduser -S boris -G boris
 WORKDIR /app
 
-# BORIS's portable identity and avatar assets are part of the image: the runtime reads them,
-# and refuses to start without them.
+# The portable identity packages are part of the image: the runtime reads them, and an agent whose
+# package is missing is not hosted. Both ship by default; a solo image can drop either COPY line.
 COPY --chown=boris:boris agents/BORIS-001 ./agents/BORIS-001
-COPY --chown=boris:boris assets/agents/boris-001 ./assets/agents/boris-001
+COPY --chown=boris:boris agents/GARY-001 ./agents/GARY-001
+COPY --chown=boris:boris assets/agents ./assets/agents
+
+# The headquarters and the workbench are served from the same origin as the API.
+COPY --chown=boris:boris hq ./hq
+COPY --chown=boris:boris index.html ./index.html
+COPY --chown=boris:boris blocks ./blocks
+COPY --chown=boris:boris agents/registry.js agents/routing.js agents/advisory.js \
+     agents/panel.js agents/gary.js agents/hq.js ./agents/
 
 WORKDIR /app/boris
 COPY --chown=boris:boris boris/package.json ./

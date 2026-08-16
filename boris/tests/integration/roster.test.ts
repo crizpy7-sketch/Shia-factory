@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { agentFor, submitObjective } from '../../src/runtime.js';
+import { agentFor, convene, submitObjective } from '../../src/runtime.js';
 import { WorkerService } from '../../src/worker/worker.js';
 import { makeHarness } from '../helpers.js';
 import { CompletionRequest } from '../../src/providers/types.js';
@@ -147,6 +147,27 @@ test('Gary cannot reach a tool his package never gave him, even with a plan reco
   // Refusing in the prompt is not refusing. The file must not exist.
   assert.equal(existsSync(join(h.workspace, 'campaign.md')), false,
     'a tool outside his package must not be able to touch the disk');
+});
+
+test('a solo deployment hosts exactly one agent and says so', (t) => {
+  /* This is the VPS shape: the same image, BORIS_AGENTS naming one id. Nothing about the runtime
+     changes except who is in the room, which is the point — an agent must be deployable alone. */
+  const solo = makeHarness({ config: { hostedAgents: ['GARY-001'], agentId: 'GARY-001' } });
+  t.after(() => solo.cleanup());
+
+  assert.deepEqual([...solo.runtime.roster.keys()], ['GARY-001']);
+  assert.equal(solo.runtime.roster.get('GARY-001')?.profile.tools?.includes('fs_write'), false,
+    'his boundary travels with him; it is not a property of sharing a runtime with Boris');
+
+  // Work for an absent colleague is refused rather than run by the one who is here.
+  assert.throws(() => submitObjective(solo.runtime, 'Repair the median calculation.', { agentId: 'BORIS-001' }),
+    /no runtime hosts BORIS-001 \(hosted: GARY-001\)/);
+  // And there is nobody to meet with.
+  assert.throws(() => convene(solo.runtime, 'Should we launch in March?'),
+    /at least two hosted agents/);
+
+  const alone = submitObjective(solo.runtime, 'Draft the launch brief for the booking app.');
+  assert.equal(alone.assignedAgent, 'GARY-001', 'the solo agent is the default assignee');
 });
 
 test('Boris keeps the tools Gary does not have', async (t) => {

@@ -10,7 +10,7 @@ cd boris && npm install && npm run build && node dist/src/cli.js run
 
 | Address | What is there |
 | --- | --- |
-| `/hq` | **Headquarters** — Office, Workshop, Lab, Records |
+| `/hq` | **Headquarters** — Office, Workshop, Lab, Boardroom, Records |
 | `/factory` | The block workbench, full screen |
 | `/` | The BORIS Control Center |
 
@@ -26,6 +26,16 @@ Run Factory and the real block runtimes mount in iframes and pass real records.
 **Lab** — evals, exams and certification evidence. Boris's recertification gate and Gary's passport
 are read from their files. No box is ticked here; a tick requires the gauntlet actually running and
 Cristian's approval.
+
+**Boardroom** — where the agents meet. Convene a topic, seat whoever is hosted, and each agent
+speaks in his own voice: opening positions in round one, then responses once he has read the others.
+He may agree, and he may challenge — and a challenge must name what would change his mind.
+
+Nothing said in a meeting takes effect. Participants are offered exactly one tool, `contribute`; no
+file, shell, git or network tool is reachable from a session. The minutes are **assembled** from
+what was said, never summarised by a model, because a summary is where disagreement quietly
+disappears. Everything is attributed, disagreements stay open with the evidence that would settle
+them, and anything only you can decide is routed to you as such.
 
 **Records** — identity, memory, skills, ledgers and provenance. Ledger counts are read from the
 ledgers, so an empty one reports empty and a full one reports what it holds.
@@ -68,6 +78,8 @@ playing Gary calls `fs_write`, the call is denied and nothing touches the disk.
 ```sh
 node dist/src/cli.js agents                                  # who can be hosted, and with what
 node dist/src/cli.js submit "Draft the launch brief." --agent GARY-001
+node dist/src/cli.js meet "Should we launch in March?" --rounds 2
+node dist/src/cli.js minutes <meetingId>
 ```
 
 Work is addressed to an agent and runs as that agent. An objective for an agent the runtime cannot
@@ -77,6 +89,25 @@ executed by whoever happens to be loaded.
 **GARY-001 is a Shia-owned fictionalised identity.** It may be informed by publicly documented
 marketing principles associated with Gary Vaynerchuk, but it is not him, does not impersonate him,
 and must not imply endorsement or affiliation.
+
+## Deploy them apart, or together
+
+The same image does both. An agent is hosted when `BORIS_AGENTS` names him and his package is on
+disk; leaving it unset hosts everyone in the image.
+
+```sh
+# one agent, his own VPS, his own database, no colleague
+docker compose -f boris/docker-compose.solo.yml --profile gary up -d
+
+# the headquarters: both agents, one address, Office and Boardroom live
+docker compose -f boris/docker-compose.yml up -d
+```
+
+A solo runtime refuses work addressed to an absent colleague rather than running it as whoever is
+loaded, and it cannot convene a meeting, because a meeting needs two. An agent you can only run
+inside the Factory would not be portable — and portability is the whole point of his package.
+
+See `boris/docs/deployment.md`.
 
 ## The runtime
 
@@ -109,7 +140,7 @@ node --test agents/tests/*.test.mjs   # the Factory's agent layer
 cd boris && npm run gauntlet          # typecheck, lint, unit, integration, security, e2e
 ```
 
-235 tests, no dependencies beyond Node's own test runner and TypeScript.
+250 tests, no dependencies beyond Node's own test runner and TypeScript.
 
 ## What is not true yet
 

@@ -1,0 +1,125 @@
+# A single agent, alone on a VPS, with no headquarters and no colleague.
+#
+# This is the deployment shape for "Boris runs my infrastructure" or "Gary runs growth" as separate
+# services that know nothing about each other. Each stack has its own database volume, its own
+# workspaces and its own port, so nothing is shared and nothing leaks between them.
+#
+#   docker compose -f docker-compose.solo.yml --profile boris up -d
+#   docker compose -f docker-compose.solo.yml --profile gary  up -d
+#   docker compose -f docker-compose.solo.yml --profile boris --profile gary up -d
+#
+# The same image serves the headquarters (docker-compose.yml); only the roster differs. An agent is
+# hosted because BORIS_AGENTS names him and his package is on disk — there is no build variant.
+#
+# Storage note: SQLite on a persistent volume. A Postgres adapter is an implemented interface away
+# (src/storage/types.ts) but is NOT included. Do not point this at Postgres expecting it to work.
+
+x-agent: &agent
+  build:
+    context: ..
+    dockerfile: boris/Dockerfile
+  image: shia-agent-runtime:latest
+  restart: unless-stopped
+  stop_grace_period: 30s
+
+x-provider: &provider
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  BORIS_PROVIDER: ${BORIS_PROVIDER:-anthropic}
+  BORIS_MODEL: ${BORIS_MODEL:-claude-sonnet-5}
+  BORIS_LOG_LEVEL: ${BORIS_LOG_LEVEL:-info}
+
+services:
+  # ----------------------------------------------------------------- BORIS-001 alone
+  boris-api:
+    <<: *agent
+    profiles: ["boris"]
+    command: ["node", "dist/src/cli.js", "serve"]
+    ports:
+      - "127.0.0.1:${BORIS_SOLO_PORT:-8787}:8787"
+    environment:
+      <<: *provider
+      BORIS_AGENTS: BORIS-001
+      BORIS_AGENT_ID: BORIS-001
+      BORIS_HOST: 0.0.0.0
+      BORIS_PORT: "8787"
+      BORIS_REQUIRE_AUTH: "true"
+      BORIS_API_TOKEN: ${BORIS_API_TOKEN:?set BORIS_API_TOKEN in .env}
+    volumes:
+      - boris-solo-data:/app/boris/data
+      - boris-solo-workspaces:/app/boris/workspaces
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  boris-worker:
+    <<: *agent
+    profiles: ["boris"]
+    command: ["node", "dist/src/cli.js", "worker"]
+    depends_on:
+      boris-api:
+        condition: service_healthy
+    environment:
+      <<: *provider
+      BORIS_AGENTS: BORIS-001
+      BORIS_AGENT_ID: BORIS-001
+      BORIS_MAX_CONCURRENT_TASKS: ${BORIS_MAX_CONCURRENT_TASKS:-2}
+      BORIS_MAX_COST_USD: ${BORIS_MAX_COST_USD:-5}
+    volumes:
+      - boris-solo-data:/app/boris/data
+      - boris-solo-workspaces:/app/boris/workspaces
+
+  # ------------------------------------------------------------------ GARY-001 alone
+  #
+  # Gary's canonical execution host is his own Growth Agent application. This stack runs the
+  # identity package on the Shia runtime, bounded to read/research/reasoning tools, and it is not
+  # certified as him — his passport says so and nothing here changes that.
+  gary-api:
+    <<: *agent
+    profiles: ["gary"]
+    command: ["node", "dist/src/cli.js", "serve"]
+    ports:
+      - "127.0.0.1:${GARY_SOLO_PORT:-8788}:8787"
+    environment:
+      <<: *provider
+      BORIS_AGENTS: GARY-001
+      BORIS_AGENT_ID: GARY-001
+      BORIS_HOST: 0.0.0.0
+      BORIS_PORT: "8787"
+      BORIS_REQUIRE_AUTH: "true"
+      BORIS_API_TOKEN: ${GARY_API_TOKEN:?set GARY_API_TOKEN in .env}
+    volumes:
+      - gary-solo-data:/app/boris/data
+      - gary-solo-workspaces:/app/boris/workspaces
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  gary-worker:
+    <<: *agent
+    profiles: ["gary"]
+    command: ["node", "dist/src/cli.js", "worker"]
+    depends_on:
+      gary-api:
+        condition: service_healthy
+    environment:
+      <<: *provider
+      BORIS_AGENTS: GARY-001
+      BORIS_AGENT_ID: GARY-001
+      BORIS_MAX_CONCURRENT_TASKS: ${GARY_MAX_CONCURRENT_TASKS:-2}
+      BORIS_MAX_COST_USD: ${GARY_MAX_COST_USD:-5}
+    volumes:
+      - gary-solo-data:/app/boris/data
+      - gary-solo-workspaces:/app/boris/workspaces
+
+volumes:
+  boris-solo-data:
+  boris-solo-workspaces:
+  gary-solo-data:
+  gary-solo-workspaces:
