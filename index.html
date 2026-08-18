@@ -9,22 +9,34 @@ html[data-theme="dark"]{--bg:#070b14;--panel:#0d1422;--panel2:#111a2b;--line:#24
 *{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}button,input{font:inherit}button{cursor:pointer}.app{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto}.top{display:flex;gap:12px;align-items:center;padding:12px 16px;background:#080d17;color:#fff;border-bottom:1px solid #27314a;position:sticky;top:0;z-index:30}.logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(145deg,#a78bfa,#6d28d9);display:grid;place-items:center;font-weight:900;box-shadow:0 0 24px #7c3aed66}.top strong{white-space:nowrap;letter-spacing:.03em}.ver{font-size:12px;color:#c8cfe0;padding:4px 8px;border:1px solid #343e57;border-radius:999px}.top input{flex:1;min-width:100px;background:#151c2b;color:#fff;border:1px solid #35415e;border-radius:10px;padding:10px 12px}.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:9px 12px;font-weight:750;transition:.18s ease}.btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.12)}.primary{background:linear-gradient(135deg,#7c3aed,#6d28d9);border-color:#8b5cf6;color:#fff}.theme-toggle{border:1px solid #35415e;background:#151c2b;color:#fff;border-radius:999px;padding:8px 11px}.layout{display:grid;grid-template-columns:248px minmax(0,1fr) 300px;min-height:0}.panel{background:var(--panel);overflow:auto;border-right:1px solid var(--line)}.panel.right{border-right:0;border-left:1px solid var(--line)}.panel h2{font-size:15px;margin:0;padding:15px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.count{font-size:11px;color:var(--muted);background:var(--panel2);padding:3px 7px;border-radius:999px}.section{padding:14px;border-bottom:1px solid var(--line)}.section-title{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:850;margin:2px 0 10px}.shelf{border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px;background:linear-gradient(145deg,var(--panel),var(--panel2));cursor:grab;box-shadow:0 6px 18px rgba(0,0,0,.05);transition:.18s ease}.shelf:hover{transform:translateY(-2px);border-color:var(--accent)}.shelf b{display:block}.shelf-icon{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:900;margin-bottom:9px}.shelf-icon.form{background:linear-gradient(145deg,#22c55e,#15803d)}.shelf-icon.records{background:linear-gradient(145deg,#3b82f6,#1d4ed8)}.meta{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;margin-top:6px}.badge{font-size:10px;border-radius:999px;padding:3px 7px;font-weight:800}.badge.stable{background:var(--record-soft);color:var(--record)}.badge.dev{background:var(--accent-soft);color:var(--accent)}.progress-card{border:1px solid var(--line);border-radius:13px;padding:12px;background:var(--panel2)}.progress-bar{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:9px 0}.progress-bar span{display:block;width:72%;height:100%;background:linear-gradient(90deg,#8b5cf6,#ec4899)}.canvas-wrap{overflow:auto;background:radial-gradient(circle at 50% 45%,rgba(124,58,237,.06),transparent 34%),linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:auto,24px 24px,24px 24px}.canvas{position:relative;min-width:980px;min-height:700px}.node{position:absolute;width:224px;background:linear-gradient(155deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow);user-select:none;overflow:hidden}.node:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--node-color,var(--accent))}.node[data-type="forms"]{--node-color:var(--record)}.node[data-type="records"]{--node-color:var(--textflow)}.node.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent),var(--shadow)}.head{padding:13px 14px;border-bottom:1px solid var(--line);cursor:move;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.node-remove{border:0;background:transparent;color:var(--danger);font-weight:900;font-size:20px;line-height:1;padding:0 2px}.body{padding:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;font-size:13px}.port{width:16px;height:16px;border-radius:50%;background:var(--record);box-shadow:0 0 0 2px var(--record),0 0 16px color-mix(in srgb,var(--record) 55%,transparent);border:3px solid var(--panel);cursor:crosshair;animation:portPulse 2.2s infinite}.port.in{background:var(--record);box-shadow:0 0 0 2px var(--record),0 0 16px color-mix(in srgb,var(--record) 55%,transparent)}@keyframes portPulse{50%{transform:scale(1.08)}}.pill{font-size:11px;padding:3px 7px;border-radius:999px;background:var(--record-soft);color:var(--record);font-weight:750}.edges{position:absolute;inset:0;pointer-events:none}.edge{fill:none;stroke:var(--record);stroke-width:4;stroke-linecap:round;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--record) 55%,transparent));stroke-dasharray:9 10;animation:dataFlow 1.1s linear infinite}@keyframes dataFlow{to{stroke-dashoffset:-19}}.edge-hit{fill:none;stroke:transparent;stroke-width:20;pointer-events:stroke;cursor:pointer}.edge.selected{stroke:var(--event);stroke-width:5}.glue-engine{position:absolute;left:420px;top:430px;width:150px;height:150px;border-radius:50%;border:1px solid #516084;background:radial-gradient(circle,#24164e 0,#10182a 52%,#080d17 100%);color:#fff;display:grid;place-items:center;text-align:center;box-shadow:0 0 0 8px #7c3aed18,0 0 55px #7c3aed55;pointer-events:none}.glue-engine:before,.glue-engine:after{content:"";position:absolute;border:1px solid #8b5cf677;border-radius:50%;inset:-10px;animation:spin 7s linear infinite}.glue-engine:after{inset:-21px;border-style:dashed;animation-direction:reverse;animation-duration:10s}@keyframes spin{to{transform:rotate(360deg)}}.glue-core{font-size:12px;font-weight:900;letter-spacing:.08em}.glue-state{font-size:10px;color:#c4b5fd;margin-top:4px}.help{font-size:12px;line-height:1.45;color:var(--muted)}.inspector label{display:block;font-size:12px;font-weight:750;margin:10px 0 4px}.inspector input,.inspector textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--text)}.inspector textarea{height:190px;font-family:monospace;font-size:11px}.console{background:var(--console);color:#e5e7eb;padding:10px 14px;max-height:165px;overflow:auto;font:12px ui-monospace,monospace;border-top:1px solid #28324a}.ok{color:#62e6a5}.err{color:#ff8a80}.preview{display:none;position:fixed;inset:0;background:var(--bg);z-index:50;overflow:auto}.preview.open{display:block}.preview-top{position:sticky;top:0;background:#080d17;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;z-index:4}.preview-grid{max-width:1500px;margin:auto;padding:20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}.runtime-frame{width:100%;height:980px;border:1px solid var(--line);border-radius:15px;background:#fff}.runtime-shell{min-width:0}.runtime-label{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:0 0 8px;font-size:13px}.runtime-state{color:var(--muted)}@media(max-width:900px){.layout{grid-template-columns:1fr}.panel{display:none}.canvas-wrap{min-height:72vh}.preview-grid{grid-template-columns:1fr}.runtime-frame{height:1050px}.top .minor{display:none}}
 .agent-card{cursor:pointer}.agent-head{display:flex;gap:10px;align-items:center;margin-bottom:9px}.agent-avatar{width:44px;height:44px;border-radius:11px;object-fit:cover;flex:none;border:1px solid var(--line);background:var(--panel2)}.agent-role{font-size:11px;line-height:1.35;color:var(--muted);margin-top:2px}.badge.council{background:var(--accent-soft);color:var(--accent)}.agent-call{width:100%;margin-top:10px;padding:7px 10px;font-size:11px;letter-spacing:.07em}.agent-profile-avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line);background:var(--panel2)}.agent-profile-art{width:100%;display:block;margin:11px 0;border:1px solid var(--line);border-radius:13px}.agent-authority{list-style:none;margin:6px 0 0;padding:0;font-size:12px;color:var(--muted)}.agent-authority li{display:flex;gap:8px;padding:3px 0}.agent-authority b{font-weight:900;width:12px;flex:none}.agent-authority .yes{color:var(--record)}.agent-authority .no{color:var(--danger)}
 .agent-pills{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}.agent-pill{font-size:10px;font-weight:850;letter-spacing:.06em;border-radius:999px;padding:3px 8px}.agent-pill.ok{background:var(--record-soft);color:var(--record)}.agent-pill.warn{background:var(--accent-soft);color:var(--accent)}.inspector textarea.boris-request{height:76px;font-family:inherit;font-size:12px}.boris-quick{display:grid;gap:6px;margin-bottom:11px}.boris-quick .btn{text-align:left;padding:7px 10px;font-size:12px;font-weight:700}.boris-run{width:100%;letter-spacing:.08em}.run-request{border-left:2px solid var(--line);padding-left:9px;margin:2px 0 11px}.finding-card{border:1px solid var(--line);border-left:3px solid var(--muted);border-radius:12px;padding:11px 12px;margin-bottom:10px;background:var(--panel2)}.finding-card.sev-high,.finding-card.refused,.finding-card.errored{border-left-color:var(--danger)}.finding-card.sev-medium,.finding-card.blocked{border-left-color:#f59e0b}.finding-card.sev-low{border-left-color:var(--muted)}.finding-card.clear{border-left-color:var(--record)}.finding-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}.sev-pill{font-size:10px;font-weight:900;letter-spacing:.07em;border-radius:999px;padding:3px 8px;color:#fff;background:var(--muted)}.sev-pill.sev-high{background:var(--danger)}.sev-pill.sev-medium{background:#f59e0b}.sev-pill.sev-low{background:var(--muted)}.sev-pill.sev-clear{background:var(--record)}.fl{font-size:9px;font-weight:850;letter-spacing:.13em;color:var(--muted);display:block;margin:9px 0 3px}.finding-top .fl{margin:0}.finding-target{font-size:13px;font-weight:800}.finding-body{margin:0;font-size:12px;line-height:1.45}.finding-evidence{display:block;font:11px ui-monospace,monospace;color:var(--muted);word-break:break-word}.agent-identity{margin-top:12px;font-size:12px}.agent-identity summary{cursor:pointer;color:var(--muted);font-weight:750}
+.agent-pill.grant{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff}.grant-tag{font-style:normal;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-left:6px}.inspector textarea.agent-request{height:76px;font-family:inherit;font-size:12px}.agent-quick{display:grid;gap:6px;margin-bottom:11px}.agent-quick .btn{text-align:left;padding:7px 10px;font-size:12px;font-weight:700}.agent-run{width:100%;letter-spacing:.08em;margin-bottom:4px}.agent-force{width:100%;margin-bottom:11px;font-size:12px}
+.artifact-card{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;padding:11px 12px;margin-bottom:10px;background:var(--panel2)}.artifact-card .finding-target{margin-bottom:8px;word-break:break-all}.artifact-download{width:100%;font-size:12px}.artifact-source{margin-top:9px;font-size:12px}.artifact-source summary{cursor:pointer;color:var(--muted);font-weight:750}.artifact-source pre{max-height:280px;overflow:auto;background:var(--console);color:#e5e7eb;border-radius:9px;padding:10px;font:11px ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
+.rooms{display:flex;gap:4px;margin-left:2px}.rooms .room-tab{border:1px solid #35415e;background:#151c2b;color:#c8cfe0;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:750}.rooms .room-tab[aria-current="true"]{background:linear-gradient(135deg,#7c3aed,#6d28d9);border-color:#8b5cf6;color:#fff}
+.room{display:none;overflow:auto;padding:24px 20px 40px;background:var(--bg)}.room.open{display:block}.room-inner{max-width:1180px;margin:auto}.room-head{margin:0 0 20px}.room-head h1{font-size:22px;margin:0 0 5px;letter-spacing:.01em}.room-head p{margin:0;font-size:13px;color:var(--muted);max-width:66ch;line-height:1.5}
+.desk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}.desk{border:1px solid var(--line);border-radius:16px;padding:16px;background:linear-gradient(155deg,var(--panel),var(--panel2));box-shadow:0 6px 18px rgba(0,0,0,.05)}.desk .agent-head{margin-bottom:11px}.desk h3{margin:0;font-size:16px}.desk dl{margin:11px 0 0;font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 10px}.desk dt{color:var(--muted);font-weight:750}.desk dd{margin:0;word-break:break-word}.desk .btn{width:100%;margin-top:12px;font-size:12px;letter-spacing:.06em}
+.matrix-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.matrix{border-collapse:collapse;width:100%;font-size:12px;min-width:520px}.matrix th,.matrix td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}.matrix thead th{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:850}.matrix tbody tr:last-child td{border-bottom:0}.matrix .yes{color:var(--record);font-weight:900}.matrix .no{color:var(--danger);font-weight:900}.matrix .granted{color:var(--accent);font-weight:900}.matrix td.cap{font-family:ui-monospace,monospace}
+.council-block{border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;background:var(--panel)}.council-block h3{margin:0 0 3px;font-size:15px}.council-block .remit{margin:0 0 12px;font-size:12px;color:var(--muted)}.seat{display:flex;gap:11px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}.seat img{width:38px;height:38px;border-radius:10px;object-fit:cover;border:1px solid var(--line);flex:none}.seat b{display:block;font-size:13px}.seat span{font-size:12px;color:var(--muted)}
+.lab-bench{border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;background:var(--panel)}.lab-bench h3{margin:0 0 3px;font-size:15px}.lab-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.lab-actions .btn{font-size:12px}
+@media(max-width:900px){.rooms{width:100%;order:9;overflow-x:auto}.room{padding:18px 14px 32px}}
 </style>
 </head>
 <body>
 <div class="app">
-<header class="top"><div class="logo">◆</div><strong>SHIA APP FACTORY</strong><span class="ver">v0.4.0</span><input id="name" value="Untitled Shia App"><button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">☾</button><button class="btn minor" id="save">Save JSON</button><button class="btn primary" id="run">Run Factory ▶</button></header>
-<main class="layout">
-<aside class="panel"><h2><span>Blocks Shelf</span><span class="count">2 available</span></h2><div class="section"><div class="section-title">Stable</div><div class="shelf" draggable="true" data-block="forms"><div class="shelf-icon form">F</div><b>Forms Block #001</b><div class="meta"><span class="badge stable">Stable</span><span>v1.0.0</span></div></div><div class="section-title">Development</div><div class="shelf" draggable="true" data-block="records"><div class="shelf-icon records">R</div><b>Records Block #002</b><div class="meta"><span class="badge dev">Development</span><span>v0.2.0</span></div></div><p class="help">Drag blocks onto the workbench. Record connections glow green and animate while data is flowing.</p></div><h2><span>In Progress</span><span class="count">1</span></h2><div class="section"><div class="progress-card"><b>Block Interface Standard</b><div class="progress-bar"><span></span></div><div class="meta"><span>Typed ports & manifests</span><span>72%</span></div></div></div><h2><span>Influencers Council</span><span class="count" id="councilCount">0 members</span></h2><div class="section" id="councilShelf"></div></aside>
+<header class="top"><div class="logo">◆</div><strong>SHIA APP FACTORY</strong><span class="ver">v0.4.0</span><input id="name" value="Untitled Shia App"><nav class="rooms" id="rooms" aria-label="Factory rooms"></nav><button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">☾</button><button class="btn minor" id="save">Save JSON</button><button class="btn primary" id="run">Run Factory ▶</button></header>
+<main class="layout" id="workbench">
+<aside class="panel"><h2><span>Blocks Shelf</span><span class="count">2 available</span></h2><div class="section"><div class="section-title">Stable</div><div class="shelf" draggable="true" data-block="forms"><div class="shelf-icon form">F</div><b>Forms Block #001</b><div class="meta"><span class="badge stable">Stable</span><span>v1.0.0</span></div></div><div class="section-title">Development</div><div class="shelf" draggable="true" data-block="records"><div class="shelf-icon records">R</div><b>Records Block #002</b><div class="meta"><span class="badge dev">Development</span><span>v0.2.0</span></div></div><p class="help">Drag blocks onto the workbench. Record connections glow green and animate while data is flowing.</p></div><h2><span>In Progress</span><span class="count">1</span></h2><div class="section"><div class="progress-card"><b>Block Interface Standard</b><div class="progress-bar"><span></span></div><div class="meta"><span>Typed ports & manifests</span><span>72%</span></div></div></div><h2><span>Councils</span><span class="count" id="councilCount">0 members</span></h2><div class="section" id="councilShelf"></div></aside>
 <section class="canvas-wrap" id="wrap"><div class="canvas" id="canvas"><svg class="edges" id="edges"></svg><div class="glue-engine"><div><div class="glue-core">GLUE<br>ENGINE</div><div class="glue-state" id="glueState">Ready</div></div></div></div></section>
 <aside class="panel right"><h2>Inspector</h2><div class="section inspector" id="inspector"><p class="help">Select a block.</p></div><h2>Project Graph</h2><div class="section inspector"><textarea id="json" readonly></textarea></div></aside>
 </main>
+<section class="room" id="room" aria-live="polite"></section>
 <div class="console" id="console"></div>
 </div>
 <div class="preview" id="preview"><div class="preview-top"><b id="previewTitle">Preview</b><button class="btn" id="exit">Exit Preview</button></div><div class="preview-grid" id="previewGrid"></div></div>
 <script src="agents/registry.js"></script>
 <script src="agents/routing.js"></script>
 <script src="agents/advisory.js"></script>
+<script src="agents/growth.js"></script>
+<script src="agents/build.js"></script>
 <script src="agents/panel.js"></script>
 <script>
 (()=>{
@@ -37,17 +49,227 @@ const savedTheme=localStorage.getItem('shia-theme')||'dark';document.documentEle
 function log(t,c=''){con.innerHTML+=`<div class="${c}">${new Date().toLocaleTimeString()}  ${t}</div>`;con.scrollTop=con.scrollHeight}
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 /* The council layer is additive: if agents/*.js fail to load the workbench still runs. */
-const agentRegistry=window.SHIA_AGENTS||null,agentAdvisory=window.ShiaAgentAdvisory||null,agentRouter=agentRegistry&&window.ShiaAgentRouting?window.ShiaAgentRouting.createRouter(agentRegistry.agents):null;
-const borisAgent=agentRegistry&&agentRegistry.byId('BORIS-001'),borisPanel=borisAgent&&window.ShiaAgentPanel&&agentRouter&&agentAdvisory?window.ShiaAgentPanel.createSession({agent:borisAgent,router:agentRouter,advisory:agentAdvisory}):null;
+const agentRegistry=window.SHIA_AGENTS||null,agentRouter=agentRegistry&&window.ShiaAgentRouting?window.ShiaAgentRouting.createRouter(agentRegistry.agents):null;
+/* One panel session per registered agent, wired from the modules that agent's registry entry
+   declares — so adding an agent to registry.js is the whole job, and the shell learns nothing
+   about who it is holding. `modulesFor` withholds a module whose capability the agent lacks, which
+   is why Gary gets no builder. */
+const agentSessions=new Map();
+if(agentRegistry&&agentRouter&&window.ShiaAgentPanel){
+  agentRegistry.agents.forEach(a=>{
+    const mods=agentRegistry.modulesFor(a);
+    const review=mods.filter(m=>m.id!=='build').map(m=>window[m.global]).find(Boolean)||null;
+    const buildMod=mods.filter(m=>m.id==='build').map(m=>window[m.global]).find(Boolean)||null;
+    if(!review)return;
+    agentSessions.set(a.agent_id,window.ShiaAgentPanel.createSession({
+      agent:a,router:agentRouter,review,build:buildMod,capabilities:agentRegistry.capabilities}));
+  });
+}
 let lastBlockId=null;const readyCounts=new Map();
 /* Runtime evidence for "Review Runtime" — observed, never assumed. */
 function agentTelemetry(){const counts={};readyCounts.forEach((n,id)=>counts[id]=n);return{readyCounts:counts,pendingDeliveries:pendingDeliveries.size,mounted:runtimeFrames.size>0}}
-function runBoris(ctx){if(!borisPanel){log('Boris panel unavailable — agent library not loaded','err');return null}const out=borisPanel.run(Object.assign({project,defs,selectedBlockId:lastBlockId,telemetry:agentTelemetry()},ctx||{}));out.logs.forEach(l=>log(esc(l.text),l.cls));selected={kind:'agent',id:'BORIS-001'};inspect();return out}
-function renderCouncil(){const shelf=document.getElementById('councilShelf'),council=agentRegistry&&agentRegistry.council('Influencers Council');if(!shelf||!council)return;const n=council.members.length;document.getElementById('councilCount').textContent=`${n} member${n===1?'':'s'}`;shelf.innerHTML=council.members.map(a=>`<div class="shelf agent-card" data-agent="${esc(a.agent_id)}"><div class="agent-head"><img class="agent-avatar" src="${esc(a.avatars.square)}" alt="${esc(a.display_name)}"><div><b>${esc(a.display_name)}</b><div class="agent-role">${esc(a.card.subtitle)}</div></div></div><div class="meta"><span class="badge council">${esc(a.card.badge)}</span><span>${esc(a.agent_id)}</span></div><button class="btn agent-call" data-call="${esc(a.agent_id)}">${esc(a.card.action_label)}</button></div>`).join('')+'<p class="help">Advisory seats. Council agents may challenge the graph and request rework; they cannot merge, deploy or reach secrets.</p>';shelf.querySelectorAll('.agent-card').forEach(el=>{el.onclick=()=>{selected={kind:'agent',id:el.dataset.agent};render()}});shelf.querySelectorAll('.agent-call').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();const a=agentRegistry.byId(btn.dataset.call);if(a)invokeAgent(`Call ${a.display_name}`)}})}
+function agentContext(ctx){return Object.assign({project,defs,selectedBlockId:lastBlockId,telemetry:agentTelemetry()},ctx||{})}
+function runAgent(agentId,ctx){
+  const s=agentSessions.get(agentId);
+  if(!s){log(`Agent panel unavailable for ${esc(agentId)} — agent library not loaded`,'err');return null}
+  const out=s.run(agentContext(ctx));
+  out.logs.forEach(l=>log(esc(l.text),l.cls));
+  selected={kind:'agent',id:agentId};inspect();renderRoom();return out;
+}
+/* Building goes through the same session, so the router's refusal happens before the builder is
+   reached for an agent without the grant. */
+function buildWithAgent(agentId,ctx){
+  const s=agentSessions.get(agentId);
+  if(!s){log(`Agent panel unavailable for ${esc(agentId)}`,'err');return null}
+  const out=s.runBuild(agentContext(ctx));
+  out.logs.forEach(l=>log(esc(l.text),l.cls));
+  selected={kind:'agent',id:agentId};inspect();renderRoom();return out;
+}
+function downloadText(name,text,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:type||'text/plain'}));
+  a.download=name;a.click();URL.revokeObjectURL(a.href);
+  log(`Downloaded ${esc(name)}`,'ok');
+}
+/* Download buttons appear in both the Inspector and the Lab, so they are wired from one place
+   against whichever build the agent last produced. */
+function wireArtifacts(scope,agentId){
+  const s=agentSessions.get(agentId);
+  (scope||document).querySelectorAll('.artifact-download').forEach(btn=>{
+    btn.onclick=e=>{
+      e.stopPropagation();
+      const build=s&&s.state.build;
+      const file=build&&(build.artifacts||[]).find(a=>a.path===btn.dataset.path);
+      if(!file){log(`Artifact ${esc(btn.dataset.path)} is no longer available — build again`,'err');return}
+      downloadText(file.path,file.contents,file.language==='json'?'application/json':'text/plain');
+    };
+  });
+}
+function agentCardHtml(a){
+  return `<div class="shelf agent-card" data-agent="${esc(a.agent_id)}"><div class="agent-head"><img class="agent-avatar" src="${esc(a.avatars.square)}" alt="${esc(a.display_name)}"><div><b>${esc(a.display_name)}</b><div class="agent-role">${esc(a.card.subtitle)}</div></div></div><div class="meta"><span class="badge council">${esc(a.card.badge)}</span><span>${esc(a.agent_id)}</span></div><button class="btn agent-call" data-call="${esc(a.agent_id)}">${esc(a.card.action_label)}</button></div>`;
+}
+/* Every council in the registry, not one named one — a new council appears here by being declared. */
+function renderCouncil(){
+  const shelf=document.getElementById('councilShelf');
+  if(!shelf||!agentRegistry)return;
+  const roster=agentRegistry.roster().filter(c=>c&&c.members.length);
+  const total=roster.reduce((n,c)=>n+c.members.length,0);
+  document.getElementById('councilCount').textContent=`${total} member${total===1?'':'s'}`;
+  shelf.innerHTML=roster.map(c=>`<div class="section-title">${esc(c.name)}</div>`+c.members.map(agentCardHtml).join('')).join('')
+    +'<p class="help">Council seats are advisory: they challenge the graph and request rework. Building is granted separately, and nobody merges, deploys or reaches secrets.</p>';
+  shelf.querySelectorAll('.agent-card').forEach(el=>{el.onclick=()=>{selected={kind:'agent',id:el.dataset.agent};render()}});
+  shelf.querySelectorAll('.agent-call').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();const a=agentRegistry.byId(btn.dataset.call);if(a)invokeAgent(`Call ${a.display_name}`)}});
+}
+
 /* Alias invocation ("Call Boris", "@Boris …") routes exactly as before, then hands the resolved
    request to the Inspector panel so the answer is readable, not just logged. */
-function invokeAgent(text){if(!agentRouter||!agentAdvisory){log('Agent library unavailable — council invocation skipped','err');return null}const hit=agentRouter.resolve(text);if(!hit){log('No council agent matched that invocation','err');return null}log(`${esc(hit.agentName)} ▸ invoked via "${esc(hit.alias)}"`,'ok');const out=runBoris({requestText:hit.request,invocation:hit});return Object.assign({},hit,{review:out&&out.run})}
-window.ShiaFactory=Object.assign(window.ShiaFactory||{},{invoke:invokeAgent,agents:agentRegistry,router:agentRouter});
+/* An alias contributed by a build grant runs the build pass; every other alias reviews. Which is
+   which comes from the registry, so this stays true for the next agent that gets a grant. */
+function aliasRunsBuild(agent,alias){
+  return ((agent&&agent.grants)||[]).some(g=>(g.aliases||[]).includes(alias)&&g.capabilities&&g.capabilities.may_build===true);
+}
+function invokeAgent(text){
+  if(!agentRouter){log('Agent library unavailable — council invocation skipped','err');return null}
+  const hit=agentRouter.resolve(text);
+  if(!hit){log('No council agent matched that invocation','err');return null}
+  log(`${esc(hit.agentName)} ▸ invoked via "${esc(hit.alias)}"`,'ok');
+  const agent=agentRegistry.byId(hit.agentId);
+  const out=aliasRunsBuild(agent,hit.alias)
+    ? buildWithAgent(hit.agentId,{requestText:hit.request,invocation:hit})
+    : runAgent(hit.agentId,{requestText:hit.request,invocation:hit});
+  return Object.assign({},hit,{result:out&&(out.run||out.build)});
+}
+
+window.ShiaFactory=Object.assign(window.ShiaFactory||{},{invoke:invokeAgent,agents:agentRegistry,router:agentRouter,sessions:agentSessions,room:openRoom});
+/* ---------------------------------------------------------------- rooms
+
+   The Factory has four rooms and they are all registry-driven: Workbench is the block graph,
+   Lab is where agents holding a build grant author code, Office is one desk per agent, and
+   Headquarters is the councils and the standing authority matrix. Registering an agent puts it in
+   all of them without a line changing here. */
+let currentRoom='workbench';
+const roomEl=document.getElementById('room'),workbenchEl=document.getElementById('workbench');
+const rooms=(agentRegistry&&agentRegistry.rooms)||[{id:'workbench',label:'Workbench',blurb:''}];
+const cap=k=>esc(String(k).replace(/^may_/,'').replace(/_/g,' '));
+
+function renderRoomTabs(){
+  const nav=document.getElementById('rooms');
+  if(!nav)return;
+  nav.innerHTML=rooms.map(r=>`<button class="room-tab" data-room="${esc(r.id)}" aria-current="${r.id===currentRoom}">${esc(r.label)}</button>`).join('');
+  nav.querySelectorAll('.room-tab').forEach(b=>{b.onclick=()=>openRoom(b.dataset.room)});
+}
+function openRoom(id){
+  if(!rooms.some(r=>r.id===id))return;
+  currentRoom=id;
+  const onWorkbench=id==='workbench';
+  workbenchEl.style.display=onWorkbench?'':'none';
+  roomEl.classList.toggle('open',!onWorkbench);
+  renderRoomTabs();
+  renderRoom();
+  if(onWorkbench)draw();
+  log(`Entered the ${esc(rooms.find(r=>r.id===id).label)}`,'ok');
+}
+function roomHead(room){
+  return `<div class="room-head"><h1>${esc(room.label)}</h1><p>${esc(room.blurb)}</p></div>`;
+}
+function renderRoom(){
+  if(currentRoom==='workbench'||!roomEl)return;
+  const room=rooms.find(r=>r.id===currentRoom);
+  const body=currentRoom==='lab'?renderLab():currentRoom==='office'?renderOffice():renderHQ();
+  roomEl.innerHTML=`<div class="room-inner">${roomHead(room)}${body}</div>`;
+  roomEl.querySelectorAll('[data-call]').forEach(btn=>{
+    btn.onclick=()=>{const a=agentRegistry.byId(btn.dataset.call);if(a){openRoom('workbench');selected={kind:'agent',id:a.agent_id};render()}};
+  });
+  roomEl.querySelectorAll('[data-build]').forEach(btn=>{
+    btn.onclick=()=>buildWithAgent(btn.dataset.build,{target:btn.dataset.target||'export',force:btn.dataset.force==='1'});
+  });
+  agentRegistry&&agentRegistry.agents.forEach(a=>wireArtifacts(roomEl,a.agent_id));
+}
+
+/* --- Lab ------------------------------------------------------------- */
+function renderLab(){
+  if(!agentRegistry)return '<p class="help">Agent library not loaded.</p>';
+  const builders=agentRegistry.agents.filter(a=>{const s=agentSessions.get(a.agent_id);return s&&s.canBuild});
+  const others=agentRegistry.agents.filter(a=>!builders.includes(a));
+  if(!builders.length)return '<p class="help">No agent currently holds a build grant, so nothing can be authored here.</p>';
+  return builders.map(a=>{
+    const s=agentSessions.get(a.agent_id);
+    const grant=(a.grants||[])[0];
+    const build=s.state.build;
+    const targets=(window.ShiaAgentBuild&&window.ShiaAgentBuild.TARGETS)||{};
+    return `<section class="lab-bench"><div class="agent-head"><img class="agent-avatar" src="${esc(a.avatars.square)}" alt="${esc(a.display_name)}"><div><h3>${esc(a.display_name)}'s bench</h3><div class="agent-role">${esc(a.agent_id)} · grant ${esc(grant?grant.grant_id:'—')}</div></div></div>`
+      +(grant?`<p class="help">${esc(grant.reason)}<br>Granted by <b>${esc(grant.granted_by)}</b> on ${esc(grant.granted_on)}, scoped to ${esc(grant.scope)}. Withheld: ${grant.withheld.map(cap).join(', ')}.</p>`:'')
+      +`<p class="help">Current graph · <b>${esc(project.name)}</b> — ${project.blocks.length} block${project.blocks.length===1?'':'s'}, ${project.connections.length} connection${project.connections.length===1?'':'s'}.</p>`
+      +`<div class="lab-actions">${Object.entries(targets).map(([id,t])=>`<button class="btn${id==='export'?' primary':''}" data-build="${esc(a.agent_id)}" data-target="${esc(id)}">${esc(t.label)}</button>`).join('')}`
+      +(build&&build.status==='blocked'?`<button class="btn" data-build="${esc(a.agent_id)}" data-target="${esc(build.target)}" data-force="1">Force build anyway</button>`:'')
+      +`</div>`
+      +s.renderBuild(build)
+      +`</section>`;
+  }).join('')
+  +(others.length?`<p class="help">Without a build grant: ${others.map(a=>esc(a.display_name)).join(', ')}. ${others.length===1?'That agent advises':'Those agents advise'} on the graph and ${others.length===1?'does':'do'} not author code.</p>`:'');
+}
+
+/* --- Office ---------------------------------------------------------- */
+function renderOffice(){
+  if(!agentRegistry)return '<p class="help">Agent library not loaded.</p>';
+  return `<div class="desk-grid">`+agentRegistry.agents.map(a=>{
+    const eff=agentRegistry.capabilities(a);
+    const granted=agentRegistry.grantedCapabilities(a);
+    const s=agentSessions.get(a.agent_id);
+    const modules=agentRegistry.modulesFor(a).map(m=>m.label);
+    return `<article class="desk"><div class="agent-head"><img class="agent-avatar" src="${esc(a.avatars.square)}" alt="${esc(a.display_name)}"><div><h3>${esc(a.display_name)}</h3><div class="agent-role">${esc(a.card.subtitle)}</div></div></div>`
+      +`<div class="agent-pills"><span class="agent-pill ok">● ${esc(a.card.status)}</span>`
+      +(a.runtime.certified?'':'<span class="agent-pill warn">PENDING RECERTIFICATION</span>')
+      +(granted.length?'<span class="agent-pill grant">BUILD GRANT</span>':'')
+      +`</div>`
+      +`<dl><dt>ID</dt><dd>${esc(a.agent_id)}</dd>`
+      +`<dt>Council</dt><dd>${esc(a.council.council)} — ${esc(a.council.authority)}</dd>`
+      +`<dt>Does</dt><dd>${modules.length?modules.map(esc).join(' · '):'—'}</dd>`
+      +`<dt>Roles</dt><dd>${a.roles.map(esc).join(' · ')}</dd>`
+      +`<dt>Call by</dt><dd>${agentRegistry.aliasesFor(a).map(esc).join(' · ')}</dd>`
+      +`<dt>Package</dt><dd>${esc(a.package)} @ ${esc(a.package_version)}</dd>`
+      +`<dt>Integrity</dt><dd>${a.package_integrity==='transfer_manifest'?'transfer manifest, verified':'baseline recorded at integration'}</dd>`
+      +`<dt>Avatar</dt><dd>${a.avatar_provenance==='package'?'from the package':'generated placeholder — no art shipped'}</dd>`
+      +`<dt>Granted</dt><dd>${granted.length?granted.map(cap).join(', '):'nothing beyond the package'}</dd>`
+      +`<dt>Withheld</dt><dd>${Object.keys(eff).filter(k=>eff[k]===false).map(cap).join(', ')||'—'}</dd>`
+      +`<dt>Answers to</dt><dd>${esc(a.authority.final_authority)}</dd></dl>`
+      +(a.simulation_notice?`<p class="help">${esc(a.simulation_notice)}</p>`:'')
+      +(s?`<button class="btn primary" data-call="${esc(a.agent_id)}">${esc(a.card.action_label)}</button>`:'<p class="help">No runtime module loaded for this agent.</p>')
+      +`</article>`;
+  }).join('')+`</div>`;
+}
+
+/* --- Headquarters ---------------------------------------------------- */
+function renderHQ(){
+  if(!agentRegistry)return '<p class="help">Agent library not loaded.</p>';
+  const agents=agentRegistry.agents;
+  const councils=agentRegistry.roster().filter(Boolean).map(c=>
+    `<section class="council-block"><h3>${esc(c.name)}</h3><p class="remit">${esc(c.remit||'')}</p>`
+    +(c.members.length?c.members.map(m=>`<div class="seat"><img src="${esc(m.avatars.square)}" alt="${esc(m.display_name)}"><div><b>${esc(m.display_name)} · ${esc(m.agent_id)}</b><span>${esc(m.council.role)}</span></div></div>`).join('')
+      :'<p class="help">No seats filled.</p>')
+    +`</section>`).join('');
+
+  /* Every capability any registered agent declares, so the matrix cannot quietly omit one. */
+  const keys=[];
+  agents.forEach(a=>Object.entries(agentRegistry.capabilities(a)).forEach(([k,v])=>{if(typeof v==='boolean'&&!keys.includes(k))keys.push(k)}));
+  keys.sort();
+  const cell=(a,k)=>{
+    const eff=agentRegistry.capabilities(a);
+    if(!(k in eff))return '<span class="no" title="not declared — withheld by default">✗</span>';
+    if(eff[k]!==true)return '<span class="no">✗</span>';
+    return agentRegistry.grantedCapabilities(a).includes(k)
+      ? '<span class="granted" title="granted in the Factory">✓</span>'
+      : '<span class="yes">✓</span>';
+  };
+  const matrix=`<div class="section-title">Standing authority</div><div class="matrix-wrap"><table class="matrix">`
+    +`<thead><tr><th>Capability</th>${agents.map(a=>`<th>${esc(a.display_name)}</th>`).join('')}</tr></thead><tbody>`
+    +keys.map(k=>`<tr><td class="cap">${esc(k)}</td>${agents.map(a=>`<td>${cell(a,k)}</td>`).join('')}</tr>`).join('')
+    +`<tr><td class="cap">final_authority</td>${agents.map(a=>`<td>${esc(a.authority.final_authority)}</td>`).join('')}</tr>`
+    +`</tbody></table></div>`
+    +`<p class="help"><span class="yes">✓</span> held by the package · <span class="granted">✓</span> granted in the Factory by Cristian · <span class="no">✗</span> withheld, including anything an agent never declares. The router refuses a request needing a withheld capability before it dispatches.</p>`;
+  return councils+matrix;
+}
+
 function add(type,x,y){const b={id:uid(type),type,x,y,title:type==='forms'?'Customer Booking':'Appointment Records'};project.blocks.push(b);if(type==='records')recordsByInstance[b.id]=[];selected={kind:'block',id:b.id};render();log(defs[type].name+' added','ok')}
 function node(id){return project.blocks.find(b=>b.id===id)}
 function update(){project.name=document.getElementById('name').value;json.value=JSON.stringify(project,null,2)}
@@ -56,7 +278,7 @@ function removeConnection(id){const c=project.connections.find(x=>x.id===id);pro
 function pc(id,dir){const n=canvas.querySelector(`[data-id="${id}"]`),p=n&&n.querySelector(`.port[data-dir="${dir}"]`);if(!p)return null;const cr=canvas.getBoundingClientRect(),r=p.getBoundingClientRect();return{x:r.left-cr.left+r.width/2+canvas.parentElement.scrollLeft,y:r.top-cr.top+r.height/2+canvas.parentElement.scrollTop}}
 function path(a,b){const d=Math.max(60,Math.abs(b.x-a.x)*.45);return`M${a.x},${a.y} C${a.x+d},${a.y} ${b.x-d},${b.y} ${b.x},${b.y}`}
 function draw(){edges.setAttribute('width',canvas.scrollWidth);edges.setAttribute('height',canvas.scrollHeight);edges.innerHTML='<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#6f3fd6"/></marker></defs>';project.connections.forEach(c=>{const a=pc(c.from,'out'),b=pc(c.to,'in');if(!a||!b)return;const d=path(a,b);const visible=document.createElementNS('http://www.w3.org/2000/svg','path');visible.setAttribute('d',d);visible.setAttribute('class','edge'+(selected?.kind==='connection'&&selected.id===c.id?' selected':''));visible.setAttribute('marker-end','url(#a)');edges.appendChild(visible);const hit=document.createElementNS('http://www.w3.org/2000/svg','path');hit.setAttribute('d',d);hit.setAttribute('class','edge-hit');hit.addEventListener('click',()=>{selected={kind:'connection',id:c.id};render()});edges.appendChild(hit)})}
-function inspect(){if(!selected){ins.innerHTML='<p class="help">Select a block or connection.</p>';return}if(selected.kind==='block')lastBlockId=selected.id;if(selected.kind==='agent'){if(!borisPanel||selected.id!=='BORIS-001'){ins.innerHTML='<p class="help">Agent panel unavailable.</p>';return}ins.innerHTML=borisPanel.render({projectName:project.name});const box=document.getElementById('borisRequest');box.oninput=e=>borisPanel.setRequest(e.target.value);ins.querySelectorAll('.boris-action').forEach(btn=>{btn.onclick=()=>runBoris({scope:btn.dataset.scope})});document.getElementById('runBoris').onclick=()=>runBoris({});return}if(selected.kind==='connection'){const c=project.connections.find(x=>x.id===selected.id);if(!c){selected=null;return inspect()}ins.innerHTML=`<b>Connection</b><p class="help">${node(c.from)?.title||c.from}.submitted → ${node(c.to)?.title||c.to}.addRecord</p><p class="help">Type: ${c.type}</p><button class="btn" id="deleteConnection">Delete connection</button>`;document.getElementById('deleteConnection').onclick=()=>removeConnection(c.id);return}const b=node(selected.id);if(!b){selected=null;return inspect()}ins.innerHTML=`<b>${defs[b.type].name}</b><label>Instance title</label><input id="title" value="${b.title}"><p class="help">${b.type==='forms'?'Output: submitted → Record':'Input: addRecord ← Record'}</p><button class="btn" id="deleteBlock">Delete block</button>`;document.getElementById('title').oninput=e=>{b.title=e.target.value;update()};document.getElementById('deleteBlock').onclick=()=>removeBlock(b.id)}
+function inspect(){if(!selected){ins.innerHTML='<p class="help">Select a block or connection.</p>';return}if(selected.kind==='block')lastBlockId=selected.id;if(selected.kind==='agent'){const sess=agentSessions.get(selected.id);if(!sess){ins.innerHTML='<p class="help">Agent panel unavailable.</p>';return}const id=selected.id;ins.innerHTML=sess.render({projectName:project.name});const box=document.getElementById('agentRequest');if(box)box.oninput=e=>sess.setRequest(e.target.value);let buildTarget='export';ins.querySelectorAll('.agent-action').forEach(btn=>{btn.onclick=()=>runAgent(id,{scope:btn.dataset.scope})});const runBtn=document.getElementById('runAgent');if(runBtn)runBtn.onclick=()=>runAgent(id,{});ins.querySelectorAll('.agent-build').forEach(btn=>{btn.onclick=()=>{buildTarget=btn.dataset.target;buildWithAgent(id,{target:buildTarget})}});const buildBtn=document.getElementById('runBuild');if(buildBtn)buildBtn.onclick=()=>buildWithAgent(id,{target:buildTarget});const forceBtn=document.getElementById('forceBuild');if(forceBtn)forceBtn.onclick=()=>buildWithAgent(id,{target:buildTarget,force:true});wireArtifacts(ins,id);return}if(selected.kind==='connection'){const c=project.connections.find(x=>x.id===selected.id);if(!c){selected=null;return inspect()}ins.innerHTML=`<b>Connection</b><p class="help">${node(c.from)?.title||c.from}.submitted → ${node(c.to)?.title||c.to}.addRecord</p><p class="help">Type: ${c.type}</p><button class="btn" id="deleteConnection">Delete connection</button>`;document.getElementById('deleteConnection').onclick=()=>removeConnection(c.id);return}const b=node(selected.id);if(!b){selected=null;return inspect()}ins.innerHTML=`<b>${defs[b.type].name}</b><label>Instance title</label><input id="title" value="${b.title}"><p class="help">${b.type==='forms'?'Output: submitted → Record':'Input: addRecord ← Record'}</p><button class="btn" id="deleteBlock">Delete block</button>`;document.getElementById('title').oninput=e=>{b.title=e.target.value;update()};document.getElementById('deleteBlock').onclick=()=>removeBlock(b.id)}
 function render(){canvas.querySelectorAll('.node').forEach(n=>n.remove());project.blocks.forEach(b=>{const d=defs[b.type],el=document.createElement('div');el.className='node'+(selected?.kind==='block'&&selected.id===b.id?' sel':'');el.dataset.id=b.id;el.dataset.type=b.type;el.style.left=b.x+'px';el.style.top=b.y+'px';el.innerHTML=`<div class="head"><div><b>${d.name}</b><div class="meta">v${d.version}</div></div><button class="node-remove" title="Remove block" aria-label="Remove block">×</button></div><div class="body">${d.in?`<div class="row"><span class="port in" data-dir="in" data-type="${d.in.type}"></span><span>${d.in.id}</span><span class="pill">${d.in.type}</span></div>`:''}${d.out?`<div class="row"><span>${d.out.id}</span><span class="pill">${d.out.type}</span><span class="port" data-dir="out" data-type="${d.out.type}"></span></div>`:''}</div>`;canvas.appendChild(el);el.querySelector('.node-remove').onclick=e=>{e.stopPropagation();removeBlock(b.id)};el.onmousedown=e=>{if(e.target.classList.contains('port')||e.target.classList.contains('node-remove'))return;selected={kind:'block',id:b.id};drag=b;const r=el.getBoundingClientRect();offset={x:e.clientX-r.left,y:e.clientY-r.top};render()};el.querySelectorAll('.port').forEach(p=>{p.onmousedown=e=>{e.stopPropagation();if(p.dataset.dir==='out')connecting={from:b.id,type:p.dataset.type}};p.onmouseup=e=>{e.stopPropagation();if(connecting&&p.dataset.dir==='in'){if(connecting.type!==p.dataset.type){log('Connection rejected: incompatible types','err')}else if(connecting.from===b.id){log('Connection rejected: block cannot connect to itself','err')}else{const exists=project.connections.some(c=>c.from===connecting.from&&c.to===b.id&&c.fromPort==='submitted'&&c.toPort==='addRecord');if(exists)log('Connection already exists','err');else{project.connections.push({id:uid('conn'),from:connecting.from,fromPort:'submitted',to:b.id,toPort:'addRecord',type:p.dataset.type});log('Connected submitted → addRecord','ok')}}connecting=null;render()}}})});draw();inspect();update()}
 document.onmousemove=e=>{if(drag){const r=canvas.getBoundingClientRect();drag.x=Math.max(10,e.clientX-r.left+canvas.parentElement.scrollLeft-offset.x);drag.y=Math.max(10,e.clientY-r.top+canvas.parentElement.scrollTop-offset.y);const el=canvas.querySelector(`[data-id="${drag.id}"]`);if(el){el.style.left=drag.x+'px';el.style.top=drag.y+'px'}draw();update()}};
 document.onmouseup=()=>{drag=null;connecting=null};
@@ -109,6 +331,9 @@ window.addEventListener('message',event=>{
 });
 
 document.getElementById('exit').onclick=()=>document.getElementById('preview').classList.remove('open');
-const f={id:'booking-form',type:'forms',x:120,y:180,title:'Customer Booking'},r={id:'appointment-records',type:'records',x:500,y:240,title:'Appointment Records'};project.blocks=[f,r];project.connections=[{id:'starter',from:f.id,fromPort:'submitted',to:r.id,toPort:'addRecord',type:'Record'}];recordsByInstance[r.id]=[];renderCouncil();render();log('Factory v0.4.0 initialized','ok');log('Real block runtime mounting enabled','ok');const councilRoster=agentRegistry&&agentRegistry.council('Influencers Council');log(councilRoster?`Influencers Council: ${councilRoster.members.map(a=>esc(a.agent_id)).join(', ')} registered (advisory)`:'Influencers Council registry not loaded',councilRoster?'ok':'err')})();
+const f={id:'booking-form',type:'forms',x:120,y:180,title:'Customer Booking'},r={id:'appointment-records',type:'records',x:500,y:240,title:'Appointment Records'};project.blocks=[f,r];project.connections=[{id:'starter',from:f.id,fromPort:'submitted',to:r.id,toPort:'addRecord',type:'Record'}];recordsByInstance[r.id]=[];renderCouncil();renderRoomTabs();render();log('Factory v0.4.0 initialized','ok');log('Real block runtime mounting enabled','ok');const roster=agentRegistry&&agentRegistry.roster().filter(c=>c&&c.members.length);
+if(!roster||!roster.length){log('Agent registry not loaded — the workbench runs, the councils do not','err')}
+else{roster.forEach(c=>log(`${esc(c.name)}: ${c.members.map(a=>esc(a.agent_id)).join(', ')} registered (advisory)`,'ok'));
+  agentRegistry.agents.forEach(a=>{const g=agentRegistry.grantedCapabilities(a);if(g.length)log(`${esc(a.display_name)} holds a Factory grant: ${g.map(k=>esc(k.replace(/^may_/,'').replace(/_/g,' '))).join(', ')} — merge, deploy and secrets stay withheld`,'ok')})}})();
 </script>
 </body></html>

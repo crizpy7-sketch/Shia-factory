@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "agent_id": "GARY-001",
+  "migration_goal": "Preserve Shia-owned growth-agent identity, personality, memory, evidence, skills, certifications, campaign history, and performance history across model runtimes.",
+  "portable_assets": [
+    "identity/identity.json",
+    "identity/cognitive_model.md",
+    "identity/agent_passport.json",
+    "knowledge/research_ledger.jsonl",
+    "knowledge/failure_library.jsonl",
+    "knowledge/changed_beliefs.jsonl",
+    "runtime/runtime_contract.md"
+  ],
+  "nonportable_assets": [
+    "proprietary model weights",
+    "hidden provider reasoning state",
+    "provider-specific latent behavior",
+    "unexported private model memory"
+  ],
+  "recommended_storage": {
+    "documents": "Git or object storage",
+    "structured_memory": "PostgreSQL or compatible open database",
+    "semantic_retrieval": "portable embeddings/vector index with rebuild support",
+    "events": "append-only JSONL or database event table"
+  },
+  "future_runtime_candidates": [
+    "cloud LLM runtime",
+    "self-hosted open-source LLM",
+    "local inference server",
+    "hybrid local/cloud router"
+  ],
+  "migration_gate": "RECERTIFICATION_REQUIRED",
+  "package_version": "0.4.0-multi-model-research-in-progress"
+}

@@ -10,14 +10,15 @@
 
 const SEVERITY_ORDER={high:0,medium:1,low:2};
 
-/* Review scopes drive the Inspector's quick actions. Every scope reads the same evidence;
-   they differ only in which findings they surface. */
+/* Review scopes drive the Inspector's quick actions, in the order declared here. Every scope reads
+   the same evidence; they differ only in which findings they surface. `action` is the button label,
+   and `requires_block` marks a scope the panel cannot run without a selection on the workbench. */
 const SCOPES={
-  'factory':{label:'Entire Factory',keep:()=>true},
-  'connections':{label:'Connections',keep:f=>f.tags.includes('connections')},
-  'runtime':{label:'Runtime',keep:f=>f.tags.includes('runtime')},
-  'block':{label:'Selected Block',keep:(f,ctx)=>f.blockId===ctx.blockId},
-  'highest-risk':{label:'Highest-Risk Defect',keep:()=>true,limit:1}
+  'factory':{label:'Entire Factory',action:'Review Entire Factory',keep:()=>true},
+  'block':{label:'Selected Block',action:'Review Selected Block',requires_block:true,keep:(f,ctx)=>f.blockId===ctx.blockId},
+  'highest-risk':{label:'Highest-Risk Defect',action:'Find Highest-Risk Defect',keep:()=>true,limit:1},
+  'runtime':{label:'Runtime',action:'Review Runtime',keep:f=>f.tags.includes('runtime')},
+  'connections':{label:'Connections',action:'Review Connections',keep:f=>f.tags.includes('connections')}
 };
 
 function review(project,options){

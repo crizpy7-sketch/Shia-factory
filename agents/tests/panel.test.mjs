@@ -1,4 +1,6 @@
-/* BORIS-001 Inspector panel: interaction, visible findings, console audit trail, authority. */
+/* The agent Inspector panel, driven by BORIS-001: interaction, visible findings, console audit
+   trail, authority. The panel is agent-agnostic — agents/tests/agents.test.mjs covers it holding
+   Gary and covers Boris's build section. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -11,6 +13,7 @@ const panel=require('../panel.js');
 
 const agent=registry.byId('BORIS-001');
 const router=createRouter(registry.agents);
+const capabilities=registry.capabilities;
 const defs={
   forms:{name:'Forms Block #001',version:'1.0.0',stability:'stable',out:{id:'submitted',type:'Record'}},
   records:{name:'Records Block #002',version:'0.2.0',stability:'development',in:{id:'addRecord',type:'Record'}}
@@ -20,7 +23,7 @@ const project={
   blocks:[{id:'booking-form',type:'forms',title:'Customer Booking'},{id:'appointment-records',type:'records',title:'Appointment Records'}],
   connections:[{id:'starter',from:'booking-form',fromPort:'submitted',to:'appointment-records',toPort:'addRecord',type:'Record'}]
 };
-const session=(over={})=>panel.createSession(Object.assign({agent,router,advisory},over));
+const session=(over={})=>panel.createSession(Object.assign({agent,router,advisory,capabilities},over));
 const ctx=(over={})=>Object.assign({project,defs},over);
 const logText=out=>out.logs.map(l=>l.text).join('\n');
 
@@ -32,7 +35,7 @@ test('CALL BORIS opens an Inspector interaction, not just a profile', () => {
   assert.match(html, /PENDING RECERTIFICATION/);
   assert.match(html, /Untitled Shia App/, 'current project name missing');
   assert.match(html, /What should Boris review\?/);
-  assert.match(html, /<textarea id="borisRequest"/);
+  assert.match(html, /<textarea id="agentRequest"/);
   assert.match(html, /RUN BORIS/);
   for(const label of ['Review Entire Factory','Review Selected Block','Find Highest-Risk Defect','Review Runtime','Review Connections']){
     assert.ok(html.includes(label), `quick action missing: ${label}`);
@@ -113,16 +116,27 @@ test('forbidden merge, deploy and secrets requests stay blocked', () => {
 
 test('the panel always states the authority boundaries', () => {
   const html=session().render({projectName:'x'});
-  assert.match(html, /Challenge decisions/);
-  assert.match(html, /Request rework/);
-  assert.match(html, /Merge/);
-  assert.match(html, /Deploy/);
-  assert.match(html, /Access secrets/);
+  /* Rows are derived from the capabilities the agent actually declares, so this list is Boris's
+     own contract rather than a fixed one the panel carries. */
+  assert.match(html, /challenge rights/);
+  assert.match(html, /request rework/);
+  assert.match(html, /<b class="no">✗<\/b><span>merge<\/span>/);
+  assert.match(html, /<b class="no">✗<\/b><span>deploy<\/span>/);
+  assert.match(html, /<b class="no">✗<\/b><span>access secrets<\/span>/);
   assert.match(html, /Final authority: Cristian/);
 });
 
+test('granted capabilities are shown as granted, not as if the package allowed them', () => {
+  const html=session().render({projectName:'x'});
+  assert.match(html, /author code<i class="grant-tag">granted<\/i>|author code <i class="grant-tag">granted<\/i>/);
+  assert.match(html, /Granted in the Factory by Cristian/);
+  assert.match(html, /package's own boundaries are unchanged/);
+  /* The grant must not read as loosening merge, deploy or secrets. */
+  assert.match(html, /<b class="no">✗<\/b><span>merge<\/span>/);
+});
+
 test('Boris cannot silently fail: a throwing review is reported', () => {
-  const s=session({advisory:{review(){throw new Error('graph walk exploded')}}});
+  const s=session({advisory:{review(){throw new Error('graph walk exploded')},SCOPES:advisory.SCOPES}});
   const out=s.run(ctx());
   assert.equal(out.run.status, 'error');
   assert.match(out.run.error, /graph walk exploded/);
@@ -131,7 +145,7 @@ test('Boris cannot silently fail: a throwing review is reported', () => {
 });
 
 test('Boris cannot silently fail: a malformed review result is reported', () => {
-  const s=session({advisory:{review(){return {summary:'looks fine'}}}});
+  const s=session({advisory:{review(){return {summary:'looks fine'}},SCOPES:advisory.SCOPES}});
   const out=s.run(ctx());
   assert.equal(out.run.status, 'error');
   assert.match(out.run.error, /no result/i);
