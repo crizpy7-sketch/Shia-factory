@@ -2,6 +2,25 @@
 
 Shia Factory is the orchestration and product layer. GStack is the default software-engineering execution methodology. GBrain is the default persistent memory substrate.
 
+## gstack (REQUIRED — global install)
+
+Before meaningful AI-assisted engineering work, verify that a global GStack install can be resolved. This repository intentionally does **not** vendor GStack skills.
+
+```bash
+_GS=""
+for _D in "${GSTACK_ROOT:-}" "$HOME/.claude/skills/gstack" "$HOME/.codex/skills/gstack" "$HOME/.factory/skills/gstack" "$HOME/.kiro/skills/gstack" "$HOME/.config/opencode/skills/gstack" "$HOME/.slate/skills/gstack" "$HOME/.cursor/skills/gstack" "$HOME/.openclaw/skills/gstack" "$HOME/.hermes/skills/gstack" "$HOME/.gbrain/skills/gstack" "$HOME/.gstack/repos/gstack"; do
+  [ -z "$_GS" ] && [ -n "$_D" ] && [ -d "$_D/bin" ] && _GS="$_D"
+done
+[ -n "$_GS" ] && echo "GSTACK_OK: $_GS" || echo "GSTACK_MISSING"
+```
+
+If GStack is missing, stop and run one of the repository bootstrap scripts:
+
+- `bash scripts/bootstrap-ai-stack.sh`
+- `powershell -ExecutionPolicy Bypass -File scripts/bootstrap-ai-stack.ps1`
+
+Then restart the AI coding tool. Do not work around a missing GStack installation by copying skill files into this repo.
+
 ## Source of truth
 
 - Preserve Shia-owned agent identity, authority, avatars, evaluation records, blocks, and Factory UI in this repository.
@@ -85,7 +104,7 @@ Recommended GBrain sources for the broader system:
 - `second-brain`
 - `research`
 
-This repository should resolve to the `shia-factory` source when the local GBrain installation is configured.
+This repository is pinned by `.gbrain-source` to `shia-factory`. The bootstrap scripts register that source against the local checkout if it does not already exist.
 
 ## Completeness standard
 
