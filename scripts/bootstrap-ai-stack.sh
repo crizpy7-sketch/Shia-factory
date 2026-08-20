@@ -32,6 +32,9 @@ else
   git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git "${GSTACK_DIR}"
 fi
 
+echo "Enabling GStack team mode..."
+(cd "${GSTACK_DIR}" && bash ./setup --team)
+
 install_gstack_host() {
   local host="$1"
   echo "Installing/updating GStack host profile: ${host}"
@@ -41,7 +44,7 @@ install_gstack_host() {
 if command -v claude >/dev/null 2>&1; then
   install_gstack_host claude
 else
-  echo "Claude Code not detected; skipping Claude host profile."
+  echo "Claude Code not detected; team-mode files are still installed."
 fi
 
 if command -v codex >/dev/null 2>&1; then
@@ -52,10 +55,6 @@ fi
 
 if command -v hermes >/dev/null 2>&1; then
   install_gstack_host hermes
-fi
-
-if ! command -v claude >/dev/null 2>&1 && ! command -v codex >/dev/null 2>&1 && ! command -v hermes >/dev/null 2>&1; then
-  echo "No supported AI host CLI was detected. GStack source is installed; rerun this script after installing a host."
 fi
 
 echo "Installing/updating GBrain from garrytan/gbrain..."
@@ -76,6 +75,13 @@ if [ ! -f "${GBRAIN_CONFIG}" ]; then
   gbrain init --pglite
 else
   echo "Existing GBrain config detected; leaving its engine unchanged."
+fi
+
+if gbrain sources list --json 2>/dev/null | grep -qE '"id"[[:space:]]*:[[:space:]]*"shia-factory"'; then
+  echo "GBrain source 'shia-factory' already exists."
+else
+  echo "Registering this repository as GBrain source 'shia-factory'..."
+  gbrain sources add shia-factory --path "${REPO_ROOT}" --federated
 fi
 
 register_mcp() {
@@ -106,4 +112,5 @@ gbrain doctor || {
 
 echo
 echo "Bootstrap complete."
+echo "This repo is pinned to GBrain source: shia-factory"
 echo "Next: read docs/AI_STACK.md, then verify a remember -> fresh-session recall round trip."
