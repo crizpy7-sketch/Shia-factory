@@ -83,12 +83,16 @@ Portable named agent, Growth Council seat, role: growth strategy / brand positio
 carried in `registry.js` and rendered on his panel and his office seat: GARY-001 is not Gary
 Vaynerchuk, does not impersonate him, and must not imply endorsement, affiliation or personal access.
 
-**No runtime here executes him.** His execution host is the separate Gary Vee Growth Agent
-application (release 1.1.0), which is not vendored into this repository. So `agents/gary.js` is
-deliberately the part of Gary that is code rather than cognition: it routes his aliases, applies his
-authority, classifies the owner-approval gates a request trips, and reports what evidence a growth
-answer would still need. **It never produces strategy**, and every run states that no certified Gary
-runtime answered.
+**He runs here, bounded — but not from this panel.** The `boris/` runtime hosts him: it loads his
+package, briefs him from his own cognitive model and operating rules, and offers him read, research
+and reasoning tools only, because his package grants no authority to change a repository. That is a
+second host and not his canonical one — the separate Gary Vee Growth Agent application (release
+1.1.0) still is — and hosting him certifies nothing.
+
+`agents/gary.js` is a different thing again: the part of Gary that is code rather than cognition. It
+routes his aliases, applies his owner-approval gates, and reports what evidence a growth answer would
+still need. **It never produces strategy**, and every run says so and points at the Office, where the
+runtime actually is.
 
 **Authority.** Twelve declared boundaries, and they are not the same shape as Boris's. Three
 categories, all enforced in `routing.js`:
@@ -121,6 +125,34 @@ seed. They were imported unchanged, including `GARY-UNATTRIBUTED-005`, which is 
 
 **Avatar.** None shipped. `avatar_art_supplied: false` and a monogram placeholder stands in, named as
 a placeholder everywhere it appears.
+
+## The boardroom
+
+Both agents can be convened into one room. Each is briefed from his own package, speaks in his own
+voice, and — from round two — has read what the others said. He may agree; he may challenge; a
+challenge must name what would change his mind.
+
+The runtime enforces four things a meeting must never do, in code rather than in the prompt:
+
+| Rule | Where |
+| --- | --- |
+| It cannot act — exactly one tool, `contribute`, is on the table | `boris/src/meetings/service.ts` |
+| It cannot decide — a contribution can only route a decision to Cristian | the tool's schema |
+| It cannot summarise — minutes are assembled from contributions, never by a model | `boris/src/domain/meetings.ts` |
+| It cannot pass silence off as assent — an unreachable agent is recorded absent, and a meeting nobody attended is `blocked` | `MeetingService.run` |
+
+Each agent is told who else is in the room using **that colleague's own package**: Gary's cognitive
+model states the BORIS relationship and his operating rules name him twice; Boris's says he may
+disagree with other agents and councils. `describeColleagues` quotes them rather than inventing a
+rapport.
+
+```sh
+cd boris && node dist/src/cli.js meet "Should we launch in March?" --rounds 2
+cd boris && node dist/src/cli.js minutes <meetingId>
+```
+
+The same room is in the HQ Boardroom, and the decisions it routes to Cristian appear in the Office's
+outstanding list — a record nobody reads is the same as no record.
 
 ## Portability and recertification
 

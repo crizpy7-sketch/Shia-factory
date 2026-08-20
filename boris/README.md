@@ -30,7 +30,7 @@ Then open the building:
 
 | Address | What it is |
 | --- | --- |
-| <http://127.0.0.1:8787/hq> | **Headquarters** — Office, Workshop, Lab, Records |
+| <http://127.0.0.1:8787/hq> | **Headquarters** — Office, Workshop, Lab, Boardroom, Records |
 | <http://127.0.0.1:8787/factory> | The block workbench |
 | <http://127.0.0.1:8787/> | The BORIS Control Center |
 
