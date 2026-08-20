@@ -1,0 +1,11 @@
+{
+  "name": "broken-calc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fixture project with a deliberate defect, used to exercise the BORIS agent loop end to end.",
+  "scripts": {
+    "test": "node --test test/stats.test.js",
+    "typecheck": "node --check src/stats.js"
+  }
+}

@@ -1,0 +1,21 @@
+<!-- Placeholder monogram for GARY-001.
+     Not a portrait, not brand art, and not an attempt at Gary's visual identity: it exists so the
+     headquarters can render a second seat honestly while his real assets are outstanding. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gary — placeholder monogram">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1626"/><stop offset="1" stop-color="#05090f"/>
+    </linearGradient>
+    <linearGradient id="s" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2ea8ff"/><stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="72" fill="url(#g)"/>
+  <rect x="8" y="8" width="496" height="496" rx="66" fill="none" stroke="url(#s)" stroke-width="3" opacity=".7"/>
+  <text x="256" y="300" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif"
+        font-size="240" font-weight="900" fill="url(#s)">G</text>
+  <text x="256" y="372" text-anchor="middle" font-family="ui-monospace,monospace"
+        font-size="26" letter-spacing="6" fill="#7f93b5">GARY-001</text>
+  <text x="256" y="416" text-anchor="middle" font-family="ui-monospace,monospace"
+        font-size="18" letter-spacing="2" fill="#4a5b78">PLACEHOLDER · AWAITING ASSETS</text>
+</svg>

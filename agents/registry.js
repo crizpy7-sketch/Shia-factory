@@ -53,6 +53,12 @@ const BORIS={
   },
   /* avatar-square for the Factory shelf card, avatar-circle for profile/chat,
      avatar-brand-sheet for full identity art, avatar-app-icon where a compact icon is needed. */
+  /* The shipped avatar-square.png and avatar-circle.png are miscropped fragments of the brand
+     sheet (they include the sneakers above the portrait). The sheet itself is clean, so every
+     surface crops the portrait from it using these verified fractions. No packaged byte is
+     modified; when corrected square/circle exports arrive, drop `portrait` and the surfaces fall
+     back to the files. */
+  portrait:{source:'brand_sheet',x:0.022,y:0.828,size:0.128},
   avatars:{
     square:'assets/agents/boris-001/avatar-square.png',
     circle:'assets/agents/boris-001/avatar-circle.png',
@@ -61,14 +67,97 @@ const BORIS={
   }
 };
 
-const agents=[BORIS];
-const councils=[{name:'Influencers Council',members:['BORIS-001']}];
+/* GARY-001's identity package arrived on 2026-08-15 and was imported verbatim to agents/GARY-001.
+   Everything below restates that package for the UI; agents/tests/registry.test.mjs fails if the
+   two drift. What his package does not contain is not filled in here: he shipped no avatar art and
+   no recertification gate document, and neither has been invented. See agents/GARY-001/IMPORT.md
+   for the full import record, including why his provenance is weaker than Boris's. */
+const GARY={
+  agent_id:'GARY-001',
+  display_name:'Gary',
+  class:'portable_named_agent',
+  origin:'Shia App Factory',
+  package:'agents/GARY-001',
+  package_version:'0.4.0-multi-model-research-in-progress',
+  status:'active_identity_seed_multi_model_research_in_progress',
+  /* Carried from identity.json so every surface that renders Gary can render this with him. */
+  simulation_notice:'Shia-owned growth agent with a distinct fictionalized operating identity. It may be informed by verified public marketing principles associated with Gary Vaynerchuk, but it is not Gary Vaynerchuk, does not impersonate him, and must not imply endorsement, affiliation, or personal access.',
+  roles:['growth strategy','brand positioning','content and distribution strategy','audience development','campaign architecture','organic acquisition','marketing experimentation','launch planning','conversion and retention analysis'],
+  /* Verbatim from identity.json. Gary declares more capabilities than Boris and more refusals with
+     them; the extra keys are the point, so they are not flattened to Boris's shape. */
+  authority:{
+    advisory:true,
+    challenge_rights:true,
+    may_request_rework:true,
+    may_generate_campaigns:true,
+    may_generate_content_drafts:true,
+    may_recommend_budget:true,
+    may_run_read_only_analysis_when_authorized:true,
+    may_publish_without_owner_approval:false,
+    may_spend_money:false,
+    may_access_secrets_directly:false,
+    may_bypass_platform_rules:false,
+    final_authority:'Cristian',
+    may_create_legal_commitments:false
+  },
+  invocation_aliases:['Call Gary','Ask Gary','Gary review this','Run this through Gary','Gary launch plan','@Gary'],
+  /* The boris/ runtime hosts Gary as well as Boris: it loads his package, briefs him from his own
+     cognitive model and operating rules, and gives him only the tools his authority covers. That is
+     a second host, not the canonical one — the Gary Vee Growth Agent application still is — and
+     hosting him certifies nothing. `certified` stays false and his passport status is unchanged. */
+  runtime:{
+    host:'Shia agent runtime (boris/)',
+    host_is_identity:false,
+    host_note:'Hosted by the Shia agent runtime in boris/, which loads his package and bounds him to read, research and reasoning tools. His canonical execution host remains the separate Gary Vee Growth Agent application (release 1.1.0). Hosting is not certification.',
+    certification_status:'IDENTITY_SEEDED_RESEARCH_IN_PROGRESS_RUNTIME_RECERTIFICATION_PENDING',
+    certified:false,
+    contract:'agents/GARY-001/runtime/runtime_contract.md',
+    /* No recertification gate document shipped. Boris has one; Gary's passport carries the test
+       list instead. A document is not authored on his behalf. */
+    recertification:null,
+    passport:'agents/GARY-001/identity/agent_passport.json',
+    migration_manifest:'agents/GARY-001/runtime/migration_manifest.json'
+  },
+  council:{
+    council:'Growth Council',
+    role:'Growth, brand, distribution and experimentation',
+    authority:'advisory',
+    activation:['positioning','messaging','campaign','audience','distribution','launch','experiment','retention','council-debate']
+  },
+  card:{
+    subtitle:'Growth • Brand • Distribution • Experiments',
+    status:'AVAILABLE',
+    badge:'Growth Council',
+    action_label:'CALL GARY'
+  },
+  /* No avatar art of any kind shipped in Gary's archive. The monogram is a generated stand-in and
+     says so; `avatar_art_supplied` is what the UI reads to avoid presenting it as his brand art. */
+  avatar_art_supplied:false,
+  avatars:{
+    square:'assets/agents/gary-001/placeholder-monogram.svg',
+    circle:'assets/agents/gary-001/placeholder-monogram.svg',
+    brand_sheet:null,
+    app_icon:'assets/agents/gary-001/placeholder-monogram.svg'
+  }
+};
+
+const agents=[BORIS,GARY];
+/* Each agent's council seat is the one his own package declares. Boris's council-membership.json
+   says Influencers Council; Gary's agent-card.json says Growth Council. Neither was moved to make
+   a tidier roster. */
+const councils=[
+  {name:'Influencers Council',members:['BORIS-001']},
+  {name:'Growth Council',members:['GARY-001']}
+];
 
 return {
   version:'1.0.0',
   agents,
   councils,
   byId(id){return agents.find(a=>a.agent_id===id)||null},
+  /* Agents whose identity package has actually been transferred and verified. */
+  established(){return agents.filter(a=>!a.provisional)},
+  provisional(){return agents.filter(a=>a.provisional===true)},
   council(name){
     const c=councils.find(x=>x.name===name);
     if(!c)return null;

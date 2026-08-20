@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BORIS-001 Control Center</title>
+<style>
+:root{
+  --bg:#04070f;--panel:#0a1120;--panel2:#0d1626;--line:#16263f;--text:#dbe7ff;--muted:#7f93b5;
+  --neon:#2ea8ff;--neon-soft:#0e2338;--ok:#31dc72;--warn:#f5a524;--err:#ff5c5c;--shadow:0 18px 44px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 20% -10%,rgba(46,168,255,.16),transparent 45%),var(--bg);
+  color:var(--text);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--neon)}
+header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#071021,#04070f);position:sticky;top:0;z-index:20}
+.brand{font-weight:900;letter-spacing:.14em;font-size:15px}
+.brand small{display:block;font-weight:600;letter-spacing:.06em;color:var(--muted);font-size:10px}
+.spacer{flex:1}
+.pill{font-size:10px;font-weight:800;letter-spacing:.09em;padding:4px 9px;border-radius:999px;
+  border:1px solid var(--line);background:var(--panel2);color:var(--muted);text-transform:uppercase}
+.pill.live{color:var(--ok);border-color:#12432a}
+.pill.warn{color:var(--warn);border-color:#4a3510}
+.pill.err{color:var(--err);border-color:#4a1717}
+main{display:grid;grid-template-columns:300px minmax(0,1fr) 330px;gap:16px;padding:16px;align-items:start}
+.card{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);
+  border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+/* The avatar is a sprite cut from the shipped BORIS brand sheet; the tile is chosen by the
+   heartbeat reported by the runtime, so it always shows real state. */
+.avatar{width:100%;aspect-ratio:1/1.31;border-radius:14px;border:1px solid var(--line);
+  background-image:url(/avatar/sheet);background-size:847.46% auto;background-repeat:no-repeat;
+  box-shadow:0 0 34px rgba(46,168,255,.22) inset,0 0 22px rgba(46,168,255,.14)}
+.state{margin-top:10px;text-align:center;font-weight:900;letter-spacing:.12em;font-size:13px;color:var(--neon)}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:12px;border-bottom:1px dashed rgba(127,147,181,.14)}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:var(--muted)}
+.kv span:last-child{text-align:right;word-break:break-word}
+.muted{color:var(--muted)}
+.unknown{color:var(--muted);font-style:italic}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:8px 12px;font-weight:700}
+button:hover{border-color:var(--neon)}
+button.primary{background:linear-gradient(135deg,#1668b8,#2ea8ff);border-color:#2ea8ff;color:#04121f}
+button.danger{border-color:#4a1717;color:var(--err)}
+textarea,input,select{width:100%;background:#060c17;border:1px solid var(--line);border-radius:10px;
+  color:var(--text);padding:9px;font:inherit}
+textarea{min-height:86px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.stream{max-height:460px;overflow:auto;font:11.5px/1.5 ui-monospace,monospace}
+.ev{display:grid;grid-template-columns:62px 152px 1fr;gap:10px;padding:4px 0;border-bottom:1px solid rgba(22,38,63,.6)}
+.ev .t{color:var(--muted)}
+.ev .ty{color:var(--neon);font-weight:700}
+.ev.warn .ty{color:var(--warn)}.ev.error .ty{color:var(--err)}
+.task{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;background:#070d1a;cursor:pointer}
+.task:hover{border-color:var(--neon)}
+.task b{display:block;font-size:13px}
+.badge{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.badge.queued{color:var(--muted)}.badge.working,.badge.planning,.badge.verifying{color:var(--neon);border-color:#123a5c}
+.badge.completed{color:var(--ok);border-color:#12432a}.badge.failed{color:var(--err);border-color:#4a1717}
+.badge.blocked,.badge.awaiting_approval{color:var(--warn);border-color:#4a3510}
+.approval{border:1px solid #4a3510;border-radius:12px;padding:10px;margin-bottom:10px;background:#150f04}
+.approval h3{margin:0 0 6px;font-size:13px;color:var(--warn)}
+.approval p{margin:3px 0;font-size:12px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{padding:5px 9px;font-size:11px}
+.tabs button[aria-selected=true]{border-color:var(--neon);color:var(--neon)}
+.mono{font:11.5px ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
+.list{max-height:300px;overflow:auto}
+@media(max-width:1100px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">BORIS-001<small>SHIA APP FACTORY · CONTROL CENTER</small></div>
+  <div class="spacer"></div>
+  <span class="pill" id="providerPill">provider…</span>
+  <span class="pill" id="certPill">certification…</span>
+  <span class="pill" id="connPill">connecting…</span>
+</header>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>Agent</h2>
+      <div class="avatar" id="avatar"></div>
+      <div class="state" id="stateLabel">—</div>
+      <div class="kv"><span>Agent</span><span id="agentId">—</span></div>
+      <div class="kv"><span>Provider</span><span id="provider">—</span></div>
+      <div class="kv"><span>Model</span><span id="model">—</span></div>
+      <div class="kv"><span>Uptime</span><span id="uptime">—</span></div>
+      <div class="kv"><span>Queue</span><span id="queue">—</span></div>
+      <div class="kv"><span>Workers</span><span id="workers">—</span></div>
+      <div class="kv"><span>Recertification</span><span id="recert">—</span></div>
+    </div>
+    <div class="card">
+      <h2>Submit objective</h2>
+      <textarea id="objective" placeholder="Inspect this codebase, identify the failing behaviour, repair it and verify with tests."></textarea>
+      <div class="row"><input id="workspace" placeholder="workspace directory (optional)"></div>
+      <div class="row">
+        <select id="priority"><option>normal</option><option>high</option><option>critical</option><option>low</option></select>
+        <button class="primary" id="submitBtn">Submit</button>
+      </div>
+      <div class="row"><input id="token" type="password" placeholder="API token (if required)"></div>
+      <p class="muted" id="submitNote"></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2>Current work</h2>
+      <div id="current"><p class="unknown">No task running.</p></div>
+    </div>
+    <div class="card">
+      <h2>Activity stream</h2>
+      <div class="stream" id="stream"><p class="unknown">Waiting for events…</p></div>
+    </div>
+    <div class="card">
+      <h2>Task detail</h2>
+      <div id="detail"><p class="unknown">Select a task.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2>Approvals</h2>
+      <div id="approvals"><p class="unknown">None pending.</p></div>
+    </div>
+    <div class="card">
+      <h2>Queue</h2>
+      <div id="tasks" class="list"><p class="unknown">No tasks.</p></div>
+    </div>
+    <div class="card">
+      <h2>Usage</h2>
+      <div id="usage"><p class="unknown">No usage recorded.</p></div>
+    </div>
+    <div class="card">
+      <h2>Knowledge</h2>
+      <div class="tabs">
+        <button data-tab="memory" aria-selected="true">Memory</button>
+        <button data-tab="skills" aria-selected="false">Skills</button>
+      </div>
+      <div id="knowledge" class="list"><p class="unknown">Loading…</p></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+// Sprite coordinates verified against the shipped brand sheet (3 columns x 4 rows of expressions).
+const COLS = [0.6420, 0.7590, 0.8760], ROWS = [0.0180, 0.2010, 0.3840, 0.5670];
+const TILE_W = 0.1180, TILE_H = 0.1550;
+const SPRITE = {
+  thinking:[0,0], researching:[0,1], analyzing:[0,2],
+  approved:[1,0], warning:[1,1], bug_found:[1,2],
+  deploying:[2,0], red_team:[2,1], fixing:[2,2],
+  done:[3,0], learning:[3,1], sleep:[3,2],
+};
+// The shipped avatar-circle.png is a miscropped fragment of the sheet, so the profile portrait is
+// cropped from the sheet itself using the same verified fractions the registry records.
+const PORTRAIT = { x: 0.022, y: 0.828, size: 0.128 };
+// Heartbeat states map onto real expressions; nothing animates unless the runtime says so.
+const STATE_SPRITE = {
+  idle:'sleep', sleep:'sleep', thinking:'thinking', planning:'thinking', researching:'researching',
+  analyzing:'analyzing', working:'fixing', testing:'analyzing', bug_found:'bug_found', fixing:'fixing',
+  blocked:'warning', awaiting_approval:'warning', deploying:'deploying', learning:'learning',
+  done:'done', error:'warning',
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const unknown = (label) => `<span class="unknown">${esc(label)}</span>`;
+let token = sessionStorage.getItem('boris_token') || '';
+if (token) $('token').value = token;
+$('token').addEventListener('change', (e) => { token = e.target.value.trim(); sessionStorage.setItem('boris_token', token); refresh(); });
+
+async function api(path, options = {}) {
+  const res = await fetch(path, {
+    ...options,
+    headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) },
+  });
+  if (res.status === 401) throw new Error('unauthorised — enter the API token');
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+  return res.json();
+}
+
+function setSprite(state) {
+  const key = STATE_SPRITE[state] || 'thinking';
+  const [row, col] = SPRITE[key];
+  const el = $('avatar');
+  el.style.backgroundPositionX = `${(COLS[col] / (1 - TILE_W)) * 100}%`;
+  el.style.backgroundPositionY = `${(ROWS[row] / (1 - TILE_H)) * 100}%`;
+  $('stateLabel').textContent = state.replace(/_/g, ' ').toUpperCase();
+}
+
+function badge(status) { return `<span class="badge ${esc(status)}">${esc(status)}</span>`; }
+
+async function refreshStatus() {
+  const s = await api('/api/status');
+  setSprite(s.heartbeat);
+  $('agentId').textContent = `${s.displayName} · ${s.agentId}`;
+  $('provider').innerHTML = s.providerAvailable
+    ? esc(s.provider)
+    : `${esc(s.provider)} <span class="pill err">unavailable</span>`;
+  $('model').textContent = s.model;
+  $('uptime').textContent = `${s.uptimeSeconds}s`;
+  $('queue').textContent = s.queueDepth;
+  $('workers').textContent = s.activeWorkers;
+  $('recert').textContent = s.recertification;
+  $('providerPill').textContent = s.isTestDouble ? 'TEST DOUBLE PROVIDER' : (s.providerAvailable ? 'PROVIDER READY' : 'NO CREDENTIALS');
+  $('providerPill').className = 'pill ' + (s.isTestDouble ? 'warn' : (s.providerAvailable ? 'live' : 'err'));
+  $('certPill').textContent = `RECERT ${s.recertification}`;
+  $('certPill').className = 'pill ' + (s.recertification === 'PENDING' ? 'warn' : 'live');
+
+  $('current').innerHTML = s.currentTaskId ? `
+    <div class="kv"><span>Task</span><span>${esc(s.currentTaskId)}</span></div>
+    <div class="kv"><span>Objective</span><span>${esc((s.currentObjective || '').slice(0, 220))}</span></div>
+    <div class="kv"><span>Step</span><span>${esc(s.currentStep || 'unknown')}</span></div>
+    <div class="kv"><span>Tool</span><span>${s.currentTool ? esc(s.currentTool) : unknown('idle between tools')}</span></div>
+    <div class="kv"><span>Workers</span><span>${s.activeWorkers}</span></div>`
+    : '<p class="unknown">No task running.</p>';
+}
+
+async function refreshTasks() {
+  const { tasks } = await api('/api/tasks?limit=40');
+  $('tasks').innerHTML = tasks.length ? tasks.map((t) => `
+    <div class="task" data-id="${esc(t.id)}">
+      <b>${esc(t.title)}</b>
+      <div class="row" style="margin-top:6px;gap:6px">${badge(t.status)}
+        <span class="muted">${t.attempts}/${t.maxAttempts} attempts · ${t.usage.toolCalls} tools · ${t.usage.modelCalls} model calls</span></div>
+    </div>`).join('') : '<p class="unknown">No tasks.</p>';
+  for (const el of $('tasks').querySelectorAll('.task')) {
+    el.onclick = () => showTask(el.dataset.id);
+  }
+}
+
+async function showTask(id) {
+  const data = await api(`/api/tasks/${id}`);
+  const t = data.task;
+  const cost = data.usage.reduce((sum, u) => u.costUsd === null ? sum : sum + u.costUsd, 0);
+  const anyCost = data.usage.some((u) => u.costUsd !== null);
+  $('detail').innerHTML = `
+    <div class="kv"><span>${esc(t.id)}</span><span>${badge(t.status)}</span></div>
+    <div class="kv"><span>Objective</span><span>${esc(t.objective.slice(0, 400))}</span></div>
+    <div class="kv"><span>Workspace</span><span class="mono">${esc(t.workspace)}</span></div>
+    <div class="kv"><span>Model calls</span><span>${t.usage.modelCalls}</span></div>
+    <div class="kv"><span>Tool calls</span><span>${t.usage.toolCalls}</span></div>
+    <div class="kv"><span>Workers</span><span>${t.usage.workers}</span></div>
+    <div class="kv"><span>Cost</span><span>${anyCost ? '$' + cost.toFixed(4) : unknown('not reported by provider')}</span></div>
+    ${t.plan ? `<h2 style="margin-top:12px">Plan</h2>
+      <div class="mono">${esc(t.plan.summary)}</div>
+      <div class="mono" style="margin-top:6px">${t.plan.steps.map((s, i) => `${i + 1}. ${esc(s.step)}\n   why: ${esc(s.why)}\n   verify: ${esc(s.verification)}`).join('\n')}</div>
+      ${t.plan.risks.length ? `<div class="muted" style="margin-top:6px;font-size:11.5px">risks: ${t.plan.risks.map(esc).join(' · ')}</div>` : ''}`
+      : '<h2 style="margin-top:12px">Plan</h2><p class="unknown">No plan recorded — the workspace stays locked until there is one.</p>'}
+    ${t.result ? `<h2 style="margin-top:12px">Result</h2><div class="mono">${esc(t.result)}</div>` : ''}
+    ${t.error ? `<h2 style="margin-top:12px">Error</h2><div class="mono" style="color:var(--err)">${esc(t.error)}</div>` : ''}
+    <h2 style="margin-top:12px">Evidence (${t.evidence.length})</h2>
+    <div class="mono">${t.evidence.length ? t.evidence.map((e) => `${e.ok ? '✓' : '✗'} [${esc(e.kind)}] ${esc(e.summary)}`).join('\n') : 'none recorded'}</div>
+    <h2 style="margin-top:12px">Tool calls (${data.toolCalls.length})</h2>
+    <div class="mono">${data.toolCalls.length ? data.toolCalls.map((c) => `${c.ok === true ? '✓' : c.ok === false ? '✗' : '·'} ${esc(c.tool)} ${c.durationMs ?? '—'}ms ${esc(c.error || '')}`).join('\n') : 'none'}</div>
+    ${t.status !== 'completed' && t.status !== 'cancelled' ? `<div class="row"><button class="danger" id="cancelBtn">Cancel task</button></div>` : ''}`;
+  const cancel = $('cancelBtn');
+  if (cancel) cancel.onclick = async () => { await api(`/api/tasks/${id}/cancel`, { method: 'POST' }); refresh(); };
+}
+
+async function refreshApprovals() {
+  const { approvals } = await api('/api/approvals?state=requested');
+  $('approvals').innerHTML = approvals.length ? approvals.map((a) => `
+    <div class="approval">
+      <h3>${esc(a.action)}</h3>
+      <p><b>Why</b> ${esc(a.reason)}</p>
+      <p><b>Risk</b> ${esc(a.risk)}</p>
+      <p><b>If approved</b> ${esc(a.consequence)}</p>
+      <div class="row">
+        <button class="primary" data-approve="${esc(a.id)}">Approve</button>
+        <button class="danger" data-reject="${esc(a.id)}">Reject</button>
+      </div>
+    </div>`).join('') : '<p class="unknown">None pending.</p>';
+  for (const el of $('approvals').querySelectorAll('[data-approve]')) {
+    el.onclick = async () => { await api(`/api/approvals/${el.dataset.approve}/approve`, { method: 'POST', body: JSON.stringify({ by: 'dashboard' }) }); refresh(); };
+  }
+  for (const el of $('approvals').querySelectorAll('[data-reject]')) {
+    el.onclick = async () => { await api(`/api/approvals/${el.dataset.reject}/reject`, { method: 'POST', body: JSON.stringify({ by: 'dashboard' }) }); refresh(); };
+  }
+}
+
+async function refreshUsage() {
+  const { tasks } = await api('/api/tasks?limit=100');
+  const totals = tasks.reduce((acc, t) => ({
+    modelCalls: acc.modelCalls + t.usage.modelCalls,
+    toolCalls: acc.toolCalls + t.usage.toolCalls,
+    inputTokens: acc.inputTokens + t.usage.inputTokens,
+    outputTokens: acc.outputTokens + t.usage.outputTokens,
+    costUsd: acc.costUsd + t.usage.costUsd,
+    workers: acc.workers + t.usage.workers,
+  }), { modelCalls: 0, toolCalls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, workers: 0 });
+  $('usage').innerHTML = `
+    <div class="kv"><span>Model calls</span><span>${totals.modelCalls}</span></div>
+    <div class="kv"><span>Tool calls</span><span>${totals.toolCalls}</span></div>
+    <div class="kv"><span>Input tokens</span><span>${totals.inputTokens.toLocaleString()}</span></div>
+    <div class="kv"><span>Output tokens</span><span>${totals.outputTokens.toLocaleString()}</span></div>
+    <div class="kv"><span>Workers spawned</span><span>${totals.workers}</span></div>
+    <div class="kv"><span>Estimated spend</span><span>${totals.costUsd > 0 ? '$' + totals.costUsd.toFixed(4) : unknown('provider reports no pricing')}</span></div>`;
+}
+
+let knowledgeTab = 'memory';
+async function refreshKnowledge() {
+  if (knowledgeTab === 'memory') {
+    const { memory } = await api('/api/memory?limit=25');
+    $('knowledge').innerHTML = memory.length ? memory.map((m) => `
+      <div class="task" style="cursor:default">
+        <b>${esc(m.title)}</b>
+        <div class="row" style="gap:6px;margin-top:4px"><span class="badge">${esc(m.category)}</span>
+          <span class="muted">conf ${m.confidence.toFixed(2)}${m.verified ? ' · verified' : ''} · used ${m.useCount}×</span></div>
+        <div class="muted" style="margin-top:6px;font-size:11.5px">${esc(m.preview)}</div>
+        <div class="muted" style="margin-top:4px;font-size:10.5px">source: ${esc(m.source)}</div>
+      </div>`).join('') : '<p class="unknown">No memory stored yet.</p>';
+  } else {
+    const { skills } = await api('/api/skills');
+    $('knowledge').innerHTML = skills.length ? skills.map((s) => `
+      <div class="task" style="cursor:default">
+        <b>${esc(s.name)} <span class="muted">v${esc(s.version)}</span></b>
+        <div class="muted" style="margin-top:4px;font-size:11.5px">${esc(s.purpose)}</div>
+        <div class="muted" style="margin-top:4px;font-size:10.5px">triggers: ${esc(s.triggers.join(', ') || 'none')}</div>
+      </div>`).join('') : '<p class="unknown">No skills registered.</p>';
+  }
+}
+for (const b of document.querySelectorAll('.tabs button')) {
+  b.onclick = () => {
+    knowledgeTab = b.dataset.tab;
+    for (const other of document.querySelectorAll('.tabs button')) other.setAttribute('aria-selected', String(other === b));
+    refreshKnowledge().catch(showError);
+  };
+}
+
+const seen = new Set();
+function pushEvent(ev) {
+  if (seen.has(ev.id)) return;
+  seen.add(ev.id);
+  const stream = $('stream');
+  if (stream.querySelector('.unknown')) stream.innerHTML = '';
+  const row = document.createElement('div');
+  row.className = `ev ${esc(ev.level)}`;
+  row.innerHTML = `<span class="t">${new Date(ev.at).toLocaleTimeString()}</span>
+    <span class="ty">${esc(ev.type)}</span><span>${esc(ev.summary)}</span>`;
+  stream.prepend(row);
+  while (stream.childElementCount > 300) stream.lastElementChild.remove();
+  if (['task.completed','task.failed','approval.requested','heartbeat.changed','task.created','run.started','run.completed'].includes(ev.type)) {
+    refresh().catch(() => {});
+  }
+}
+
+function connectStream() {
+  // EventSource cannot set headers, so an authenticated deployment falls back to polling.
+  if (token) { setInterval(() => pollEvents().catch(() => {}), 2000); $('connPill').textContent = 'POLLING'; $('connPill').className = 'pill warn'; return; }
+  const source = new EventSource('/api/stream');
+  source.onopen = () => { $('connPill').textContent = 'LIVE'; $('connPill').className = 'pill live'; };
+  source.onerror = () => { $('connPill').textContent = 'DISCONNECTED'; $('connPill').className = 'pill err'; };
+  source.onmessage = (e) => { try { pushEvent(JSON.parse(e.data)); } catch {} };
+  for (const type of ['task.created','task.started','task.completed','task.failed','tool.started','tool.completed','tool.failed','tool.denied','approval.requested','approval.approved','approval.rejected','worker.started','worker.completed','verification.started','verification.passed','verification.failed','repair.started','heartbeat.changed','model.completed','model.failed','limit.reached','memory.created','skill.loaded','run.started','run.completed','run.failed','schedule.fired','task.recovered','run.interrupted','memory.retrieved','model.invalid_output','worker.rejected','worker.failed','task.blocked','task.cancelled','plan.created','model.requested','tool.requested','skill.created']) {
+    source.addEventListener(type, (e) => { try { pushEvent(JSON.parse(e.data)); } catch {} });
+  }
+}
+
+let lastEventId = null;
+async function pollEvents() {
+  const { events } = await api(`/api/events?limit=50${lastEventId ? `&since=${lastEventId}` : ''}`);
+  for (const ev of events) { pushEvent(ev); lastEventId = ev.id; }
+}
+
+function showError(error) {
+  $('submitNote').textContent = error.message;
+  $('connPill').textContent = 'ERROR';
+  $('connPill').className = 'pill err';
+}
+
+$('submitBtn').onclick = async () => {
+  const objective = $('objective').value.trim();
+  if (objective.length < 10) { $('submitNote').textContent = 'Objective must be at least 10 characters.'; return; }
+  try {
+    const body = { objective, priority: $('priority').value };
+    const workspace = $('workspace').value.trim();
+    if (workspace) body.workspace = workspace;
+    const { task } = await api('/api/tasks', { method: 'POST', body: JSON.stringify(body) });
+    $('submitNote').textContent = `Queued ${task.id}`;
+    $('objective').value = '';
+    refresh();
+  } catch (error) { showError(error); }
+};
+
+async function refresh() {
+  await Promise.all([
+    refreshStatus(), refreshTasks(), refreshApprovals(), refreshUsage(), refreshKnowledge(),
+  ]);
+}
+
+refresh().then(() => { pollEvents().catch(() => {}); connectStream(); }).catch(showError);
+setInterval(() => refresh().catch(() => {}), 5000);
+})();
+</script>
+</body>
+</html>
