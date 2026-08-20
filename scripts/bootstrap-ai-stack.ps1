@@ -29,6 +29,14 @@ if (Test-Path (Join-Path $GStackDir ".git")) {
     git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git $GStackDir
 }
 
+Write-Host "Enabling GStack team mode..."
+Push-Location $GStackDir
+try {
+    bash ./setup --team
+} finally {
+    Pop-Location
+}
+
 function Install-GStackHost([string]$HostName) {
     if (Get-Command $HostName -ErrorAction SilentlyContinue) {
         Write-Host "Installing/updating GStack host profile: $HostName"
@@ -40,7 +48,7 @@ function Install-GStackHost([string]$HostName) {
         }
         return $true
     }
-    Write-Host "$HostName CLI not detected; skipping its GStack profile."
+    Write-Host "$HostName CLI not detected; skipping its explicit GStack profile."
     return $false
 }
 
@@ -50,7 +58,7 @@ $AnyHost = (Install-GStackHost "codex") -or $AnyHost
 $AnyHost = (Install-GStackHost "hermes") -or $AnyHost
 
 if (-not $AnyHost) {
-    Write-Warning "No supported AI host CLI was detected. GStack source is installed; rerun after installing a host."
+    Write-Warning "No supported AI host CLI was detected. Team-mode GStack is installed; rerun after installing a host."
 }
 
 Write-Host "Installing/updating GBrain from garrytan/gbrain..."
@@ -72,6 +80,19 @@ if (-not (Test-Path $GBrainConfig)) {
     gbrain init --pglite
 } else {
     Write-Host "Existing GBrain config detected; leaving its engine unchanged."
+}
+
+$SourcesJson = ""
+try {
+    $SourcesJson = (& gbrain sources list --json 2>$null | Out-String)
+} catch {
+    $SourcesJson = ""
+}
+if ($SourcesJson -match '"id"\s*:\s*"shia-factory"') {
+    Write-Host "GBrain source 'shia-factory' already exists."
+} else {
+    Write-Host "Registering this repository as GBrain source 'shia-factory'..."
+    & gbrain sources add shia-factory --path $RepoRoot --federated
 }
 
 function Register-GBrainMcp([string]$HostName) {
@@ -112,4 +133,5 @@ try {
 
 Write-Host ""
 Write-Host "Bootstrap complete."
+Write-Host "This repo is pinned to GBrain source: shia-factory"
 Write-Host "Next: read docs/AI_STACK.md, then verify a remember -> fresh-session recall round trip."
