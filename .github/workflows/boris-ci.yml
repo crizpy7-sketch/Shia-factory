@@ -1,0 +1,59 @@
+name: BORIS Runtime CI
+
+on:
+  pull_request:
+    paths:
+      - 'boris/**'
+      - 'AGENTS.md'
+      - 'FACTORY_CONSTITUTION.md'
+      - 'docs/factory/**'
+      - '.github/workflows/boris-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'boris/**'
+      - 'AGENTS.md'
+      - 'FACTORY_CONSTITUTION.md'
+      - 'docs/factory/**'
+      - '.github/workflows/boris-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: boris-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: boris
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: boris/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Security tests
+        run: npm run test:security
