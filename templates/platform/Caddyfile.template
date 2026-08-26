@@ -1,0 +1,27 @@
+# Shia App Factory shared VPS reverse proxy template.
+# Replace example.com and upstream ports/services only after DNS ownership is confirmed.
+# Keep app services bound to localhost or a private Docker network where practical.
+
+{
+    email admin@example.com
+}
+
+marketswarm.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3010
+}
+
+tutor.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3020
+}
+
+michel.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3030
+}
+
+remixr.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3040
+}
