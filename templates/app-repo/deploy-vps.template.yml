@@ -1,0 +1,170 @@
+# Copy this file to .github/workflows/deploy-vps.yml in an app repository,
+# then adapt the marked project-specific values.
+#
+# Required GitHub Actions secrets:
+#   VPS_HOST
+#   VPS_USER
+#   VPS_PORT
+#   VPS_SSH_KEY_B64
+#
+# Required server-side file:
+#   /opt/<APP_NAME>/deploy/.env.production
+#
+# This template intentionally keeps production secrets out of GitHub source.
+
+name: Deploy App to VPS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: app-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST" || { echo "Missing VPS_HOST"; exit 1; }
+          test -n "$VPS_USER" || { echo "Missing VPS_USER"; exit 1; }
+          test -n "$VPS_SSH_KEY_B64" || { echo "Missing VPS_SSH_KEY_B64"; exit 1; }
+
+      - name: Configure deployment key
+        shell: bash
+        env:
+          VPS_SSH_KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s' "$VPS_SSH_KEY_B64" | base64 --decode > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Package and sync release
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${VPS_PORT:-22}"
+          tar --exclude=.git --exclude=node_modules --exclude=.next -czf /tmp/app-release.tgz .
+          scp \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=10 \
+            -i ~/.ssh/deploy_key \
+            -P "$PORT" \
+            /tmp/app-release.tgz \
+            "$VPS_USER@$VPS_HOST:/tmp/app-release.tgz"
+
+      - name: Build and deploy
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${VPS_PORT:-22}"
+
+          # PROJECT-SPECIFIC: change this once per repository.
+          APP_NAME="CHANGE_ME"
+
+          ssh \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=10 \
+            -i ~/.ssh/deploy_key \
+            -p "$PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "APP_NAME='$APP_NAME' bash -se" <<'REMOTE'
+          set -euo pipefail
+
+          APP_DIR="/opt/${APP_NAME}"
+          sudo mkdir -p "$APP_DIR"
+          sudo tar -xzf /tmp/app-release.tgz -C "$APP_DIR"
+          sudo chown -R "$(id -u):$(id -g)" "$APP_DIR"
+          cd "$APP_DIR"
+
+          command -v docker >/dev/null 2>&1 || { echo "Docker missing"; exit 1; }
+          docker compose version >/dev/null 2>&1 || { echo "Docker Compose missing"; exit 1; }
+          test -f deploy/.env.production || { echo "Missing deploy/.env.production"; exit 1; }
+          test -f deploy/docker-compose.yml || { echo "Missing deploy/docker-compose.yml"; exit 1; }
+
+          COMPOSE="docker compose --env-file deploy/.env.production -f deploy/docker-compose.yml"
+          $COMPOSE config >/dev/null
+          $COMPOSE build --pull
+
+          # PROJECT-SPECIFIC OPTIONAL MIGRATION EXAMPLE:
+          # Use -T and </dev/null so a one-off container cannot consume the
+          # parent SSH here-document.
+          # $COMPOSE run -T --rm --no-deps api ./bin/migrate </dev/null
+
+          $COMPOSE up -d --remove-orphans
+          $COMPOSE ps
+          REMOTE
+
+      - name: Production health gate
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${VPS_PORT:-22}"
+
+          # PROJECT-SPECIFIC: change once per repository.
+          APP_NAME="CHANGE_ME"
+
+          ssh \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=10 \
+            -i ~/.ssh/deploy_key \
+            -p "$PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "APP_NAME='$APP_NAME' bash -se" <<'REMOTE'
+          set -euo pipefail
+          cd "/opt/${APP_NAME}"
+
+          COMPOSE="docker compose --env-file deploy/.env.production -f deploy/docker-compose.yml"
+
+          # PROJECT-SPECIFIC: replace these with real application gates.
+          # A shallow process check alone is not enough.
+          #
+          # Example:
+          # for i in $(seq 1 24); do
+          #   if curl -fsS http://127.0.0.1:3010/health >/dev/null && \
+          #      curl -fsS http://127.0.0.1:3010/api/dashboard >/dev/null; then
+          #     break
+          #   fi
+          #   sleep 5
+          # done
+          # curl -fsS http://127.0.0.1:3010/health >/dev/null
+          # curl -fsS http://127.0.0.1:3010/api/dashboard >/dev/null
+          #
+          # If the app has a worker/daemon, verify it remains running too.
+
+          $COMPOSE ps
+          echo "IMPORTANT: replace template health section with real app health gates before production use."
+          REMOTE
