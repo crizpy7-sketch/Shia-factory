@@ -1,6 +1,11 @@
 # Copy this file to .github/workflows/deploy-vps.yml in an app repository,
 # then adapt the marked project-specific values.
 #
+# Default architecture:
+#   GitHub Actions builds production images.
+#   The VPS receives finished images and performs load -> migrate -> start -> health gate.
+#   The VPS is a runtime target, not the normal compilation host.
+#
 # Required GitHub Actions secrets:
 #   VPS_HOST
 #   VPS_USER
@@ -44,6 +49,41 @@ jobs:
           test -n "$VPS_USER" || { echo "Missing VPS_USER"; exit 1; }
           test -n "$VPS_SSH_KEY_B64" || { echo "Missing VPS_SSH_KEY_B64"; exit 1; }
 
+      - name: Build production images on GitHub runner
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # PROJECT-SPECIFIC: change image names / Dockerfiles once per repo.
+          APP_IMAGE="CHANGE_ME:latest"
+          WEB_IMAGE="CHANGE_ME-web:latest"
+
+          docker build \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            -f deploy/Dockerfile \
+            -t "$APP_IMAGE" \
+            .
+
+          # Remove this second build if the app has only one image.
+          docker build \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            -f deploy/web.Dockerfile \
+            -t "$WEB_IMAGE" \
+            .
+
+          docker save "$APP_IMAGE" "$WEB_IMAGE" | gzip -1 > /tmp/app-images.tar.gz
+          test -s /tmp/app-images.tar.gz
+          echo "Prebuilt image bundle: $(du -h /tmp/app-images.tar.gz | cut -f1)"
+
+      - name: Package release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar --exclude=.git --exclude=node_modules --exclude=.next -czf /tmp/app-release.tgz .
+          test -s /tmp/app-release.tgz
+
       - name: Configure deployment key
         shell: bash
         env:
@@ -57,7 +97,7 @@ jobs:
           touch ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Package and sync release
+      - name: Transfer prebuilt release
         shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -66,17 +106,11 @@ jobs:
         run: |
           set -euo pipefail
           PORT="${VPS_PORT:-22}"
-          tar --exclude=.git --exclude=node_modules --exclude=.next -czf /tmp/app-release.tgz .
-          scp \
-            -o StrictHostKeyChecking=accept-new \
-            -o ConnectTimeout=20 \
-            -o ServerAliveInterval=10 \
-            -i ~/.ssh/deploy_key \
-            -P "$PORT" \
-            /tmp/app-release.tgz \
-            "$VPS_USER@$VPS_HOST:/tmp/app-release.tgz"
+          SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 -o ServerAliveInterval=10 -i ~/.ssh/deploy_key)
+          scp "${SSH_OPTS[@]}" -P "$PORT" /tmp/app-release.tgz "$VPS_USER@$VPS_HOST:/tmp/app-release.tgz"
+          scp "${SSH_OPTS[@]}" -P "$PORT" /tmp/app-images.tar.gz "$VPS_USER@$VPS_HOST:/tmp/app-images.tar.gz"
 
-      - name: Build and deploy
+      - name: Load and deploy prebuilt images
         shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -86,7 +120,7 @@ jobs:
           set -euo pipefail
           PORT="${VPS_PORT:-22}"
 
-          # PROJECT-SPECIFIC: change this once per repository.
+          # PROJECT-SPECIFIC: change once per repository.
           APP_NAME="CHANGE_ME"
 
           ssh \
@@ -109,18 +143,22 @@ jobs:
           docker compose version >/dev/null 2>&1 || { echo "Docker Compose missing"; exit 1; }
           test -f deploy/.env.production || { echo "Missing deploy/.env.production"; exit 1; }
           test -f deploy/docker-compose.yml || { echo "Missing deploy/docker-compose.yml"; exit 1; }
+          test -s /tmp/app-images.tar.gz || { echo "Missing prebuilt image bundle"; exit 1; }
+
+          echo "Loading CI-built production images. No app compilation occurs on this VPS."
+          gzip -dc /tmp/app-images.tar.gz | docker load
 
           COMPOSE="docker compose --env-file deploy/.env.production -f deploy/docker-compose.yml"
           $COMPOSE config >/dev/null
-          $COMPOSE build --pull
 
           # PROJECT-SPECIFIC OPTIONAL MIGRATION EXAMPLE:
           # Use -T and </dev/null so a one-off container cannot consume the
           # parent SSH here-document.
           # $COMPOSE run -T --rm --no-deps api ./bin/migrate </dev/null
 
-          $COMPOSE up -d --remove-orphans
+          $COMPOSE up -d --no-build --remove-orphans
           $COMPOSE ps
+          rm -f /tmp/app-release.tgz /tmp/app-images.tar.gz
           REMOTE
 
       - name: Production health gate
@@ -149,22 +187,11 @@ jobs:
 
           COMPOSE="docker compose --env-file deploy/.env.production -f deploy/docker-compose.yml"
 
-          # PROJECT-SPECIFIC: replace these with real application gates.
-          # A shallow process check alone is not enough.
-          #
-          # Example:
-          # for i in $(seq 1 24); do
-          #   if curl -fsS http://127.0.0.1:3010/health >/dev/null && \
-          #      curl -fsS http://127.0.0.1:3010/api/dashboard >/dev/null; then
-          #     break
-          #   fi
-          #   sleep 5
-          # done
-          # curl -fsS http://127.0.0.1:3010/health >/dev/null
-          # curl -fsS http://127.0.0.1:3010/api/dashboard >/dev/null
-          #
-          # If the app has a worker/daemon, verify it remains running too.
+          # PROJECT-SPECIFIC: replace these comments with real application gates.
+          # A shallow process check alone is not enough. Verify at least the
+          # user-facing health route and any critical API/worker/daemon state.
 
           $COMPOSE ps
           echo "IMPORTANT: replace template health section with real app health gates before production use."
+          docker image prune -f >/dev/null || true
           REMOTE
