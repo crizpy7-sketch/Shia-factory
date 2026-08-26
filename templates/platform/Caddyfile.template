@@ -1,27 +1,29 @@
 # Shia App Factory shared VPS reverse proxy template.
-# Replace example.com and upstream ports/services only after DNS ownership is confirmed.
-# Keep app services bound to localhost or a private Docker network where practical.
+# Canonical domain: shiaco.com
+# Activate each hostname only after its DNS record points to the production VPS.
+# Keep app services bound to localhost or a private Docker network after proxy cutover.
 
-{
-    email admin@example.com
-}
+# Optional ACME contact email can be added in a global block once confirmed:
+# {
+#     email admin@shiaco.com
+# }
 
-marketswarm.example.com {
+marketswarm.shiaco.com {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3010
 }
 
-tutor.example.com {
+tutor.shiaco.com {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3020
 }
 
-michel.example.com {
+michel.shiaco.com {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3030
 }
 
-remixr.example.com {
+remixr.shiaco.com {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3040
 }
