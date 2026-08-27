@@ -14,9 +14,15 @@ resume without reconstructing chat history.
 1. `FACTORY_CONSTITUTION.md` — non-negotiable factory law.
 2. `docs/factory/OPERATING_SYSTEM.md` — task lifecycle, risk tiers, context, memory, evidence,
    orchestration, receipts, and learning loops.
-3. `CLAUDE.md` — existing repository-specific working agreement and runtime safety rules.
-4. `boris/src/factory/operating-system.ts` — deterministic factory policy primitives.
-5. `boris/tests/unit/factory-operating-system.test.ts` — executable policy tests.
+3. `docs/AI_STACK.md` — Shia Factory / GStack / GBrain responsibility boundaries.
+4. `skills/factory-runtime-wiring/SKILL.md` — executable operating procedure for state, checkpoints,
+   verification, steering, resumability, and duplicate-safe side effects.
+5. `skills/factory-learning-loop/SKILL.md` — verified memory promotion and bounded harness improvement.
+6. `gstack/SHIA_FACTORY_EXTENSION.md` — how upstream GStack workflows plug into Shia governance.
+7. `gbrain/FACTORY_MEMORY_SEED.md` — compact durable memory seed and provenance contract.
+8. `CLAUDE.md` — existing repository-specific working agreement and runtime safety rules.
+9. `boris/src/factory/operating-system.ts` — deterministic factory policy primitives.
+10. `boris/tests/unit/factory-operating-system.test.ts` — executable policy tests.
 
 ## Sources of truth
 
@@ -49,6 +55,12 @@ npm test
 npm run test:security
 npm run test:e2e
 npm run gauntlet
+```
+
+GBrain seed/verification on Windows:
+
+```powershell
+./scripts/seed-gbrain-factory-playbook.ps1
 ```
 
 ## Factory lifecycle
@@ -93,6 +105,12 @@ writes, and safety-critical work do.
 - Repeated failures should become tests, constraints, skills, tooling, or other harness improvements.
 - Stable repeatable mechanics should become deterministic code; use models for judgment and
   uncertainty.
+- Reviewer steering can add information but cannot silently add authority.
+- Work must survive worker/session replacement through durable checkpoints.
+- Consequential side effects must be safe to retry without accidental duplication.
+- Only verified trajectories may teach authoritative procedural memory or trusted skills.
+- Upstream GStack workflows remain subordinate to Shia Factory task/risk/acceptance policy.
+- GBrain recall is evidence/context, not authority over current repository truth.
 - Never fabricate progress, evidence, costs, memory, certifications, runtime state, or success.
 
 ## Change discipline
