@@ -5,12 +5,12 @@ import test from 'node:test';
 const root = new URL('../', import.meta.url);
 const json = async (relative) => JSON.parse(await readFile(new URL(relative, root), 'utf8'));
 
-test('Phase 5 keeps exactly five canonical permanent role IDs and upgrades only Quality Gate', async () => {
+test('Phase 5 keeps exactly five canonical permanent role IDs and records approved Quality Gate v1', async () => {
   const registry = await json('factory/registry/core-v2.json');
   assert.deepEqual(registry.permanent_roles.map((role) => role.id), ['shia-core', 'boris', 'design-director', 'gary', 'quality-gate']);
   const quality = registry.permanent_roles.find((role) => role.id === 'quality-gate');
-  assert.equal(quality.implementation_status, 'operational-quality-gate-v1-candidate');
-  assert.equal(quality.certification_status, 'pending-cristian-phase-5-approval');
+  assert.equal(quality.implementation_status, 'operational-quality-gate-v1');
+  assert.equal(quality.certification_status, 'approved-phase-5');
   for (const role of registry.permanent_roles) {
     assert.deepEqual(await readdir(new URL(`agents/${role.id}/`, root)), ['README.md']);
   }
@@ -63,5 +63,6 @@ test('Phase 5 creates no standalone skill or sixth agent and leaves Phase 6 unto
   const status = await readFile(new URL('docs/STATUS.md', root), 'utf8');
   const phase6 = status.split('## Phase 6')[1]?.split('## Phase 7')[0] ?? '';
   assert.doesNotMatch(phase6, /\[x\]/);
-  assert.match(status, /Phase 5 candidate: 7\/7 technical items evidenced; approval pending/);
+  assert.match(status, /Phase 5: 100% complete/);
+  assert.match(status, /Production CI, BORIS, browser and GStack evidence adapters still require real environment-specific wiring/);
 });

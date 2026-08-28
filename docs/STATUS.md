@@ -56,8 +56,10 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 - [x] Performance gate by relevant surface/risk — explicit thresholds and measurements required
 - [x] Dangerous-action permission verification — verified existing Factory approval receipt required
 - [x] Bounded BORIS repair and exact-candidate retest loop — stale evidence cannot certify a repaired SHA
-- [ ] Phase 5 completion reviewed and approved by Cristian — draft PR pending
-- **Phase 5 candidate: 7/7 technical items evidenced; approval pending.** Phase 5 is not yet an approved completion.
+- [x] Phase 5 completion reviewed and approved by Cristian — merged PR #14, `d2b1baa2005c10ac1b2c25a26a8c705acc6c444e`
+- **Phase 5: 100% complete** — all seven technical items have merged repository evidence and Cristian approved the exact trusted-evidence candidate
+
+Production CI, BORIS, browser and GStack evidence adapters still require real environment-specific wiring and must be proven during an application lifecycle. Phase 5 approval does not claim those future application integrations already work.
 
 ## Phase 6 — Reusable Factory Shelf
 

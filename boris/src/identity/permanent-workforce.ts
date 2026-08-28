@@ -139,6 +139,7 @@ function routeOnlyPaths(role: PermanentRoleAdapter): string[] {
 
 function certificationFor(role: RegistryRole): BootstrapCertification {
   if (role.certification_status?.startsWith('pending-cristian-')) return 'pending-cristian-approval';
+  if (role.certification_status?.startsWith('approved-phase-')) return 'approved';
   if (role.certification_status === 'bootstrap-approved-phase-4') return 'bootstrap-approved';
   if (role.id === 'shia-core') return 'approved';
   return 'legacy-mapped';

@@ -190,7 +190,7 @@ test('authority enforcement denies direct secrets and gates merge/deploy', () =>
   assert.ok(gated.approvalGates.includes('Cristian'));
 });
 
-test('task contract reports the pending Phase 5 Quality Gate candidate as a certification/release blocker', async () => {
+test('approved Phase 5 Quality Gate no longer creates a registry certification blocker', async () => {
   const result = await orchestrate(repoRoot, profileSource, request({
     objective: 'Add a normal integration feature.', requestedCapabilities: ['integration'], requestedActions: ['inspect', 'plan', 'build'],
   }));
@@ -200,7 +200,7 @@ test('task contract reports the pending Phase 5 Quality Gate candidate as a cert
   assert.ok(result.contract.requiredEvidence.includes('security'));
   assert.ok(result.contract.acceptanceCriteria.length > 0);
   assert.equal(result.contract.executionBlocked, false);
-  assert.equal(result.contract.certificationReleaseBlockers.some((blocker) => /quality-gate.*pending Cristian approval.*phase-5/.test(blocker)), true);
+  assert.equal(result.contract.certificationReleaseBlockers.some((blocker) => /quality-gate.*pending Cristian approval/.test(blocker)), false);
   assert.equal(result.contract.executionBlocked, false);
 });
 

@@ -85,4 +85,8 @@ candidate SHA A
 → Quality Gate reruns for SHA B
 ```
 
-The default repair budget remains at most two. Exhaustion blocks and escalates. Quality Gate does not repair the candidate it judges, and it cannot self-certify a candidate that implements or changes Quality Gate. Cristian approval of the exact Phase 5 candidate remains required before merge.
+The default repair budget remains at most two. Exhaustion blocks and escalates. Quality Gate does not repair the candidate it judges, and it cannot self-certify a candidate that implements or changes Quality Gate. Cristian approved the exact Phase 5 implementation in merged PR #14 (`d2b1baa2005c10ac1b2c25a26a8c705acc6c444e`); future self-changing candidates still require independent review and Cristian approval.
+
+## Production adapter limitation
+
+Production CI, BORIS, browser and GStack evidence adapters require environment-specific wiring to authoritative run and artifact stores. Their integration must be proven during a real application lifecycle before the Factory may claim those sources work end to end. Until then, unavailable or unverified evidence remains `needs-evidence`.

@@ -179,11 +179,11 @@ test('complete bounded Quality Gate input executes the canonical receipt engine 
   assert.equal(routed.status, 'completed');
   assert.equal(routed.roleId, 'quality-gate');
   assert.equal(routed.dispatch.executed, true);
-  assert.equal(routed.certified, false);
-  assert.equal(routed.approvalRequired, true);
+  assert.equal(routed.certified, true);
+  assert.equal(routed.approvalRequired, false);
   assert.equal(routed.qualityReceipt?.finalState, 'pass');
   assert.equal(routed.qualityReceipt?.controlPlane.qualityGateMayAcceptTask, false);
-  assert.ok(routed.limitations.some((item) => /Phase 5 implementation approval is pending/.test(item)));
+  assert.equal(routed.limitations.some((item) => /Phase 5 implementation approval is pending/.test(item)), false);
 });
 
 test('malformed Quality Gate packet is blocked rather than throwing or inventing evidence', async () => {

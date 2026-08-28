@@ -6,7 +6,7 @@ Phase 4 consolidates the Factory behind exactly five canonical role IDs. The cal
 
 `factory/registry/invocation-contracts.json` is the source of truth for required inputs. The adapter returns the exact missing field names as `needs-input` or `evidence-gap` before dispatch. It never fills absent context.
 
-Shia Core executes only through the Phase 3 orchestrator. BORIS and Gary return explicit route-only dispatch records pointing to their preserved runtime/identity surfaces; this is not a claim that they performed work. Design Director remains a bounded route-only adapter. In the Phase 5 candidate, Quality Gate admits raw evidence through `boris/src/quality/evidence-admission.ts` before delegating complete validated packets to the single deterministic engine at `boris/src/quality/quality-gate.ts`; missing or unverified inputs return an evidence gap before evaluation.
+Shia Core executes only through the Phase 3 orchestrator. BORIS and Gary return explicit route-only dispatch records pointing to their preserved runtime/identity surfaces; this is not a claim that they performed work. Design Director remains a bounded route-only adapter. The approved Phase 5 Quality Gate admits raw evidence through `boris/src/quality/evidence-admission.ts` before delegating complete validated packets to the single deterministic engine at `boris/src/quality/quality-gate.ts`; missing or unverified inputs return an evidence gap before evaluation.
 
 | Canonical role | Consolidated implementation | Bootstrap/certification state |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ Shia Core executes only through the Phase 3 orchestrator. BORIS and Gary return 
 | `boris` | `agents/BORIS-001`, `boris/`, hosted roster profile and existing tests | Existing runtime mapped; identity certification claims unchanged |
 | `gary` | `agents/GARY-001`, deterministic Inspector, hosted roster profile and Growth pack | Existing runtime mapped; identity/history preserved |
 | `design-director` | Invocation/authority contracts, Design pack, registered design-tool ownership and callable adapter | Phase 4 bootstrap approved in merged PR #13; full certification not claimed |
-| `quality-gate` | Exact-candidate receipt engine consuming existing tests, CI and advisory/GStack evidence | Phase 5 candidate operational; self-certification forbidden; Cristian approval pending |
+| `quality-gate` | Exact-candidate receipt engine consuming existing tests, CI and advisory/GStack evidence | Phase 5 approved in merged PR #14; self-certification remains forbidden |
 
 ## Legacy consolidation
 
@@ -28,7 +28,7 @@ Deprecated names resolve to their permanent owner. Historical code, packages, co
 
 ## Bootstrap boundary
 
-Callable does not mean independently certified. Design Director requires product context, target platforms, user flows, a candidate/design artifact and acceptance criteria before routing. Quality Gate requires the complete evidence-packet context defined by its invocation contract. A role evaluating a candidate that implements or changes itself always requires independent review and Cristian approval. Cristian's approval of merged PR #13 records only the Phase 4 bootstrap; the Phase 5 candidate requires its own exact-candidate approval.
+Callable does not mean independently certified. Design Director requires product context, target platforms, user flows, a candidate/design artifact and acceptance criteria before routing. Quality Gate requires the complete evidence-packet context defined by its invocation contract. A role evaluating a candidate that implements or changes itself always requires independent review and Cristian approval. Cristian approved the exact Phase 5 implementation in merged PR #14; that approval does not pre-approve future candidates evaluated by Quality Gate.
 
 ## Deferred
 
