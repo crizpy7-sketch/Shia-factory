@@ -2,6 +2,12 @@
 
 Phase 4 consolidates the Factory behind exactly five canonical role IDs. The callable adapter is `boris/src/identity/permanent-workforce.ts`; it reuses the Phase 2 registries and Phase 3 orchestrator.
 
+## Invocation semantics
+
+`factory/registry/invocation-contracts.json` is the source of truth for required inputs. The adapter returns the exact missing field names as `needs-input` or `evidence-gap` before dispatch. It never fills absent context.
+
+Shia Core is the only role executed directly by this adapter, and it executes only through the Phase 3 orchestrator. BORIS and Gary return explicit route-only dispatch records pointing to their preserved runtime/identity surfaces; this is not a claim that they performed work. Design Director and Quality Gate likewise return bounded route-only records with no produced artifacts. Contract outputs remain empty until the owning runtime or capability actually produces them.
+
 | Canonical role | Consolidated implementation | Bootstrap/certification state |
 | --- | --- | --- |
 | `shia-core` | Phase 3 orchestrator, operating system and runtime wiring | Phase 3 approved |
@@ -22,7 +28,7 @@ Deprecated names resolve to their permanent owner. Historical code, packages, co
 
 ## Bootstrap boundary
 
-Callable does not mean independently certified. Design Director and Quality Gate are available to receive bounded work, but their initial creation cannot satisfy its own approval. Quality Gate requires an exact candidate and retained evidence; when evaluating its own bootstrap, it always returns uncertified with Cristian approval required. The Phase 3 orchestrator carries pending bootstrap certification as a certification/release blocker, not a general isolated-build blocker.
+Callable does not mean executed or independently certified. Design Director requires product context, target platforms, user flows, a candidate/design artifact and acceptance criteria before routing. Quality Gate requires a task contract, risk tier, exact candidate, acceptance criteria and required-evidence specification before routing. When evaluating its own bootstrap, Quality Gate always returns uncertified with Cristian approval required. The Phase 3 orchestrator carries pending bootstrap certification as a certification/release blocker, not a general isolated-build blocker.
 
 ## Deferred
 

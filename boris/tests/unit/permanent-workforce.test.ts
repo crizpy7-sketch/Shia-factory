@@ -50,52 +50,114 @@ test('Gary permanent contract maps existing identity and consolidated product/gr
   assert.equal(workforce.resolve('Marketing Chief')?.mapping?.classification, 'deprecated');
 });
 
+test('Gary missing audience, evidence and success metric returns exact evidence gaps without execution', async () => {
+  const result = await invokePermanentRole(repoRoot, {
+    role: 'Gary', capability: 'marketing', objective: 'Prepare a campaign route.',
+    inputs: { 'offer-or-product': 'Shia Factory' },
+  });
+  assert.equal(result.status, 'evidence-gap');
+  assert.deepEqual(result.missingInputs, ['audience', 'evidence', 'success-metric']);
+  assert.equal(result.dispatch.executed, false);
+  assert.deepEqual(result.producedOutputs, []);
+});
+
+test('BORIS complete invocation explicitly routes to its existing runtime without claiming execution', async () => {
+  const result = await invokePermanentRole(repoRoot, {
+    role: 'BORIS-001', capability: 'implementation', objective: 'Implement a bounded parser change.',
+    inputs: {
+      'allowed-paths-and-tools': { paths: ['boris/src'], tools: ['fs_read', 'fs_write'] },
+      'acceptance-criteria': ['Parser rejects invalid input.'], 'risk-tier': 'T1',
+      'verification-plan': ['typecheck', 'unit tests'],
+    },
+  });
+  assert.equal(result.status, 'routed');
+  assert.equal(result.dispatch.mode, 'route-only');
+  assert.equal(result.dispatch.executed, false);
+  assert.ok(result.dispatch.runtimePaths.includes('boris/src/runtime.ts'));
+  assert.deepEqual(result.producedOutputs, []);
+  assert.ok(result.limitations.some((item) => /did not execute/.test(item)));
+});
+
 test('Shia Core invocation calls the Phase 3 orchestrator rather than a second engine', async () => {
   const result = await invokePermanentRole(repoRoot, {
     role: '@shia-core', capability: 'intake', objective: 'Route existing work.',
     orchestrator: { profileSource, request: orchestrationRequest() },
   });
   assert.equal(result.roleId, 'shia-core');
-  assert.equal(result.status, 'accepted');
+  assert.equal(result.status, 'completed');
+  assert.equal(result.dispatch.executed, true);
   assert.equal(result.orchestration?.contract.id, 'PHASE4-INVOCATION');
   assert.ok(result.evidence.includes('boris/src/factory/orchestrator-core.ts'));
 });
 
-test('Design Director is callable and routes design work without bootstrap self-certification', async () => {
+test('Design Director missing required context needs exact input and produces no artifact', async () => {
+  const result = await invokePermanentRole(repoRoot, {
+    role: 'Design Director', capability: 'ux-review', objective: 'Review responsive UX.',
+    inputs: { 'product-context': 'Family scheduler' },
+  });
+  assert.equal(result.status, 'needs-input');
+  assert.deepEqual(result.missingInputs, ['target-platforms', 'user-flows', 'candidate-or-design-artifact', 'acceptance-criteria']);
+  assert.equal(result.dispatch.executed, false);
+  assert.deepEqual(result.producedOutputs, []);
+});
+
+test('Design Director complete bounded input is callable and routed without artifact claims or self-certification', async () => {
   const workforce = await loadPermanentWorkforce(repoRoot);
   const design = workforce.byId('design-director');
   assert.equal(design?.certification, 'pending-cristian-approval');
   assert.equal(workforce.resolve('PED')?.role.id, 'design-director');
   const result = await invokePermanentRole(repoRoot, {
     role: 'Design Director', capability: 'ux-review', objective: 'Review responsive UX.',
-    evidence: ['design brief'], bootstrapSubjectRole: 'design-director', humanApproved: true,
+    exactCandidate: 'design-candidate-a', evidence: ['design brief'],
+    inputs: {
+      'product-context': 'Family scheduler', 'target-platforms': ['mobile', 'tablet', 'desktop'],
+      'user-flows': ['create appointment'], 'acceptance-criteria': ['Responsive at supported widths'],
+    },
+    bootstrapSubjectRole: 'design-director', humanApproved: true,
   });
-  assert.equal(result.status, 'accepted');
+  assert.equal(result.status, 'routed');
+  assert.equal(result.dispatch.executed, false);
+  assert.deepEqual(result.producedOutputs, []);
   assert.equal(result.certified, false);
   assert.equal(result.approvalRequired, true);
   assert.ok(result.limitations.some((item) => /repository governance/.test(item)));
 });
 
-test('Quality Gate is callable for exact candidates and blocks missing evidence', async () => {
+test('Quality Gate missing task, risk, acceptance and required evidence returns exact evidence gaps', async () => {
   const blocked = await invokePermanentRole(repoRoot, {
     role: 'Quality Gate', capability: 'functional-test', objective: 'Verify candidate.', exactCandidate: 'candidate-a',
   });
-  assert.equal(blocked.status, 'blocked');
+  assert.equal(blocked.status, 'evidence-gap');
+  assert.deepEqual(blocked.missingInputs, ['task-contract', 'risk-tier', 'acceptance-criteria', 'required-evidence']);
+  assert.equal(blocked.dispatch.executed, false);
+});
+
+test('complete bounded Quality Gate input is callable but bootstrap certification remains pending', async () => {
   const routed = await invokePermanentRole(repoRoot, {
     role: '@quality-gate', capability: 'functional-test', objective: 'Verify candidate.',
-    exactCandidate: 'candidate-a', evidence: ['test:pass'],
+    exactCandidate: 'candidate-a', evidence: ['test:pass'], inputs: {
+      'task-contract': { id: 'TASK-1' }, 'risk-tier': 'T2',
+      'acceptance-criteria': ['Feature works'], 'required-evidence': ['test'],
+    },
   });
-  assert.equal(routed.status, 'accepted');
+  assert.equal(routed.status, 'routed');
   assert.equal(routed.roleId, 'quality-gate');
+  assert.equal(routed.dispatch.executed, false);
+  assert.equal(routed.certified, false);
+  assert.equal(routed.approvalRequired, true);
 });
 
 test('Quality Gate bootstrap cannot self-certify even when invocation claims human approval', async () => {
   const result = await invokePermanentRole(repoRoot, {
     role: 'Testing Agent', capability: 'release-verification', objective: 'Certify Quality Gate bootstrap.',
     exactCandidate: 'phase4-candidate', evidence: ['unit:pass', 'integration:pass'],
+    inputs: {
+      'task-contract': { id: 'PHASE4' }, 'risk-tier': 'T3',
+      'acceptance-criteria': ['Five roles callable'], 'required-evidence': ['test', 'review'],
+    },
     bootstrapSubjectRole: 'quality-gate', reviewerRole: 'quality-gate', humanApproved: true,
   });
-  assert.equal(result.status, 'accepted');
+  assert.equal(result.status, 'routed');
   assert.equal(result.certified, false);
   assert.equal(result.approvalRequired, true);
   assert.ok(result.limitations.some((item) => /cannot independently certify its own bootstrap/.test(item)));

@@ -63,20 +63,54 @@ export interface RoleInvocationRequest {
   bootstrapSubjectRole?: CanonicalRoleId;
   reviewerRole?: CanonicalRoleId;
   humanApproved?: boolean;
+  inputs?: Record<string, unknown>;
   orchestrator?: { profileSource: string; request: OrchestrationRequest };
 }
 
 export interface RoleInvocationResult {
   roleId: CanonicalRoleId;
-  status: 'accepted' | 'rejected' | 'blocked';
+  status: 'completed' | 'routed' | 'rejected' | 'blocked' | 'needs-input' | 'evidence-gap';
   callable: true;
   capability: string;
   objective: string;
   evidence: string[];
+  missingInputs: string[];
+  producedOutputs: string[];
+  dispatch: { mode: 'executed' | 'route-only' | 'none'; executed: boolean; runtimePaths: string[] };
   limitations: string[];
   approvalRequired: boolean;
   certified: boolean;
   orchestration?: OrchestrationResult;
+}
+
+function present(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  return value !== null && value !== undefined;
+}
+
+function requiredInput(request: RoleInvocationRequest, field: string): unknown {
+  switch (field) {
+    case 'objective': case 'bounded-objective': return request.objective;
+    case 'evidence': return request.evidence;
+    case 'exact-candidate': return request.exactCandidate;
+    case 'candidate-or-design-artifact': return request.exactCandidate ?? request.inputs?.[field];
+    case 'project-or-app-profile': return request.orchestrator?.profileSource;
+    case 'current-repository-state': return request.orchestrator?.request.repository;
+    default: return request.inputs?.[field];
+  }
+}
+
+function missingRequiredInputs(role: PermanentRoleAdapter, request: RoleInvocationRequest): string[] {
+  return role.requires.filter((field) => !present(requiredInput(request, field)));
+}
+
+function routeOnlyPaths(role: PermanentRoleAdapter): string[] {
+  if (role.id === 'boris') return ['boris/src/runtime.ts', 'boris/src/identity/roster.ts', 'agents/BORIS-001'];
+  if (role.id === 'gary') return ['boris/src/runtime.ts', 'boris/src/identity/roster.ts', 'agents/gary.js', 'agents/GARY-001'];
+  if (role.id === 'design-director') return ['skills/design/PACK.json', 'factory/registry/core-v2.json#tool_ownership'];
+  if (role.id === 'quality-gate') return ['skills/quality/PACK.json', 'boris/tests', 'agents/tests'];
+  return [];
 }
 
 function certificationFor(role: RegistryRole): BootstrapCertification {
@@ -142,43 +176,58 @@ export async function invokePermanentRole(repoRoot: string, request: RoleInvocat
   if (!role.accepts.includes(request.capability)) {
     return { roleId: role.id, status: 'rejected', callable: true, capability: request.capability,
       objective: request.objective, evidence: request.evidence ?? [], limitations: [`${role.id} does not accept ${request.capability}`],
+      missingInputs: [], producedOutputs: [], dispatch: { mode: 'none', executed: false, runtimePaths: [] },
+      approvalRequired: false, certified: false };
+  }
+
+  const missingInputs = missingRequiredInputs(role, request);
+  if (missingInputs.length > 0) {
+    const evidenceGap = role.id === 'gary' || role.id === 'quality-gate';
+    return { roleId: role.id, status: evidenceGap ? 'evidence-gap' : 'needs-input', callable: true,
+      capability: request.capability, objective: request.objective, evidence: request.evidence ?? [], missingInputs,
+      producedOutputs: [], dispatch: { mode: 'none', executed: false, runtimePaths: routeOnlyPaths(role) },
+      limitations: [`Invocation contract requirements are unsatisfied: ${missingInputs.join(', ')}.`],
       approvalRequired: false, certified: false };
   }
 
   if (role.id === 'shia-core') {
-    if (!request.orchestrator) throw new Error('Shia Core invocation requires the Phase 3 orchestrator input');
+    if (!request.orchestrator) throw new Error('validated Shia Core invocation is missing orchestrator input');
     const orchestration = await orchestrate(repoRoot, request.orchestrator.profileSource, request.orchestrator.request);
-    return { roleId: role.id, status: orchestration.contract.executionBlocked ? 'blocked' : 'accepted', callable: true,
+    return { roleId: role.id, status: orchestration.contract.executionBlocked ? 'blocked' : 'completed', callable: true,
       capability: request.capability, objective: request.objective, evidence: ['boris/src/factory/orchestrator-core.ts'],
+      missingInputs: [], producedOutputs: ['task-contract', 'decision-receipt'],
+      dispatch: { mode: 'executed', executed: true, runtimePaths: ['boris/src/factory/orchestrator-core.ts'] },
       limitations: orchestration.contract.certificationReleaseBlockers, approvalRequired: orchestration.contract.approvalGates.length > 0,
       certified: !orchestration.contract.certificationReleaseBlocked, orchestration };
   }
 
   const evidence = [...new Set(request.evidence ?? [])];
   const limitations: string[] = [];
-  let status: RoleInvocationResult['status'] = 'accepted';
+  const status: RoleInvocationResult['status'] = 'routed';
   let approvalRequired = role.certification === 'pending-cristian-approval';
-  let certified = role.certification !== 'pending-cristian-approval';
+  const certified = false;
+
+  limitations.push(`${role.name} was routed to its existing runtime/capability paths; this adapter did not execute the role or produce its contract outputs.`);
 
   if (role.id === 'design-director') {
     limitations.push('Phase 4 adapter routes existing design capabilities; it does not invent a missing artifact or certify its own bootstrap.');
   }
   if (role.id === 'quality-gate') {
-    if (!request.exactCandidate) { status = 'blocked'; limitations.push('Quality Gate requires an exact candidate.'); }
-    if (evidence.length === 0) { status = 'blocked'; limitations.push('Quality Gate requires retained evidence.'); }
     if (request.bootstrapSubjectRole === 'quality-gate') {
-      approvalRequired = true; certified = false;
+      approvalRequired = true;
       limitations.push('Quality Gate cannot independently certify its own bootstrap implementation; Cristian approval remains required.');
       if (request.reviewerRole === 'quality-gate') limitations.push('Self-review is recorded as non-independent and cannot satisfy certification.');
     }
   }
   if (request.bootstrapSubjectRole === role.id && role.certification === 'pending-cristian-approval') {
-    approvalRequired = true; certified = false;
+    approvalRequired = true;
     limitations.push(`${role.name} bootstrap approval remains unsatisfied until Cristian approves the exact candidate.`);
   }
   if (request.humanApproved === true && approvalRequired && request.bootstrapSubjectRole === role.id) {
     limitations.push('Runtime input cannot promote its own registry certification; approval must be recorded through repository governance.');
   }
   return { roleId: role.id, status, callable: true, capability: request.capability, objective: request.objective,
-    evidence, limitations, approvalRequired, certified };
+    evidence, missingInputs: [], producedOutputs: [],
+    dispatch: { mode: 'route-only', executed: false, runtimePaths: routeOnlyPaths(role) },
+    limitations, approvalRequired, certified };
 }
