@@ -15,7 +15,7 @@
       "accepts": ["intake", "plan", "reuse-search", "risk-classification", "context-selection", "role-skill-tool-routing", "lifecycle-status"],
       "requires": ["objective", "project-or-app-profile", "current-repository-state"],
       "produces": ["task-contract", "risk-tier", "reuse-candidates", "routing-decision", "required-evidence", "approval-gates"],
-      "implementation": {"status": "partial", "compatibility_paths": ["AGENTS.md", "docs/factory/OPERATING_SYSTEM.md", "boris/src/factory/operating-system.ts", "boris/src/factory/runtime-wiring.ts"]},
+      "implementation": {"status": "operational-deterministic-core-v1", "compatibility_paths": ["AGENTS.md", "docs/factory/OPERATING_SYSTEM.md", "boris/src/factory/operating-system.ts", "boris/src/factory/runtime-wiring.ts", "boris/src/factory/orchestrator-core.ts"]},
       "on_unavailable": "block execution and return the missing implementation surface; never silently route around policy"
     },
     {

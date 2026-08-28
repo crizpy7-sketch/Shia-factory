@@ -6,7 +6,7 @@
   "authority_matrix": "factory/registry/authority-matrix.json",
   "skill_pack_registry": "skills/registry.json",
   "permanent_roles": [
-    {"id":"shia-core","name":"Shia Core","owns":["orchestration","planning","context","risk","capability-selection"],"implementation_status":"partial","current_evidence":["AGENTS.md","docs/factory/OPERATING_SYSTEM.md","boris/src/factory/operating-system.ts","boris/src/factory/runtime-wiring.ts"]},
+    {"id":"shia-core","name":"Shia Core","owns":["orchestration","planning","context","risk","capability-selection"],"implementation_status":"operational-deterministic-core-v1","current_evidence":["AGENTS.md","docs/factory/OPERATING_SYSTEM.md","boris/src/factory/operating-system.ts","boris/src/factory/runtime-wiring.ts","boris/src/factory/orchestrator-core.ts","boris/tests/unit/orchestrator-core.test.ts"]},
     {"id":"boris","name":"BORIS","owns":["engineering","architecture","frontend","backend","database","ai-integration","debugging","devops","release-engineering"],"implementation_status":"operational-uncertified","current_evidence":["agents/BORIS-001","boris/src","boris/tests"]},
     {"id":"design-director","name":"Design Director","owns":["ux","visual-design","figma","design-systems","responsive-design","motion","accessibility","taste"],"implementation_status":"missing","current_evidence":[]},
     {"id":"gary","name":"Gary","owns":["product-strategy","customer-research","positioning","marketing","launch","growth","analytics-interpretation"],"implementation_status":"partial","current_evidence":["agents/GARY-001","agents/gary.js","boris/src/identity/roster.ts"]},

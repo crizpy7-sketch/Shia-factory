@@ -29,10 +29,11 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 
 ## Phase 3 — Orchestrator Core
 
-- [ ] Parse and validate `APP_PROFILE.yaml`
-- [ ] Search Shelf before capability creation
-- [ ] Route minimum roles/tools from risk and profile
-- [ ] Persist orchestration decisions and evidence receipts
+- [x] Parse and validate `APP_PROFILE.yaml` — `boris/src/factory/orchestrator-core.ts`, `boris/tests/unit/orchestrator-core.test.ts`
+- [x] Search existing Factory assets before capability creation — deterministic discovery only; no Phase 6 admission
+- [x] Route minimum roles, packs and tools from risk/profile/registries with unavailable roles preserved
+- [x] Persist repository-bound orchestration decisions and evidence receipts
+- [ ] Phase 3 completion reviewed and approved by Cristian
 
 ## Phase 4 — Agent Consolidation
 
