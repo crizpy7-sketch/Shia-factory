@@ -13,8 +13,8 @@ Shia Core is the only role executed directly by this adapter, and it executes on
 | `shia-core` | Phase 3 orchestrator, operating system and runtime wiring | Phase 3 approved |
 | `boris` | `agents/BORIS-001`, `boris/`, hosted roster profile and existing tests | Existing runtime mapped; identity certification claims unchanged |
 | `gary` | `agents/GARY-001`, deterministic Inspector, hosted roster profile and Growth pack | Existing runtime mapped; identity/history preserved |
-| `design-director` | Invocation/authority contracts, Design pack, registered design-tool ownership and callable adapter | Operational bootstrap; Cristian approval pending |
-| `quality-gate` | Existing tests, CI, advisory/GStack review references and callable exact-candidate adapter | Operational bootstrap; self-certification forbidden; Cristian approval pending |
+| `design-director` | Invocation/authority contracts, Design pack, registered design-tool ownership and callable adapter | Phase 4 bootstrap approved in merged PR #13; full certification not claimed |
+| `quality-gate` | Existing tests, CI, advisory/GStack review references and callable exact-candidate adapter | Phase 4 bootstrap approved in merged PR #13; self-certification forbidden; full Phase 5 certification not claimed |
 
 ## Legacy consolidation
 
@@ -28,7 +28,7 @@ Deprecated names resolve to their permanent owner. Historical code, packages, co
 
 ## Bootstrap boundary
 
-Callable does not mean executed or independently certified. Design Director requires product context, target platforms, user flows, a candidate/design artifact and acceptance criteria before routing. Quality Gate requires a task contract, risk tier, exact candidate, acceptance criteria and required-evidence specification before routing. When evaluating its own bootstrap, Quality Gate always returns uncertified with Cristian approval required. The Phase 3 orchestrator carries pending bootstrap certification as a certification/release blocker, not a general isolated-build blocker.
+Callable does not mean executed or independently certified. Design Director requires product context, target platforms, user flows, a candidate/design artifact and acceptance criteria before routing. Quality Gate requires a task contract, risk tier, exact candidate, acceptance criteria and required-evidence specification before routing. A role evaluating a candidate that implements or changes itself always returns uncertified with Cristian approval required. Cristian's approval of merged PR #13 records the exact Phase 4 bootstrap through repository governance; it does not satisfy future candidate review or the full Phase 5 certification system.
 
 ## Deferred
 

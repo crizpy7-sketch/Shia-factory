@@ -35,7 +35,7 @@
       "requires": ["product-context", "target-platforms", "user-flows", "candidate-or-design-artifact", "acceptance-criteria"],
       "produces": ["design-specification", "design-tokens", "responsive-states", "accessibility-requirements", "visual-evidence-requirements", "rework-request"],
       "implementation": {"status": "operational-bootstrap-uncertified", "compatibility_paths": ["agents/design-director/README.md", "skills/design/PACK.json", "boris/src/identity/permanent-workforce.ts"]},
-      "on_unavailable": "report any unavailable design capability honestly; bootstrap certification remains pending Cristian approval"
+      "on_unavailable": "report any unavailable design capability honestly; Phase 4 bootstrap approval does not imply that an unavailable capability executed or received full certification"
     },
     {
       "role_id": "gary",

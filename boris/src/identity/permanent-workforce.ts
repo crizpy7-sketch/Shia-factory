@@ -5,7 +5,7 @@ import { loadRoster, type AgentProfile } from './roster.js';
 
 export const CANONICAL_ROLE_IDS = ['shia-core', 'boris', 'design-director', 'gary', 'quality-gate'] as const;
 export type CanonicalRoleId = typeof CANONICAL_ROLE_IDS[number];
-export type BootstrapCertification = 'approved' | 'legacy-mapped' | 'pending-cristian-approval';
+export type BootstrapCertification = 'approved' | 'legacy-mapped' | 'bootstrap-approved' | 'pending-cristian-approval';
 
 interface RegistryRole {
   id: string;
@@ -115,6 +115,7 @@ function routeOnlyPaths(role: PermanentRoleAdapter): string[] {
 
 function certificationFor(role: RegistryRole): BootstrapCertification {
   if (role.certification_status === 'pending-cristian-bootstrap-approval') return 'pending-cristian-approval';
+  if (role.certification_status === 'bootstrap-approved-phase-4') return 'bootstrap-approved';
   if (role.id === 'shia-core') return 'approved';
   return 'legacy-mapped';
 }
@@ -219,9 +220,9 @@ export async function invokePermanentRole(repoRoot: string, request: RoleInvocat
       if (request.reviewerRole === 'quality-gate') limitations.push('Self-review is recorded as non-independent and cannot satisfy certification.');
     }
   }
-  if (request.bootstrapSubjectRole === role.id && role.certification === 'pending-cristian-approval') {
+  if (request.bootstrapSubjectRole === role.id) {
     approvalRequired = true;
-    limitations.push(`${role.name} bootstrap approval remains unsatisfied until Cristian approves the exact candidate.`);
+    limitations.push(`${role.name} cannot approve a candidate that implements or changes itself; Cristian approval of that exact candidate must be recorded through repository governance.`);
   }
   if (request.humanApproved === true && approvalRequired && request.bootstrapSubjectRole === role.id) {
     limitations.push('Runtime input cannot promote its own registry certification; approval must be recorded through repository governance.');

@@ -104,7 +104,7 @@ test('Design Director missing required context needs exact input and produces no
 test('Design Director complete bounded input is callable and routed without artifact claims or self-certification', async () => {
   const workforce = await loadPermanentWorkforce(repoRoot);
   const design = workforce.byId('design-director');
-  assert.equal(design?.certification, 'pending-cristian-approval');
+  assert.equal(design?.certification, 'bootstrap-approved');
   assert.equal(workforce.resolve('PED')?.role.id, 'design-director');
   const result = await invokePermanentRole(repoRoot, {
     role: 'Design Director', capability: 'ux-review', objective: 'Review responsive UX.',
@@ -132,7 +132,7 @@ test('Quality Gate missing task, risk, acceptance and required evidence returns 
   assert.equal(blocked.dispatch.executed, false);
 });
 
-test('complete bounded Quality Gate input is callable but bootstrap certification remains pending', async () => {
+test('complete bounded Quality Gate input is callable after bootstrap approval without claiming execution or full certification', async () => {
   const routed = await invokePermanentRole(repoRoot, {
     role: '@quality-gate', capability: 'functional-test', objective: 'Verify candidate.',
     exactCandidate: 'candidate-a', evidence: ['test:pass'], inputs: {
@@ -144,7 +144,7 @@ test('complete bounded Quality Gate input is callable but bootstrap certificatio
   assert.equal(routed.roleId, 'quality-gate');
   assert.equal(routed.dispatch.executed, false);
   assert.equal(routed.certified, false);
-  assert.equal(routed.approvalRequired, true);
+  assert.equal(routed.approvalRequired, false);
 });
 
 test('Quality Gate bootstrap cannot self-certify even when invocation claims human approval', async () => {
