@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "rule": "Indexes organize references; they do not duplicate skill bodies or create executable skills.",
+  "packs": [
+    {"id":"product","index":"skills/product/PACK.json"},
+    {"id":"design","index":"skills/design/PACK.json"},
+    {"id":"engineering","index":"skills/engineering/PACK.json"},
+    {"id":"ai","index":"skills/ai/PACK.json"},
+    {"id":"quality","index":"skills/quality/PACK.json"},
+    {"id":"growth","index":"skills/growth/PACK.json"},
+    {"id":"operations","index":"skills/operations/PACK.json"}
+  ]
+}

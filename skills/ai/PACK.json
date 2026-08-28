@@ -1,0 +1,1 @@
+{"schema_version":"1.0.0","id":"ai","owner":"boris","status":"code-evidence-only","members":[{"kind":"implementation-evidence","reference":"boris/src/providers","mode":"reference-only"},{"kind":"architecture-contract","reference":"docs/AI_STACK.md","mode":"reference-only"}],"gaps":["Provider code and architecture documentation are not executable skill packages."]}

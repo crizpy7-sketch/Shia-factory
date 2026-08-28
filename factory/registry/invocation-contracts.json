@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0.0",
+  "registry": "factory/registry/core-v2.json",
+  "rules": {
+    "unknown_role": "refuse",
+    "unimplemented_role": "return-unavailable-with-evidence",
+    "authority_default": "deny",
+    "approval_owner": "Cristian",
+    "candidate_mutation_after_quality_review": "invalidates-review"
+  },
+  "roles": [
+    {
+      "role_id": "shia-core",
+      "invoke_as": ["@shia-core", "Call Shia Core", "Ask Shia Core", "Route through Shia Core"],
+      "accepts": ["intake", "plan", "reuse-search", "risk-classification", "context-selection", "role-skill-tool-routing", "lifecycle-status"],
+      "requires": ["objective", "project-or-app-profile", "current-repository-state"],
+      "produces": ["task-contract", "risk-tier", "reuse-candidates", "routing-decision", "required-evidence", "approval-gates"],
+      "implementation": {"status": "partial", "compatibility_paths": ["AGENTS.md", "docs/factory/OPERATING_SYSTEM.md", "boris/src/factory/operating-system.ts", "boris/src/factory/runtime-wiring.ts"]},
+      "on_unavailable": "block execution and return the missing implementation surface; never silently route around policy"
+    },
+    {
+      "role_id": "boris",
+      "invoke_as": ["@boris", "Call BORIS", "Ask BORIS", "Run this through BORIS", "BORIS review this"],
+      "legacy_alias_source": "agents/registry.js#BORIS.invocation_aliases",
+      "accepts": ["architecture", "implementation", "frontend", "backend", "database", "ai-integration", "debugging", "devops", "release-preparation", "bounded-repair"],
+      "requires": ["bounded-objective", "allowed-paths-and-tools", "acceptance-criteria", "risk-tier", "verification-plan"],
+      "produces": ["plan", "exact-candidate", "changed-paths", "test-evidence", "repair-record", "release-candidate"],
+      "implementation": {"status": "operational-uncertified", "compatibility_paths": ["agents/BORIS-001", "boris", "agents/registry.js"]},
+      "on_unavailable": "block work assigned specifically to BORIS; never substitute a different identity without a new routing decision"
+    },
+    {
+      "role_id": "design-director",
+      "invoke_as": ["@design-director", "Call Design Director", "Ask Design Director", "Design Director review this"],
+      "accepts": ["ux-review", "visual-direction", "figma", "design-system", "responsive-design", "motion", "accessibility-design", "taste-review"],
+      "requires": ["product-context", "target-platforms", "user-flows", "candidate-or-design-artifact", "acceptance-criteria"],
+      "produces": ["design-specification", "design-tokens", "responsive-states", "accessibility-requirements", "visual-evidence-requirements", "rework-request"],
+      "implementation": {"status": "missing", "compatibility_paths": ["agents/design-director/README.md", "skills/design/PACK.json"]},
+      "on_unavailable": "report Design Director unavailable and leave design approval unsatisfied"
+    },
+    {
+      "role_id": "gary",
+      "invoke_as": ["@gary", "Call Gary", "Ask Gary", "Gary review this", "Run this through Gary", "Gary launch plan"],
+      "legacy_alias_source": "agents/registry.js#GARY.invocation_aliases",
+      "accepts": ["product-strategy", "customer-research", "positioning", "marketing", "launch", "growth", "experiment-design", "analytics-interpretation"],
+      "requires": ["audience", "offer-or-product", "objective", "evidence", "success-metric"],
+      "produces": ["research-brief", "positioning", "campaign-draft", "launch-plan", "experiment-plan", "analytics-interpretation", "approval-gates"],
+      "implementation": {"status": "partial", "compatibility_paths": ["agents/GARY-001", "agents/gary.js", "boris/src/identity/roster.ts", "agents/registry.js"]},
+      "on_unavailable": "return a bounded evidence-gap intake; never present deterministic panel output as a live Gary answer"
+    },
+    {
+      "role_id": "quality-gate",
+      "invoke_as": ["@quality-gate", "Call Quality Gate", "Ask Quality Gate", "Quality Gate verify this"],
+      "accepts": ["functional-test", "integration-test", "browser-test", "visual-qa", "accessibility-test", "security-test", "performance-test", "adversarial-review", "release-verification"],
+      "requires": ["task-contract", "risk-tier", "exact-candidate", "acceptance-criteria", "required-evidence"],
+      "produces": ["quality-receipt", "pass-or-reject", "evidence-index", "known-limitations", "rework-request"],
+      "implementation": {"status": "partial-unified-gate-missing", "compatibility_paths": ["boris/tests", "agents/tests", ".github/workflows/boris-ci.yml", "agents/advisory.js"]},
+      "on_unavailable": "leave the required quality receipt unsatisfied; tests from a builder do not become an independent gate by relabeling"
+    }
+  ]
+}

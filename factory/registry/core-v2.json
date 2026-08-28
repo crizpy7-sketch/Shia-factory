@@ -2,6 +2,9 @@
   "schema_version": "2.0.0",
   "status": "migration",
   "authority": "Shia Factory Core v2 Project Brief",
+  "invocation_contracts": "factory/registry/invocation-contracts.json",
+  "authority_matrix": "factory/registry/authority-matrix.json",
+  "skill_pack_registry": "skills/registry.json",
   "permanent_roles": [
     {"id":"shia-core","name":"Shia Core","owns":["orchestration","planning","context","risk","capability-selection"],"implementation_status":"partial","current_evidence":["AGENTS.md","docs/factory/OPERATING_SYSTEM.md","boris/src/factory/operating-system.ts","boris/src/factory/runtime-wiring.ts"]},
     {"id":"boris","name":"BORIS","owns":["engineering","architecture","frontend","backend","database","ai-integration","debugging","devops","release-engineering"],"implementation_status":"operational-uncertified","current_evidence":["agents/BORIS-001","boris/src","boris/tests"]},
@@ -10,13 +13,13 @@
     {"id":"quality-gate","name":"Quality Gate","owns":["functional-testing","browser-testing","visual-qa","accessibility-testing","security-testing","performance-testing","adversarial-review","release-verification"],"implementation_status":"partial-unified-gate-missing","current_evidence":["boris/tests",".github/workflows/boris-ci.yml","agents/advisory.js"]}
   ],
   "skill_packs": [
-    {"id":"product","status":"missing"},
-    {"id":"design","status":"missing"},
-    {"id":"engineering","status":"partial"},
-    {"id":"ai","status":"partial"},
-    {"id":"quality","status":"partial"},
-    {"id":"growth","status":"partial"},
-    {"id":"operations","status":"partial"}
+    {"id":"product","status":"indexed","index":"skills/product/PACK.json"},
+    {"id":"design","status":"indexed-empty","index":"skills/design/PACK.json"},
+    {"id":"engineering","status":"indexed","index":"skills/engineering/PACK.json"},
+    {"id":"ai","status":"indexed-evidence-only","index":"skills/ai/PACK.json"},
+    {"id":"quality","status":"indexed-evidence","index":"skills/quality/PACK.json"},
+    {"id":"growth","status":"indexed","index":"skills/growth/PACK.json"},
+    {"id":"operations","status":"indexed","index":"skills/operations/PACK.json"}
   ],
   "tool_ownership": {
     "github":"boris",
