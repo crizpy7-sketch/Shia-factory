@@ -24,7 +24,8 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 - [x] Seven pack indexes created by mapping existing skills without duplication — `skills/registry.json`, `skills/*/PACK.json`
 - [x] Permanent-role authority and permission boundaries explicit — `factory/registry/authority-matrix.json`
 - [x] Legacy runtime, identity and skill paths preserved by compatibility tests — `tests/core-v2-permanent-registry.test.mjs`
-- [ ] Phase 2 completion reviewed and approved by Cristian
+- [x] Phase 2 completion reviewed and approved by Cristian — merged PR #11, `0e357117c875d4432c826c07aea175dee64a01be`
+- **Phase 2: 100% complete** — all four source-tracker items have merged repository evidence
 
 ## Phase 3 — Orchestrator Core
 
