@@ -21,6 +21,8 @@
   "tool_ownership": {
     "github":"boris",
     "figma":"design-director",
+    "canva":"design-director",
+    "google-drive":"shia-core",
     "supabase":"boris",
     "openai":"boris",
     "browser-testing":"quality-gate",
