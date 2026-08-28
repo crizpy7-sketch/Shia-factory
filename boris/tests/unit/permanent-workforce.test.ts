@@ -7,10 +7,45 @@ import {
   invokePermanentRole,
   loadPermanentWorkforce,
 } from '../../src/identity/permanent-workforce.js';
-import type { OrchestrationRequest } from '../../src/factory/orchestrator-core.js';
+import type { OrchestrationRequest, OrchestratorTaskContract } from '../../src/factory/orchestrator-core.js';
+import type { QualityEvidence } from '../../src/quality/quality-gate.js';
+import { trustedFixtureDependencies } from '../helpers/quality-admission.js';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../../..');
 const profileSource = await readFile(path.join(repoRoot, 'APP_PROFILE.yaml'), 'utf8');
+const qualityCandidate = 'a'.repeat(40);
+
+function qualityTaskContract(): OrchestratorTaskContract {
+  return {
+    schemaVersion: '1.0.0', id: 'TASK-1', projectId: 'shia-factory', objective: 'Verify candidate.', outcome: 'Candidate is evidenced.',
+    repository: { commit: 'b'.repeat(40), branch: 'phase5' }, profileDigest: 'c'.repeat(64), risk: { tier: 'T2', reasons: ['normal feature'] },
+    reuse: { searched: true, findings: [], creationDisposition: 'reuse-search-recorded' }, selectedRoles: [], selectedSkillPacks: [], selectedTools: [],
+    acceptanceCriteria: [{ id: 'AC-1', statement: 'Feature works.', evidence: ['test'] }], requiredEvidence: ['test'], allowedActions: [], approvalGates: [],
+    executionBlocked: false, executionBlockers: [], certificationReleaseBlocked: false, certificationReleaseBlockers: [], blocked: false, blockers: [],
+  };
+}
+
+function qualityEvidence(kind: QualityEvidence['kind']): QualityEvidence {
+  return { id: `E-${kind}`, kind, candidateSha: qualityCandidate, status: 'pass', source: `command:${kind}`, summary: `${kind} passed`,
+    criterionIds: kind === 'unit' ? ['AC-1'] : [], observedAt: '2026-08-28T20:00:00Z', method: 'automated-tool' };
+}
+
+function qualityInputs(): Record<string, unknown> {
+  const task = qualityTaskContract();
+  return {
+    'task-id': task.id, 'application-or-project': task.projectId, repository: 'crizpy7-sketch/Shia-factory', branch: task.repository.branch,
+    'task-contract': task, 'risk-tier': task.risk.tier, 'acceptance-criteria': task.acceptanceCriteria, 'required-evidence': task.requiredEvidence,
+    'actual-evidence': ['typecheck', 'lint', 'unit', 'integration'].map((kind) => qualityEvidence(kind as QualityEvidence['kind'])),
+    'changed-paths': ['src/domain/value.ts'], 'change-signals': { userFacing: false, securitySurfaces: [], performanceSurfaces: [], performanceFailureMaterial: false, subjectRoles: [] },
+    'dangerous-actions': [], 'repair-budget': { attempt: 0, maxAttempts: 2 }, 'evaluated-at': '2026-08-28T20:00:00Z',
+  };
+}
+function qualityAdmissionFor(inputs: Record<string, unknown>) {
+  const task = inputs['task-contract'] as OrchestratorTaskContract;
+  const fixture = trustedFixtureDependencies({ taskId:String(inputs['task-id']),projectId:String(inputs['application-or-project']),repository:String(inputs.repository),candidateSha:qualityCandidate,branch:String(inputs.branch),riskTier:task.risk.tier,taskContract:task,acceptanceCriteria:task.acceptanceCriteria,requiredEvidence:task.requiredEvidence,actualEvidence:inputs['actual-evidence'] as QualityEvidence[],changedPaths:inputs['changed-paths'] as string[],changeSignals:inputs['change-signals'] as never,dangerousActions:[],reviewer:null,repair:inputs['repair-budget'] as {attempt:number;maxAttempts:number},evaluatedAt:String(inputs['evaluated-at']) });
+  inputs['actual-evidence']=fixture.input.actualEvidence;
+  return {qualityAdmission:fixture.dependencies};
+}
 
 function orchestrationRequest(): OrchestrationRequest {
   return {
@@ -128,40 +163,62 @@ test('Quality Gate missing task, risk, acceptance and required evidence returns 
     role: 'Quality Gate', capability: 'functional-test', objective: 'Verify candidate.', exactCandidate: 'candidate-a',
   });
   assert.equal(blocked.status, 'evidence-gap');
-  assert.deepEqual(blocked.missingInputs, ['task-contract', 'risk-tier', 'acceptance-criteria', 'required-evidence']);
+  assert.deepEqual(blocked.missingInputs, [
+    'task-id', 'application-or-project', 'repository', 'branch', 'task-contract', 'risk-tier', 'acceptance-criteria',
+    'required-evidence', 'actual-evidence', 'changed-paths', 'change-signals', 'repair-budget', 'evaluated-at',
+  ]);
   assert.equal(blocked.dispatch.executed, false);
 });
 
-test('complete bounded Quality Gate input is callable after bootstrap approval without claiming execution or full certification', async () => {
+test('complete bounded Quality Gate input executes the canonical receipt engine without accepting the Shia task', async () => {
+  const inputs = qualityInputs();
   const routed = await invokePermanentRole(repoRoot, {
     role: '@quality-gate', capability: 'functional-test', objective: 'Verify candidate.',
-    exactCandidate: 'candidate-a', evidence: ['test:pass'], inputs: {
-      'task-contract': { id: 'TASK-1' }, 'risk-tier': 'T2',
-      'acceptance-criteria': ['Feature works'], 'required-evidence': ['test'],
-    },
-  });
-  assert.equal(routed.status, 'routed');
+    exactCandidate: qualityCandidate, inputs,
+  }, qualityAdmissionFor(inputs));
+  assert.equal(routed.status, 'completed');
   assert.equal(routed.roleId, 'quality-gate');
-  assert.equal(routed.dispatch.executed, false);
+  assert.equal(routed.dispatch.executed, true);
   assert.equal(routed.certified, false);
-  assert.equal(routed.approvalRequired, false);
+  assert.equal(routed.approvalRequired, true);
+  assert.equal(routed.qualityReceipt?.finalState, 'pass');
+  assert.equal(routed.qualityReceipt?.controlPlane.qualityGateMayAcceptTask, false);
+  assert.ok(routed.limitations.some((item) => /Phase 5 implementation approval is pending/.test(item)));
+});
+
+test('malformed Quality Gate packet is blocked rather than throwing or inventing evidence', async () => {
+  const inputs = qualityInputs();
+  inputs['task-contract'] = { id: 'TASK-1' };
+  const result = await invokePermanentRole(repoRoot, {
+    role: 'Quality Gate', capability: 'release-verification', objective: 'Reject malformed input.', exactCandidate: qualityCandidate, inputs,
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.dispatch.executed, false);
+  assert.equal(result.certified, false);
+  assert.deepEqual(result.producedOutputs, []);
+  assert.ok(result.limitations.some((item) => /Malformed Quality Gate packet was rejected/.test(item)));
 });
 
 test('Quality Gate bootstrap cannot self-certify even when invocation claims human approval', async () => {
+  const inputs = qualityInputs();
+  inputs['change-signals'] = { userFacing: false, securitySurfaces: ['factory-governance'], performanceSurfaces: [], performanceFailureMaterial: false, subjectRoles: ['quality-gate'] };
+  inputs['independent-reviewer'] = { id: 'quality-gate', source: 'permanent-quality-gate', independent: false };
+  const task = qualityTaskContract();
+  task.risk = { tier: 'T3', reasons: ['Quality Gate governance change'] };
+  task.requiredEvidence = ['test', 'review'];
+  inputs['task-contract'] = task;
+  inputs['risk-tier'] = 'T3';
+  inputs['required-evidence'] = task.requiredEvidence;
+  (inputs['actual-evidence'] as QualityEvidence[]).push(qualityEvidence('security'), qualityEvidence('adversarial'));
   const result = await invokePermanentRole(repoRoot, {
     role: 'Testing Agent', capability: 'release-verification', objective: 'Certify Quality Gate bootstrap.',
-    exactCandidate: 'phase4-candidate', evidence: ['unit:pass', 'integration:pass'],
-    inputs: {
-      'task-contract': { id: 'PHASE4' }, 'risk-tier': 'T3',
-      'acceptance-criteria': ['Five roles callable'], 'required-evidence': ['test', 'review'],
-    },
+    exactCandidate: qualityCandidate, inputs,
     bootstrapSubjectRole: 'quality-gate', reviewerRole: 'quality-gate', humanApproved: true,
   });
-  assert.equal(result.status, 'routed');
+  assert.equal(result.status, 'blocked');
   assert.equal(result.certified, false);
   assert.equal(result.approvalRequired, true);
-  assert.ok(result.limitations.some((item) => /cannot independently certify its own bootstrap/.test(item)));
-  assert.ok(result.limitations.some((item) => /Self-review.*non-independent/.test(item)));
+  assert.ok(result.limitations.some((item) => /cannot independently certify/.test(item)));
 });
 
 test('deprecated aliases route deterministically to the correct permanent owner', async () => {

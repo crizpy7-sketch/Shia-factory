@@ -33,6 +33,8 @@ Shia Factory owns:
 
 GStack stages never override Shia Factory policy.
 
+Phase 5 evidence from `/review`, `/qa`, `/cso` or independent review remains raw until a Shia-authorized adapter verifies its run ID, exact candidate, collector, time and integrity. Browser evidence requires a verified runner record; visual evidence requires retained bytes and computed SHA-256. GStack remains evidence-source-only.
+
 ## Default significant-feature gauntlet
 
 ```text

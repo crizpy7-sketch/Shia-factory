@@ -51,10 +51,10 @@
       "role_id": "quality-gate",
       "invoke_as": ["@quality-gate", "Call Quality Gate", "Ask Quality Gate", "Quality Gate verify this"],
       "accepts": ["functional-test", "integration-test", "browser-test", "visual-qa", "accessibility-test", "security-test", "performance-test", "adversarial-review", "release-verification"],
-      "requires": ["task-contract", "risk-tier", "exact-candidate", "acceptance-criteria", "required-evidence"],
-      "produces": ["quality-receipt", "pass-or-reject", "evidence-index", "known-limitations", "rework-request"],
-      "implementation": {"status": "operational-bootstrap-uncertified", "compatibility_paths": ["boris/tests", "agents/tests", ".github/workflows/boris-ci.yml", "agents/advisory.js", "boris/src/identity/permanent-workforce.ts"]},
-      "on_unavailable": "leave required evidence unsatisfied; the bootstrap adapter cannot certify itself and full Phase 5 gates remain unimplemented"
+      "requires": ["task-id", "application-or-project", "repository", "branch", "task-contract", "risk-tier", "exact-candidate", "acceptance-criteria", "required-evidence", "actual-evidence", "changed-paths", "change-signals", "repair-budget", "evaluated-at"],
+      "produces": ["quality-receipt", "pass-or-reject", "admitted-evidence-index", "raw-evidence-audit", "known-limitations", "rework-request"],
+      "implementation": {"status": "operational-quality-gate-v1-candidate", "compatibility_paths": ["boris/src/quality/evidence-admission.ts", "boris/src/quality/quality-gate.ts", "factory/quality/evidence-admission.schema.json", "factory/quality/quality-gate-receipt.schema.json", "factory/quality/risk-gate-policy.json", "boris/tests", "agents/tests", ".github/workflows/boris-ci.yml", "agents/advisory.js", "gstack/SHIA_FACTORY_EXTENSION.md", "boris/src/identity/permanent-workforce.ts"]},
+      "on_unavailable": "leave required evidence unsatisfied; never fabricate a gate result or allow GStack evidence to accept a Shia task"
     }
   ]
 }

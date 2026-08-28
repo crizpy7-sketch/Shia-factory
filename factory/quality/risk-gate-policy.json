@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.1.0",
+  "control_plane": "shia-core",
+  "quality_gate_role": "quality-gate",
+  "gstack_role": "evidence-source-only",
+  "evidence_admission": {"raw_evidence_counts":false,"verified_provenance_required":true,"caller_approval_claims_count":false,"governance_approval_source":"existing-factory-approval-infrastructure","visual_artifact_requires":["trusted-artifact-record","retained-bytes","computed-sha256-match","exact-candidate-binding"]},
+  "automated_checks": ["typecheck", "lint", "unit", "integration"],
+  "risk_matrix": {
+    "T0": { "security": "baseline", "adversarial": false, "cristian_approval": false },
+    "T1": { "security": "baseline", "adversarial": false, "cristian_approval": false },
+    "T2": { "security": "when-security-surface", "adversarial": false, "cristian_approval": false },
+    "T3": { "security": "mandatory", "adversarial": true, "cristian_approval": false },
+    "T4": { "security": "mandatory", "adversarial": true, "cristian_approval": true }
+  },
+  "browser_visual": {
+    "activates_when": ["user-facing-change", "ui-path-change"],
+    "requires": ["real-browser-critical-flow", "viewport-or-device", "retained-visual-artifact", "exact-candidate-sha"]
+  },
+  "accessibility": {
+    "activates_when": ["user-facing-change", "ui-path-change"],
+    "source_inspection_alone_may_pass": false,
+    "requires": ["tested-surfaces", "failures-and-severity", "untested-surfaces", "exact-candidate-sha"]
+  },
+  "performance": {
+    "activates_when": ["frontend-performance-sensitive", "api-backend-latency-sensitive", "large-data-database", "ai-media-resource-intensive", "T3-or-T4-material-performance-consequence"],
+    "requires": ["thresholds", "measurements", "exact-candidate-sha"]
+  },
+  "dangerous_actions": ["merge", "deploy", "secret-access", "destructive-database", "external-publish-send", "spending-payment", "irreversible-infrastructure"],
+  "rules": {
+    "missing_evidence_may_pass": false,
+    "stale_evidence_may_pass": false,
+    "quality_evidence_grants_authority": false,
+    "quality_gate_may_accept_task": false,
+    "gstack_may_accept_task": false,
+    "self_certification": false,
+    "default_max_repair_attempts": 2
+  }
+}

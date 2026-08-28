@@ -26,7 +26,7 @@ Phase 3 adds a deterministic-first Shia Core pipeline at
 - BORIS may build an isolated candidate for a missing role, but the missing role remains unavailable and its approval remains unsatisfied;
 - unavailable selected roles block certification, completion and release; merge/deploy cannot execute while those blockers remain;
 - the compatibility fields `blocked` and `blockers` continue to mean hard execution blocking;
-- missing Design Director and unified Quality Gate capabilities remain honestly unavailable;
+- at the Phase 3 merge point, missing Design Director and unified Quality Gate capabilities remained honestly unavailable; later role phases must update the registry rather than invent execution history;
 - an existing provenance-verified capability routes to reuse before new creation;
 - a receipt file cannot be overwritten with different content.
 
@@ -36,9 +36,9 @@ The legacy reuse state `verified` means only that existing provenance was found,
 
 ## Intentionally not implemented
 
-- no role implementation or agent identity is created;
+- Phase 3 itself creates no role implementation or agent identity;
 - no Shelf admission or asset certification is performed;
-- no Quality Gate runtime is implemented;
+- the Phase 5 Quality Gate candidate consumes Phase 3 task contracts but cannot alter their risk, authority, approval or repair-budget decisions;
 - no agent consolidation is performed;
 - no app, including Michel OS, is migrated;
 - no automatic merge, deployment or external side effect occurs;
