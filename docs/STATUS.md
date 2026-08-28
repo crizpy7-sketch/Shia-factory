@@ -9,7 +9,9 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 - [x] Isolated migration branch created — `migration/core-v2-foundation`
 - [x] Current-state inventory and classification completed — `docs/audits/CORE_V2_CURRENT_STATE_AUDIT.md`
 - [x] Initial Factory `APP_PROFILE.yaml` added
-- [ ] Audit reviewed and approved by Cristian
+- [x] Canonical Core v2 folder structure implemented non-destructively — `tests/core-v2-structure.test.mjs`
+- [x] Canonical Core v2 architecture published — `docs/CORE_V2_ARCHITECTURE.md`
+- [ ] Phase 1 completion reviewed and approved by Cristian
 
 ## Phase 2 — Permanent Registry
 
