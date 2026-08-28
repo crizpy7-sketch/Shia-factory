@@ -33,7 +33,8 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 - [x] Search existing Factory assets before capability creation — deterministic discovery only; no Phase 6 admission
 - [x] Route minimum roles, packs and tools from risk/profile/registries with unavailable roles preserved
 - [x] Persist repository-bound orchestration decisions and evidence receipts
-- [ ] Phase 3 completion reviewed and approved by Cristian
+- [x] Phase 3 completion reviewed and approved by Cristian — merged PR #12, `cf13c909a3d06d8563e0ea5fd2f3418c1bcc8c19`
+- **Phase 3: 100% complete** — all four source-tracker items have merged repository evidence
 
 ## Phase 4 — Agent Consolidation
 
