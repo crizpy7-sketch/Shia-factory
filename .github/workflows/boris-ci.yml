@@ -7,6 +7,11 @@ on:
       - 'AGENTS.md'
       - 'FACTORY_CONSTITUTION.md'
       - 'docs/factory/**'
+      - 'factory/quality/**'
+      - 'factory/registry/**'
+      - 'skills/quality/**'
+      - 'tests/**'
+      - 'agents/tests/**'
       - '.github/workflows/boris-ci.yml'
   push:
     branches: [main]
@@ -15,6 +20,11 @@ on:
       - 'AGENTS.md'
       - 'FACTORY_CONSTITUTION.md'
       - 'docs/factory/**'
+      - 'factory/quality/**'
+      - 'factory/registry/**'
+      - 'skills/quality/**'
+      - 'tests/**'
+      - 'agents/tests/**'
       - '.github/workflows/boris-ci.yml'
 
 permissions:
@@ -57,3 +67,23 @@ jobs:
 
       - name: Security tests
         run: npm run test:security
+
+      - name: Runtime E2E tests
+        run: npm run test:e2e
+
+      - name: Core registry and structure tests
+        working-directory: .
+        run: node --test tests/*.test.mjs
+
+      - name: Legacy agent compatibility tests
+        working-directory: .
+        run: node --test agents/tests/*.test.mjs
+
+      - name: Retain Quality Gate evidence artifacts when present
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-evidence-${{ github.sha }}
+          path: factory/quality/evidence/
+          if-no-files-found: ignore
+          retention-days: 30

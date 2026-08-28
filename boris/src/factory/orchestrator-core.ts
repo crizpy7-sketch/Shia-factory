@@ -587,8 +587,8 @@ export function buildTaskContract(profile: NormalizedAppProfile, registries: Orc
   }
   for (const selectedRole of selectedRoles) {
     const registryRole = registries.core.permanent_roles.find((role) => role.id === selectedRole.id);
-    if (registryRole?.certification_status === 'pending-cristian-bootstrap-approval') {
-      certificationReleaseBlockers.push(`selected role ${selectedRole.id} bootstrap certification is pending Cristian approval`);
+    if (registryRole?.certification_status?.startsWith('pending-cristian-')) {
+      certificationReleaseBlockers.push(`selected role ${selectedRole.id} certification is pending Cristian approval (${registryRole.certification_status})`);
       approvalGates.add('Cristian');
     }
   }

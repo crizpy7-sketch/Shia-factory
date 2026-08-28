@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { orchestrate, type OrchestrationRequest, type OrchestrationResult } from '../factory/orchestrator-core.js';
+import type { RiskTier } from '../factory/operating-system.js';
+import { evaluateQualityGate, type DangerousActionRequest, type QualityChangeSignals,
+  type QualityEvidence, type QualityGateInput, type QualityGateReceipt } from '../quality/quality-gate.js';
 import { loadRoster, type AgentProfile } from './roster.js';
 
 export const CANONICAL_ROLE_IDS = ['shia-core', 'boris', 'design-director', 'gary', 'quality-gate'] as const;
@@ -81,6 +84,7 @@ export interface RoleInvocationResult {
   approvalRequired: boolean;
   certified: boolean;
   orchestration?: OrchestrationResult;
+  qualityReceipt?: QualityGateReceipt;
 }
 
 function present(value: unknown): boolean {
@@ -105,6 +109,23 @@ function missingRequiredInputs(role: PermanentRoleAdapter, request: RoleInvocati
   return role.requires.filter((field) => !present(requiredInput(request, field)));
 }
 
+function qualityInput(request: RoleInvocationRequest): QualityGateInput {
+  const inputs = request.inputs ?? {};
+  const taskContract = inputs['task-contract'] as QualityGateInput['taskContract'];
+  const changeSignals = inputs['change-signals'] as QualityChangeSignals;
+  const subjectRoles = [...new Set([...(changeSignals.subjectRoles ?? []), ...(request.bootstrapSubjectRole ? [request.bootstrapSubjectRole] : [])])];
+  const reviewer = inputs['independent-reviewer'] as QualityGateInput['reviewer'];
+  return {
+    taskId: String(inputs['task-id']), projectId: String(inputs['application-or-project']), repository: String(inputs['repository']),
+    candidateSha: request.exactCandidate ?? '', branch: String(inputs['branch']), riskTier: inputs['risk-tier'] as RiskTier,
+    taskContract, acceptanceCriteria: inputs['acceptance-criteria'] as QualityGateInput['acceptanceCriteria'],
+    requiredEvidence: inputs['required-evidence'] as string[], actualEvidence: inputs['actual-evidence'] as QualityEvidence[],
+    changedPaths: inputs['changed-paths'] as string[], changeSignals: { ...changeSignals, subjectRoles },
+    dangerousActions: (inputs['dangerous-actions'] ?? []) as DangerousActionRequest[], reviewer: reviewer ?? null,
+    repair: inputs['repair-budget'] as QualityGateInput['repair'], evaluatedAt: String(inputs['evaluated-at']),
+  };
+}
+
 function routeOnlyPaths(role: PermanentRoleAdapter): string[] {
   if (role.id === 'boris') return ['boris/src/runtime.ts', 'boris/src/identity/roster.ts', 'agents/BORIS-001'];
   if (role.id === 'gary') return ['boris/src/runtime.ts', 'boris/src/identity/roster.ts', 'agents/gary.js', 'agents/GARY-001'];
@@ -114,7 +135,7 @@ function routeOnlyPaths(role: PermanentRoleAdapter): string[] {
 }
 
 function certificationFor(role: RegistryRole): BootstrapCertification {
-  if (role.certification_status === 'pending-cristian-bootstrap-approval') return 'pending-cristian-approval';
+  if (role.certification_status?.startsWith('pending-cristian-')) return 'pending-cristian-approval';
   if (role.certification_status === 'bootstrap-approved-phase-4') return 'bootstrap-approved';
   if (role.id === 'shia-core') return 'approved';
   return 'legacy-mapped';
@@ -202,6 +223,33 @@ export async function invokePermanentRole(repoRoot: string, request: RoleInvocat
       certified: !orchestration.contract.certificationReleaseBlocked, orchestration };
   }
 
+  if (role.id === 'quality-gate') {
+    let qualityReceipt: QualityGateReceipt;
+    try {
+      qualityReceipt = evaluateQualityGate(qualityInput(request));
+    } catch (error) {
+      return {
+        roleId: role.id, status: 'blocked', callable: true, capability: request.capability, objective: request.objective,
+        evidence: [], missingInputs: [], producedOutputs: [], dispatch: { mode: 'none', executed: false, runtimePaths: ['boris/src/quality/quality-gate.ts'] },
+        limitations: [`Malformed Quality Gate packet was rejected: ${error instanceof Error ? error.message : String(error)}`],
+        approvalRequired: false, certified: false,
+      };
+    }
+    const status: RoleInvocationResult['status'] = qualityReceipt.finalState === 'pass' ? 'completed'
+      : qualityReceipt.finalState === 'reject' ? 'rejected'
+        : qualityReceipt.finalState === 'blocked' ? 'blocked' : 'evidence-gap';
+    const roleApprovalPending = role.certification === 'pending-cristian-approval';
+    const approvalRequired = roleApprovalPending || qualityReceipt.approvalGates.some((gate) => gate.state !== 'satisfied');
+    return {
+      roleId: role.id, status, callable: true, capability: request.capability, objective: request.objective,
+      evidence: qualityReceipt.actualEvidence.map((item) => `${item.id}:${item.source}`), missingInputs: [],
+      producedOutputs: ['quality-receipt', 'pass-or-reject', 'evidence-index', 'known-limitations', 'rework-request'],
+      dispatch: { mode: 'executed', executed: true, runtimePaths: ['boris/src/quality/quality-gate.ts'] },
+      limitations: [...qualityReceipt.knownLimitations, ...(roleApprovalPending ? ['Quality Gate Phase 5 implementation approval is pending Cristian repository governance.'] : [])],
+      approvalRequired, certified: qualityReceipt.finalState === 'pass' && !roleApprovalPending, qualityReceipt,
+    };
+  }
+
   const evidence = [...new Set(request.evidence ?? [])];
   const limitations: string[] = [];
   const status: RoleInvocationResult['status'] = 'routed';
@@ -212,13 +260,6 @@ export async function invokePermanentRole(repoRoot: string, request: RoleInvocat
 
   if (role.id === 'design-director') {
     limitations.push('Phase 4 adapter routes existing design capabilities; it does not invent a missing artifact or certify its own bootstrap.');
-  }
-  if (role.id === 'quality-gate') {
-    if (request.bootstrapSubjectRole === 'quality-gate') {
-      approvalRequired = true;
-      limitations.push('Quality Gate cannot independently certify its own bootstrap implementation; Cristian approval remains required.');
-      if (request.reviewerRole === 'quality-gate') limitations.push('Self-review is recorded as non-independent and cannot satisfy certification.');
-    }
   }
   if (request.bootstrapSubjectRole === role.id) {
     approvalRequired = true;

@@ -1,3 +1,3 @@
 # Quality skill pack
 
-Phase 1 structural index only; not an executable skill. Existing test suites remain in place.
+Canonical index for permanent Quality Gate contracts, runtime, existing suites, CI and GStack evidence sources. This folder is not an executable standalone skill; `PACK.json` maps the reusable surfaces without duplicating them.
