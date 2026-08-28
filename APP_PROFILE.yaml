@@ -1,0 +1,34 @@
+schema_version: "1.0"
+app:
+  id: shia-factory
+  name: Shia Factory
+  type: factory-platform
+  lifecycle_stage: migration
+blueprint: null
+risk:
+  baseline_tier: T3
+  reasons:
+    - Controls permissions, orchestration, verification, deployment, and memory promotion.
+stack:
+  frontend: static-html-current
+  language: [JavaScript, TypeScript]
+  backend: boris-node-runtime
+  source_control: GitHub
+  deployment: [VPS]
+  memory: GBrain
+  engineering_workflows: GStack
+required_roles: [shia-core, boris, quality-gate]
+conditional_roles: [design-director, gary]
+quality:
+  unit: required
+  integration: required
+  browser_e2e: required
+  visual_qa: required-for-ui-changes
+  accessibility: required-for-ui-changes
+  security: required
+  performance: required-for-runtime-or-ui-performance-changes
+approvals:
+  human_before_merge: true
+  human_before_deploy: true
+reuse_search_required: true
+status_document: docs/STATUS.md
