@@ -6,12 +6,12 @@
   "additionalProperties": false,
   "required": [
     "schemaVersion", "receiptId", "finalState", "taskId", "projectId", "repository", "candidateSha", "branch",
-    "riskTier", "taskContract", "acceptanceCriteria", "requiredEvidence", "actualEvidence", "staleEvidence",
+    "riskTier", "taskContract", "acceptanceCriteria", "requiredEvidence", "actualEvidence", "staleEvidence", "rawEvidence", "unverifiedEvidence", "governanceApprovals", "unverifiedApprovals",
     "criterionResults", "gateResults", "knownLimitations", "reworkRequests", "approvalGates", "independentReviewer",
     "controlPlane", "repair", "evaluatedAt"
   ],
   "properties": {
-    "schemaVersion": { "const": "1.0.0" },
+    "schemaVersion": { "const": "1.1.0" },
     "receiptId": { "$ref": "#/$defs/sha256" },
     "finalState": { "enum": ["pass", "reject", "blocked", "needs-evidence"] },
     "taskId": { "type": "string", "minLength": 1 },
@@ -25,6 +25,10 @@
     "requiredEvidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
     "actualEvidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
     "staleEvidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+    "rawEvidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+    "unverifiedEvidence": { "type": "array", "items": { "type": "object" } },
+    "governanceApprovals": { "type": "array", "items": { "$ref": "#/$defs/governanceApproval" } },
+    "unverifiedApprovals": { "type": "array", "items": { "type": "object" } },
     "criterionResults": { "type": "array", "items": { "$ref": "#/$defs/criterionResult" } },
     "gateResults": { "type": "array", "minItems": 6, "maxItems": 6, "items": { "$ref": "#/$defs/gateResult" } },
     "knownLimitations": { "type": "array", "items": { "type": "string" } },
@@ -88,9 +92,10 @@
         "testedSurfaces": { "type": "array", "items": { "type": "string" } }, "untestedSurfaces": { "type": "array", "items": { "type": "string" } },
         "browser": { "type": "object" }, "artifact": { "type": "object" },
         "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
-        "thresholds": { "type": "array", "items": { "type": "object" } }, "measurements": { "type": "array", "items": { "type": "object" } }
+        "thresholds": { "type": "array", "items": { "type": "object" } }, "measurements": { "type": "array", "items": { "type": "object" } }, "provenance": { "type": "object" }
       }
     },
+    "governanceApproval": {"type":"object","additionalProperties":false,"required":["approvalId","taskId","action","state","decidedBy","candidateSha","decidedAt","provenance","source"],"properties":{"approvalId":{"type":"string"},"taskId":{"type":"string"},"action":{"type":"string"},"state":{"const":"approved"},"decidedBy":{"const":"Cristian"},"candidateSha":{"$ref":"#/$defs/candidateSha"},"decidedAt":{"type":"string","format":"date-time"},"provenance":{"type":"string"},"source":{"type":"string"}}},
     "criterionResult": {
       "type": "object", "additionalProperties": false, "required": ["id", "statement", "state", "requiredEvidence", "evidenceIds", "failures"],
       "properties": {

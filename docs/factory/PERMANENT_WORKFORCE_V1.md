@@ -6,7 +6,7 @@ Phase 4 consolidates the Factory behind exactly five canonical role IDs. The cal
 
 `factory/registry/invocation-contracts.json` is the source of truth for required inputs. The adapter returns the exact missing field names as `needs-input` or `evidence-gap` before dispatch. It never fills absent context.
 
-Shia Core executes only through the Phase 3 orchestrator. BORIS and Gary return explicit route-only dispatch records pointing to their preserved runtime/identity surfaces; this is not a claim that they performed work. Design Director remains a bounded route-only adapter. In the Phase 5 candidate, Quality Gate delegates complete validated packets to the single deterministic engine at `boris/src/quality/quality-gate.ts`; missing inputs return an evidence gap before execution.
+Shia Core executes only through the Phase 3 orchestrator. BORIS and Gary return explicit route-only dispatch records pointing to their preserved runtime/identity surfaces; this is not a claim that they performed work. Design Director remains a bounded route-only adapter. In the Phase 5 candidate, Quality Gate admits raw evidence through `boris/src/quality/evidence-admission.ts` before delegating complete validated packets to the single deterministic engine at `boris/src/quality/quality-gate.ts`; missing or unverified inputs return an evidence gap before evaluation.
 
 | Canonical role | Consolidated implementation | Bootstrap/certification state |
 | --- | --- | --- |

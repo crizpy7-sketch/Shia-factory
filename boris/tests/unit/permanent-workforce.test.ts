@@ -9,6 +9,7 @@ import {
 } from '../../src/identity/permanent-workforce.js';
 import type { OrchestrationRequest, OrchestratorTaskContract } from '../../src/factory/orchestrator-core.js';
 import type { QualityEvidence } from '../../src/quality/quality-gate.js';
+import { trustedFixtureDependencies } from '../helpers/quality-admission.js';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../../..');
 const profileSource = await readFile(path.join(repoRoot, 'APP_PROFILE.yaml'), 'utf8');
@@ -38,6 +39,12 @@ function qualityInputs(): Record<string, unknown> {
     'changed-paths': ['src/domain/value.ts'], 'change-signals': { userFacing: false, securitySurfaces: [], performanceSurfaces: [], performanceFailureMaterial: false, subjectRoles: [] },
     'dangerous-actions': [], 'repair-budget': { attempt: 0, maxAttempts: 2 }, 'evaluated-at': '2026-08-28T20:00:00Z',
   };
+}
+function qualityAdmissionFor(inputs: Record<string, unknown>) {
+  const task = inputs['task-contract'] as OrchestratorTaskContract;
+  const fixture = trustedFixtureDependencies({ taskId:String(inputs['task-id']),projectId:String(inputs['application-or-project']),repository:String(inputs.repository),candidateSha:qualityCandidate,branch:String(inputs.branch),riskTier:task.risk.tier,taskContract:task,acceptanceCriteria:task.acceptanceCriteria,requiredEvidence:task.requiredEvidence,actualEvidence:inputs['actual-evidence'] as QualityEvidence[],changedPaths:inputs['changed-paths'] as string[],changeSignals:inputs['change-signals'] as never,dangerousActions:[],reviewer:null,repair:inputs['repair-budget'] as {attempt:number;maxAttempts:number},evaluatedAt:String(inputs['evaluated-at']) });
+  inputs['actual-evidence']=fixture.input.actualEvidence;
+  return {qualityAdmission:fixture.dependencies};
 }
 
 function orchestrationRequest(): OrchestrationRequest {
@@ -164,10 +171,11 @@ test('Quality Gate missing task, risk, acceptance and required evidence returns 
 });
 
 test('complete bounded Quality Gate input executes the canonical receipt engine without accepting the Shia task', async () => {
+  const inputs = qualityInputs();
   const routed = await invokePermanentRole(repoRoot, {
     role: '@quality-gate', capability: 'functional-test', objective: 'Verify candidate.',
-    exactCandidate: qualityCandidate, inputs: qualityInputs(),
-  });
+    exactCandidate: qualityCandidate, inputs,
+  }, qualityAdmissionFor(inputs));
   assert.equal(routed.status, 'completed');
   assert.equal(routed.roleId, 'quality-gate');
   assert.equal(routed.dispatch.executed, true);

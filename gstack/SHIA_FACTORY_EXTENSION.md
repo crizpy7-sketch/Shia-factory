@@ -33,7 +33,7 @@ Shia Factory owns:
 
 GStack stages never override Shia Factory policy.
 
-Phase 5 evidence supplied by `/review`, `/qa`, `/cso` or an independent-review surface must identify the exact candidate SHA, source, observation time, status and applicable criteria. Browser/visual evidence also carries viewport/device metadata and retained artifact provenance. Missing or unavailable GStack evidence is an explicit Quality Gate gap, never a pass. The canonical Shia receipt schema remains `factory/quality/quality-gate-receipt.schema.json`; GStack does not replace it.
+Phase 5 evidence from `/review`, `/qa`, `/cso` or independent review remains raw until a Shia-authorized adapter verifies its run ID, exact candidate, collector, time and integrity. Browser evidence requires a verified runner record; visual evidence requires retained bytes and computed SHA-256. GStack remains evidence-source-only.
 
 ## Default significant-feature gauntlet
 

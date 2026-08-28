@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { orchestrate, type OrchestrationRequest, type OrchestrationResult } from '../factory/orchestrator-core.js';
 import type { RiskTier } from '../factory/operating-system.js';
+import { admitQualityGateInput, type EvidenceAdmissionDependencies } from '../quality/evidence-admission.js';
 import { evaluateQualityGate, type DangerousActionRequest, type QualityChangeSignals,
   type QualityEvidence, type QualityGateInput, type QualityGateReceipt } from '../quality/quality-gate.js';
 import { loadRoster, type AgentProfile } from './roster.js';
@@ -86,6 +87,7 @@ export interface RoleInvocationResult {
   orchestration?: OrchestrationResult;
   qualityReceipt?: QualityGateReceipt;
 }
+export interface PermanentWorkforceServices { qualityAdmission?: EvidenceAdmissionDependencies }
 
 function present(value: unknown): boolean {
   if (typeof value === 'string') return value.trim().length > 0;
@@ -122,6 +124,7 @@ function qualityInput(request: RoleInvocationRequest): QualityGateInput {
     requiredEvidence: inputs['required-evidence'] as string[], actualEvidence: inputs['actual-evidence'] as QualityEvidence[],
     changedPaths: inputs['changed-paths'] as string[], changeSignals: { ...changeSignals, subjectRoles },
     dangerousActions: (inputs['dangerous-actions'] ?? []) as DangerousActionRequest[], reviewer: reviewer ?? null,
+    approvalReferences: (inputs['approval-references'] ?? []) as string[],
     repair: inputs['repair-budget'] as QualityGateInput['repair'], evaluatedAt: String(inputs['evaluated-at']),
   };
 }
@@ -190,7 +193,7 @@ export async function loadPermanentWorkforce(repoRoot: string): Promise<Permanen
   };
 }
 
-export async function invokePermanentRole(repoRoot: string, request: RoleInvocationRequest): Promise<RoleInvocationResult> {
+export async function invokePermanentRole(repoRoot: string, request: RoleInvocationRequest, services: PermanentWorkforceServices = {}): Promise<RoleInvocationResult> {
   const workforce = await loadPermanentWorkforce(repoRoot);
   const resolved = workforce.resolve(request.role);
   if (!resolved) throw new Error(`unknown permanent role or legacy alias: ${request.role}`);
@@ -226,7 +229,8 @@ export async function invokePermanentRole(repoRoot: string, request: RoleInvocat
   if (role.id === 'quality-gate') {
     let qualityReceipt: QualityGateReceipt;
     try {
-      qualityReceipt = evaluateQualityGate(qualityInput(request));
+      const admitted = admitQualityGateInput(qualityInput(request), services.qualityAdmission ?? { evidenceAdapters: [] });
+      qualityReceipt = evaluateQualityGate(admitted);
     } catch (error) {
       return {
         roleId: role.id, status: 'blocked', callable: true, capability: request.capability, objective: request.objective,

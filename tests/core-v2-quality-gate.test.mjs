@@ -19,7 +19,7 @@ test('Phase 5 keeps exactly five canonical permanent role IDs and upgrades only 
 test('canonical receipt schema requires exact task, project, repository, candidate and gate evidence', async () => {
   const schema = await json('factory/quality/quality-gate-receipt.schema.json');
   for (const field of ['taskId', 'projectId', 'repository', 'candidateSha', 'branch', 'riskTier', 'taskContract', 'acceptanceCriteria',
-    'requiredEvidence', 'actualEvidence', 'gateResults', 'knownLimitations', 'reworkRequests', 'approvalGates', 'independentReviewer']) {
+    'requiredEvidence', 'actualEvidence', 'rawEvidence', 'unverifiedEvidence', 'governanceApprovals', 'unverifiedApprovals', 'gateResults', 'knownLimitations', 'reworkRequests', 'approvalGates', 'independentReviewer']) {
     assert.ok(schema.required.includes(field), field);
   }
   assert.equal(schema.properties.controlPlane.properties.authority.const, 'shia-core');
@@ -38,6 +38,7 @@ test('risk policy activates consequence-aware security and relevant-only perform
   ]);
   assert.equal(policy.rules.stale_evidence_may_pass, false);
   assert.equal(policy.rules.quality_evidence_grants_authority, false);
+  assert.equal(policy.evidence_admission.raw_evidence_counts, false);
 });
 
 test('permanent invocation contract delegates complete Quality Gate packets to one canonical engine', async () => {
@@ -48,8 +49,10 @@ test('permanent invocation contract delegates complete Quality Gate packets to o
     assert.ok(quality.requires.includes(required), required);
   }
   assert.ok(quality.implementation.compatibility_paths.includes('boris/src/quality/quality-gate.ts'));
+  assert.ok(quality.implementation.compatibility_paths.includes('boris/src/quality/evidence-admission.ts'));
   const source = await readFile(new URL('boris/src/identity/permanent-workforce.ts', root), 'utf8');
-  assert.match(source, /evaluateQualityGate\(qualityInput\(request\)\)/);
+  assert.match(source, /admitQualityGateInput\(qualityInput\(request\)/);
+  assert.match(source, /evaluateQualityGate\(admitted\)/);
   assert.doesNotMatch(source, /gstackMayAcceptTask:\s*true/);
 });
 

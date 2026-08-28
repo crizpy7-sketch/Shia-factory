@@ -3,6 +3,9 @@ import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { OrchestratorTaskContract } from '../factory/orchestrator-core.js';
 import type { RiskTier } from '../factory/operating-system.js';
+import { isAdmittedQualityEvidence, isAdmittedQualityGateInput, isVerifiedGovernanceApproval,
+  type AdmittedQualityEvidence, type AdmittedQualityGateInput, type ApprovalAdmissionFailure,
+  type EvidenceAdmissionFailure, type EvidenceProvenanceClaim, type VerifiedGovernanceApproval } from './evidence-admission.js';
 
 export type QualityFinalState = 'pass' | 'reject' | 'blocked' | 'needs-evidence';
 export type GateState = 'pass' | 'fail' | 'blocked' | 'needs-evidence' | 'not-applicable';
@@ -39,6 +42,7 @@ export interface QualityEvidence {
   findings?: QualityFinding[];
   thresholds?: Array<{ metric: string; comparator: 'lte' | 'gte'; value: number; unit: string }>;
   measurements?: Array<{ metric: string; value: number; unit: string }>;
+  provenance?: EvidenceProvenanceClaim;
 }
 
 export interface DangerousActionRequest {
@@ -47,6 +51,7 @@ export interface DangerousActionRequest {
   approvedBy?: string;
   candidateSha?: string;
   source?: string;
+  approvalId?: string;
 }
 
 export interface QualityChangeSignals {
@@ -68,6 +73,7 @@ export interface QualityGateInput {
   acceptanceCriteria: Array<{ id: string; statement: string; evidence: string[] }>;
   requiredEvidence: string[];
   actualEvidence: QualityEvidence[];
+  approvalReferences?: string[];
   changedPaths: string[];
   changeSignals: QualityChangeSignals;
   dangerousActions: DangerousActionRequest[];
@@ -109,7 +115,7 @@ export interface ReworkRequest {
 }
 
 export interface QualityGateReceipt {
-  schemaVersion: '1.0.0';
+  schemaVersion: '1.1.0';
   receiptId: string;
   finalState: QualityFinalState;
   taskId: string;
@@ -121,8 +127,12 @@ export interface QualityGateReceipt {
   taskContract: OrchestratorTaskContract;
   acceptanceCriteria: Array<{ id: string; statement: string; evidence: string[] }>;
   requiredEvidence: string[];
-  actualEvidence: QualityEvidence[];
-  staleEvidence: QualityEvidence[];
+  actualEvidence: AdmittedQualityEvidence[];
+  staleEvidence: AdmittedQualityEvidence[];
+  rawEvidence: QualityEvidence[];
+  unverifiedEvidence: EvidenceAdmissionFailure[];
+  governanceApprovals: VerifiedGovernanceApproval[];
+  unverifiedApprovals: ApprovalAdmissionFailure[];
   criterionResults: CriterionResult[];
   gateResults: IndividualGateResult[];
   knownLimitations: string[];
@@ -300,11 +310,11 @@ function performanceGate(input: QualityGateInput, evidence: QualityEvidence[]): 
   return failures.length > 0 ? { ...result, state: 'fail', findings: failures } : result;
 }
 
-function permissionGate(input: QualityGateInput, evidence: QualityEvidence[]): { result: IndividualGateResult; approvals: QualityGateReceipt['approvalGates'] } {
+function permissionGate(input: AdmittedQualityGateInput, evidence: AdmittedQualityEvidence[]): { result: IndividualGateResult; approvals: QualityGateReceipt['approvalGates'] } {
   const findings: QualityFinding[] = [];
   const approvalNames = unique(input.taskContract.approvalGates.flatMap((name) => name.split('+').map((part) => part.trim()).filter(Boolean)));
   const approvals: QualityGateReceipt['approvalGates'] = approvalNames.map((name) => ({ name, state: 'pending', evidenceId: null }));
-  const currentApprovals = evidence.filter((item) => item.kind === 'human-approval' && item.status === 'pass');
+  const verifiedApprovals = input.governanceApprovals.filter((item) => isVerifiedGovernanceApproval(item));
   const ensureCristian = (): void => {
     if (!approvals.some((item) => item.name === 'Cristian')) approvals.push({ name: 'Cristian', state: 'pending', evidenceId: null });
   };
@@ -312,12 +322,15 @@ function permissionGate(input: QualityGateInput, evidence: QualityEvidence[]): {
   if (input.dangerousActions.some((request) => request.action !== 'secret-access')) ensureCristian();
 
   for (const approval of approvals) {
-    const match = currentApprovals.find((item) => item.candidateSha === input.candidateSha && /cristian/i.test(item.source));
-    if (approval.name === 'Cristian' && match) { approval.state = 'satisfied'; approval.evidenceId = match.id; }
+    const match = verifiedApprovals.find((item) => item.taskId === input.taskId && item.candidateSha === input.candidateSha
+      && item.decidedBy === 'Cristian' && item.state === 'approved'
+      && (item.action === 'quality-certification' || input.dangerousActions.some((request) => request.action === item.action && request.approvalId === item.approvalId)));
+    if (approval.name === 'Cristian' && match) { approval.state = 'satisfied'; approval.evidenceId = match.approvalId; }
     if (approval.name === 'quality-receipt') { approval.state = 'satisfied'; approval.evidenceId = 'current-quality-receipt'; }
-    if (approval.name === 'independent-review' && input.reviewer?.independent) {
+    const independentEvidence = evidence.find((item) => item.kind === 'independent-review' && item.status === 'pass' && item.source === input.reviewer?.source);
+    if (approval.name === 'independent-review' && input.reviewer?.independent && independentEvidence) {
       approval.state = 'satisfied';
-      approval.evidenceId = evidence.find((item) => item.kind === 'independent-review' && item.status === 'pass')?.id ?? input.reviewer.source;
+      approval.evidenceId = independentEvidence.id;
     }
   }
   for (const request of input.dangerousActions) {
@@ -325,8 +338,9 @@ function permissionGate(input: QualityGateInput, evidence: QualityEvidence[]): {
       findings.push(finding(`permission:${request.action}`, 'P0', 'Quality Gate cannot grant direct secret access; the permanent authority matrix denies it.'));
       continue;
     }
-    const exact = request.authorization === 'approved' && request.approvedBy === 'Cristian'
-      && request.candidateSha === input.candidateSha && Boolean(request.source?.trim());
+    const exact = verifiedApprovals.find((approval) => approval.approvalId === request.approvalId
+      && approval.taskId === input.taskId && approval.action === request.action
+      && approval.candidateSha === input.candidateSha && approval.decidedBy === 'Cristian');
     if (!exact) findings.push(finding(`permission:${request.action}`, 'P0', `${request.action} lacks Cristian approval bound to the exact candidate.`));
   }
   const pending = approvals.filter((item) => item.state !== 'satisfied');
@@ -334,7 +348,7 @@ function permissionGate(input: QualityGateInput, evidence: QualityEvidence[]): {
   return {
     result: {
       id: 'dangerous-action-permission', applicable: true, state, mode: 'authority-preserving',
-      requiredEvidenceKinds: approvals.length > 0 ? ['human-approval'] : [], evidenceIds: currentApprovals.map((item) => item.id),
+      requiredEvidenceKinds: approvals.length > 0 ? ['human-approval'] : [], evidenceIds: verifiedApprovals.map((item) => item.approvalId),
       findings, untestedSurfaces: [], limitations: ['Quality evidence records authorization; it never grants or executes a dangerous action.'],
     },
     approvals,
@@ -359,7 +373,11 @@ function criterionResults(input: QualityGateInput, evidence: QualityEvidence[]):
   });
 }
 
-export function evaluateQualityGate(input: QualityGateInput): QualityGateReceipt {
+export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGateReceipt {
+  if (!isAdmittedQualityGateInput(input) || input.actualEvidence.some((item) => !isAdmittedQualityEvidence(item))
+    || input.governanceApprovals.some((item) => !isVerifiedGovernanceApproval(item))) {
+    throw new Error('Quality Gate requires input produced by the trusted evidence-admission boundary');
+  }
   const structuralErrors = validateInput(input);
   const currentEvidence = input.actualEvidence.filter((item) => item.candidateSha === input.candidateSha);
   const staleEvidence = input.actualEvidence.filter((item) => item.candidateSha !== input.candidateSha);
@@ -386,9 +404,13 @@ export function evaluateQualityGate(input: QualityGateInput): QualityGateReceipt
   ]);
 
   const reviewerRequired = input.riskTier === 'T3' || input.riskTier === 'T4';
+  const verifiedIndependentReview = currentEvidence.some((item) => item.kind === 'independent-review' && item.status === 'pass'
+    && item.source === input.reviewer?.source);
   const selfReview = input.changeSignals.subjectRoles.includes('quality-gate')
     && (!input.reviewer || input.reviewer.id === 'quality-gate' || /quality-gate/i.test(input.reviewer.source));
-  if (reviewerRequired && (!input.reviewer || !input.reviewer.independent)) limitations.push('Independent reviewer identity/source is required for T3/T4.');
+  if (reviewerRequired && (!input.reviewer || !input.reviewer.independent || !verifiedIndependentReview)) limitations.push('Verified independent-review execution evidence and matching reviewer identity/source are required for T3/T4.');
+  if (input.unverifiedEvidence.length > 0) limitations.push(`${input.unverifiedEvidence.length} raw evidence item(s) were preserved but excluded because provenance was not verified.`);
+  if (input.unverifiedApprovals.length > 0) limitations.push(`${input.unverifiedApprovals.length} approval claim(s) were preserved but excluded because Factory governance could not verify them.`);
   if (selfReview) limitations.push('Quality Gate cannot independently certify a candidate that implements or changes itself.');
 
   const failedGates = gates.filter((item) => item.state === 'fail');
@@ -397,7 +419,7 @@ export function evaluateQualityGate(input: QualityGateInput): QualityGateReceipt
   const failedCriteria = criteria.filter((item) => item.state === 'fail');
   const criteriaGaps = criteria.filter((item) => item.state === 'needs-evidence');
   const exhausted = (failedGates.length > 0 || failedCriteria.length > 0) && input.repair.attempt >= input.repair.maxAttempts;
-  const reviewerBlocked = selfReview || (reviewerRequired && (!input.reviewer || !input.reviewer.independent));
+  const reviewerBlocked = selfReview || (reviewerRequired && (!input.reviewer || !input.reviewer.independent || !verifiedIndependentReview));
   let finalState: QualityFinalState;
   if (structuralErrors.length > 0 || blockedGates.length > 0 || reviewerBlocked || exhausted) finalState = 'blocked';
   else if (failedGates.length > 0 || failedCriteria.length > 0) finalState = 'reject';
@@ -416,10 +438,11 @@ export function evaluateQualityGate(input: QualityGateInput): QualityGateReceipt
   })) : [];
 
   const base = {
-    schemaVersion: '1.0.0' as const, finalState, taskId: input.taskId, projectId: input.projectId,
+    schemaVersion: '1.1.0' as const, finalState, taskId: input.taskId, projectId: input.projectId,
     repository: input.repository, candidateSha: input.candidateSha, branch: input.branch, riskTier: input.riskTier,
     taskContract: input.taskContract, acceptanceCriteria: input.acceptanceCriteria, requiredEvidence: input.requiredEvidence,
-    actualEvidence: currentEvidence, staleEvidence, criterionResults: criteria, gateResults: gates,
+    actualEvidence: currentEvidence, staleEvidence, rawEvidence: input.rawEvidence, unverifiedEvidence: input.unverifiedEvidence,
+    governanceApprovals: input.governanceApprovals, unverifiedApprovals: input.unverifiedApprovals, criterionResults: criteria, gateResults: gates,
     knownLimitations: limitations, reworkRequests, approvalGates: permissions.approvals,
     independentReviewer: input.reviewer,
     controlPlane: { authority: 'shia-core' as const, qualityGateMayAcceptTask: false as const, gstackMayAcceptTask: false as const, qualityEvidenceGrantsActionAuthority: false as const },

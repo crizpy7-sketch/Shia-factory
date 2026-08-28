@@ -1,6 +1,6 @@
 # Permanent Quality Gate v1
 
-Phase 5 upgrades the permanent `quality-gate` role. It does not create another agent, council, reviewer, security role or standalone skill. The deterministic engine is `boris/src/quality/quality-gate.ts`; the permanent workforce adapter invokes that engine after validating the normalized role contract.
+Phase 5 upgrades the permanent `quality-gate` role without adding a role or skill. `boris/src/quality/evidence-admission.ts` is the trust boundary; only its admitted input reaches `boris/src/quality/quality-gate.ts`.
 
 ## Control-plane boundary
 
@@ -35,7 +35,11 @@ Final states are deterministic:
 | `blocked` | Structure, authority, reviewer independence, approval, self-certification or repair-budget rules prevent progress. |
 | `needs-evidence` | No failure is proven, but required evidence is missing, unavailable, stale or structurally inadequate. |
 
-Evidence from another SHA is retained under `staleEvidence` for audit but is never counted. Persisted receipts use `<task-id>-<candidate-sha>.json`, so a repair necessarily creates a new receipt.
+Evidence from another SHA is retained under `staleEvidence` but never counted. Raw claims remain in `rawEvidence`/`unverifiedEvidence` and produce `needs-evidence`.
+
+## Evidence admission
+
+Workers, CI, BORIS, browser runners and GStack submit raw claims. Authorized adapters resolve independent run/artifact records and attach source type, source/run/artifact ID, exact candidate, collector, observation time, verified state and integrity digest. Admission canonical-copies and deep-freezes the verified record and packet before branding them for the evaluator, preventing mutation after verification. The evaluator rejects objects not produced by this boundary. Generic `human-approval` evidence is never admitted.
 
 ## Risk-to-gate matrix
 
@@ -56,7 +60,7 @@ For a user-facing or UI-path change, a passing packet requires both:
 1. real-browser critical-flow evidence with browser version, viewport/device and tested surfaces;
 2. a retained visual artifact path and SHA-256 digest.
 
-A screenshot alone does not prove persisted or server-side behavior. A missing browser runtime, unavailable physical device or absent screenshot produces `needs-evidence`. Quality Gate never synthesizes browser metadata or artifacts.
+A browser claim requires a verified runner record; method/version/viewport fields alone do not count. Visual evidence requires a trusted artifact/review record, allowed retained path, existing bytes and computed SHA-256 matching both recorded digests. The admitted visual status and findings come from that trusted record, never from the caller's raw claim.
 
 ## Accessibility
 
@@ -68,7 +72,7 @@ T3/T4 always require security and adversarial evidence. T2 activates on meaningf
 
 Performance activates only for declared performance-sensitive frontend, latency-sensitive API/backend, large-data/database, resource-intensive AI/media, or material T3/T4 consequence. A pass requires explicit threshold/measurement pairs; prose is not a benchmark.
 
-Merge, deploy, external publish/send, spending/payment, destructive database work and irreversible infrastructure require Cristian approval associated with the candidate. Direct secret access remains denied. Quality evidence records authorization but never grants it, and passing tests are never permission to deploy.
+Merge, deploy, external publish/send, spending/payment, destructive database work and irreversible infrastructure require a verified existing Factory/BORIS approval record bound to approval ID, task, action, exact candidate, Cristian, decision time and provenance. `approvedBy: Cristian` strings do not count. Secret access remains denied. Quality Gate records authority but never grants or executes it.
 
 ## Convergence
 

@@ -49,12 +49,12 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 
 ## Phase 5 — Quality & Safety
 
-- [x] Unified exact-candidate Quality Gate evidence packet — `boris/src/quality/quality-gate.ts`, `factory/quality/quality-gate-receipt.schema.json`
-- [x] Browser and visual evidence contract — requires real-browser metadata and retained artifact digests; unavailable evidence returns `needs-evidence`
+- [x] Unified exact-candidate Quality Gate evidence packet — admitted evidence only; raw claims retained for audit (`boris/src/quality/evidence-admission.ts`)
+- [x] Browser and visual evidence contract — requires a verified runner record plus retained bytes with computed matching SHA-256; caller metadata/digests cannot pass
 - [x] Accessibility gate — deterministic/observed evidence required; source inspection alone cannot pass
 - [x] Security and adversarial gate by risk — `factory/quality/risk-gate-policy.json`
 - [x] Performance gate by relevant surface/risk — explicit thresholds and measurements required
-- [x] Dangerous-action permission verification — `boris/tests/security/quality-gate-authority.test.ts`
+- [x] Dangerous-action permission verification — verified existing Factory approval receipt required
 - [x] Bounded BORIS repair and exact-candidate retest loop — stale evidence cannot certify a repaired SHA
 - [ ] Phase 5 completion reviewed and approved by Cristian — draft PR pending
 - **Phase 5 candidate: 7/7 technical items evidenced; approval pending.** Phase 5 is not yet an approved completion.
