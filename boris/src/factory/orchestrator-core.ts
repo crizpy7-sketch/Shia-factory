@@ -33,6 +33,7 @@ export interface CoreRegistry {
     name: string;
     owns: string[];
     implementation_status: string;
+    certification_status?: string;
     current_evidence: string[];
   }>;
   skill_packs: Array<{ id: string; status: string; index: string }>;
@@ -583,6 +584,13 @@ export function buildTaskContract(profile: NormalizedAppProfile, registries: Orc
     certificationReleaseBlockers.push(missing);
     const ownsRequestedExecution = request.requestedActions.some((action) => ACTION_OWNER[action] === role.id);
     if (ownsRequestedExecution) executionBlockers.push(`${missing}; requested owned action cannot execute`);
+  }
+  for (const selectedRole of selectedRoles) {
+    const registryRole = registries.core.permanent_roles.find((role) => role.id === selectedRole.id);
+    if (registryRole?.certification_status === 'pending-cristian-bootstrap-approval') {
+      certificationReleaseBlockers.push(`selected role ${selectedRole.id} bootstrap certification is pending Cristian approval`);
+      approvalGates.add('Cristian');
+    }
   }
   if (risk.tier === 'T4') approvalGates.add('Cristian');
   if (profile.approvals.human_before_merge === true && request.requestedActions.includes('merge')) approvalGates.add('Cristian');

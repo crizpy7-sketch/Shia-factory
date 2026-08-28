@@ -1,3 +1,3 @@
-# Shia Core compatibility destination
+# Permanent Shia Core
 
-Structural destination only. No new operational agent is created here in Phase 1. Current orchestration evidence remains in the paths listed by `factory/registry/core-v2.json`.
+Shia Core is callable through `boris/src/identity/permanent-workforce.ts`, which delegates directly to the single deterministic engine at `boris/src/factory/orchestrator-core.ts`. It does not contain or create a second orchestration engine.

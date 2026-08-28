@@ -38,12 +38,13 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 
 ## Phase 4 — Agent Consolidation
 
-- [ ] Map existing BORIS implementation to the permanent BORIS contract
-- [ ] Map existing Gary implementation to the permanent Gary contract
-- [ ] Implement Shia Core using existing orchestration logic
-- [ ] Implement Design Director using existing design capabilities
-- [ ] Implement Quality Gate using existing tests/review capabilities
-- [ ] Deprecate superseded councils/aliases without deleting history
+- [x] Map existing BORIS implementation to the permanent BORIS contract — `boris/src/identity/permanent-workforce.ts`
+- [x] Map existing Gary implementation to the permanent Gary contract — existing identity/runtime preserved
+- [x] Implement Shia Core using the single Phase 3 orchestration engine
+- [x] Implement callable Design Director bootstrap using indexed design contracts/capabilities — certification pending Cristian approval
+- [x] Implement callable Quality Gate bootstrap using existing tests/review evidence — self-certification forbidden; Phase 5 deferred
+- [x] Deprecate superseded councils/aliases without deleting history — `factory/registry/legacy-role-mapping.json`
+- [ ] Phase 4 completion reviewed and approved by Cristian
 
 ## Phase 5 — Quality & Safety
 

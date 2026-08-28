@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "canonical_registry": "factory/registry/core-v2.json",
+  "rules": {
+    "canonical_role_count": 5,
+    "historical_paths_deleted": false,
+    "deprecated_aliases_execute_as_owner": true
+  },
+  "mappings": [
+    {"alias":"BORIS-001","owner":"boris","classification":"retained-compatibility-alias","replacement":"boris"},
+    {"alias":"GARY-001","owner":"gary","classification":"retained-compatibility-alias","replacement":"gary"},
+    {"alias":"Gary Tan","owner":"gary","classification":"absorbed-capability","replacement":"gary"},
+    {"alias":"Gary Vee","owner":"gary","classification":"absorbed-capability","replacement":"gary"},
+    {"alias":"Marketing Chief","owner":"gary","classification":"deprecated","replacement":"gary"},
+    {"alias":"Growth Council","owner":"gary","classification":"deprecated","replacement":"gary"},
+    {"alias":"Premium Experience Director","owner":"design-director","classification":"absorbed-capability","replacement":"design-director"},
+    {"alias":"PED","owner":"design-director","classification":"deprecated","replacement":"design-director"},
+    {"alias":"Testing Agent","owner":"quality-gate","classification":"absorbed-capability","replacement":"quality-gate"},
+    {"alias":"Reviewer","owner":"quality-gate","classification":"deprecated","replacement":"quality-gate"},
+    {"alias":"Influencers Council","owner":"boris","classification":"deprecated","replacement":"boris"},
+    {"alias":"Engineering Council","owner":"boris","classification":"deprecated","replacement":"boris"},
+    {"alias":"Vibe Coder","owner":"boris","classification":"absorbed-capability","replacement":"boris"},
+    {"alias":"Algorithm Agent","owner":"boris","classification":"absorbed-capability","replacement":"boris"},
+    {"alias":"Systems Agent","owner":"boris","classification":"absorbed-capability","replacement":"boris"}
+  ]
+}
