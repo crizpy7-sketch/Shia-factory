@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "legend": {
+    "allow": "may perform within an approved task contract and granted tools",
+    "gated": "requires the named approval or independent evidence before the side effect",
+    "deny": "must refuse",
+    "separate": "may prepare or assess but a different role owns the action"
+  },
+  "actions": ["inspect", "plan", "route", "design", "build", "test", "reject", "request-rework", "mutate-reviewed-candidate", "merge", "deploy", "publish", "spend", "access-secrets-directly", "change-factory-governance"],
+  "roles": {
+    "shia-core": {
+      "inspect":"allow", "plan":"allow", "route":"allow", "design":"separate", "build":"separate", "test":"separate", "reject":"allow", "request-rework":"allow", "mutate-reviewed-candidate":"deny", "merge":"gated:Cristian", "deploy":"gated:Cristian", "publish":"gated:Cristian", "spend":"deny", "access-secrets-directly":"deny", "change-factory-governance":"gated:Cristian+independent-review"
+    },
+    "boris": {
+      "inspect":"allow", "plan":"allow", "route":"separate", "design":"separate", "build":"allow", "test":"allow", "reject":"separate", "request-rework":"allow", "mutate-reviewed-candidate":"deny", "merge":"gated:Cristian+quality-receipt", "deploy":"gated:Cristian+quality-receipt", "publish":"gated:Cristian", "spend":"deny", "access-secrets-directly":"deny", "change-factory-governance":"deny"
+    },
+    "design-director": {
+      "inspect":"allow", "plan":"allow", "route":"separate", "design":"allow", "build":"separate", "test":"allow:design-accessibility", "reject":"allow:design-gate", "request-rework":"allow", "mutate-reviewed-candidate":"deny", "merge":"deny", "deploy":"deny", "publish":"gated:Cristian", "spend":"deny", "access-secrets-directly":"deny", "change-factory-governance":"deny"
+    },
+    "gary": {
+      "inspect":"allow:authorized-data", "plan":"allow", "route":"separate", "design":"separate", "build":"deny", "test":"allow:growth-experiment-plan", "reject":"separate", "request-rework":"allow", "mutate-reviewed-candidate":"deny", "merge":"deny", "deploy":"deny", "publish":"gated:Cristian", "spend":"gated:Cristian+explicit-budget", "access-secrets-directly":"deny", "change-factory-governance":"deny"
+    },
+    "quality-gate": {
+      "inspect":"allow", "plan":"allow:verification", "route":"separate", "design":"separate", "build":"deny", "test":"allow", "reject":"allow", "request-rework":"allow", "mutate-reviewed-candidate":"deny", "merge":"deny", "deploy":"deny", "publish":"deny", "spend":"deny", "access-secrets-directly":"deny", "change-factory-governance":"deny"
+    }
+  }
+}

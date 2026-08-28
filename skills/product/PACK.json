@@ -1,0 +1,1 @@
+{"schema_version":"1.0.0","id":"product","owner":"gary","status":"indexed-upstream","members":[{"kind":"upstream-workflow","reference":"gstack/SHIA_FACTORY_EXTENSION.md","surfaces":["/office-hours","/spec","/autoplan"],"mode":"reference-only"}],"gaps":["No Factory-local executable Product skill has been admitted."]}

@@ -1,0 +1,1 @@
+{"schema_version":"1.0.0","id":"growth","owner":"gary","status":"indexed","members":[{"kind":"imported-local-skill","reference":"agents/GARY-001/host-application/skills/growth-operator/SKILL.md","mode":"reference-only","provenance":"agents/GARY-001/IMPORT.md"}],"gaps":[]}

@@ -11,7 +11,8 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 - [x] Initial Factory `APP_PROFILE.yaml` added
 - [x] Canonical Core v2 folder structure implemented non-destructively — `tests/core-v2-structure.test.mjs`
 - [x] Canonical Core v2 architecture published — `docs/CORE_V2_ARCHITECTURE.md`
-- [ ] Phase 1 completion reviewed and approved by Cristian
+- [x] Phase 1 completion reviewed and approved by Cristian — merged PR #10, `fe58443408563a5c086fa7971859e6c9d8256adc`
+- **Phase 1: 100% complete** — all four source-tracker items have merged repository evidence
 
 ## Phase 2 — Permanent Registry
 
@@ -19,8 +20,11 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 - [x] Canonical seven-pack registry added with honest implementation states
 - [x] Initial plugin/tool ownership map added
 - [x] Registry shape protected by automated tests
-- [ ] Role invocation contracts normalized
-- [ ] Seven pack indexes created by merging existing skills into packs
+- [x] Role invocation contracts normalized — `factory/registry/invocation-contracts.json`
+- [x] Seven pack indexes created by mapping existing skills without duplication — `skills/registry.json`, `skills/*/PACK.json`
+- [x] Permanent-role authority and permission boundaries explicit — `factory/registry/authority-matrix.json`
+- [x] Legacy runtime, identity and skill paths preserved by compatibility tests — `tests/core-v2-permanent-registry.test.mjs`
+- [ ] Phase 2 completion reviewed and approved by Cristian
 
 ## Phase 3 — Orchestrator Core
 
@@ -68,3 +72,7 @@ Evidence rule: an item is complete only when the linked repository evidence exis
 - [ ] Core v2 versioned and documented
 - [ ] Michel OS pilot accepted
 - [ ] Definition of Done fully evidenced
+
+## Deferred cross-phase improvement
+
+- [ ] Make `docs/STATUS.md` the canonical progress source and have the Factory dashboard derive percentages from it; retire browser-local checkbox state only after compatibility and migration tests pass

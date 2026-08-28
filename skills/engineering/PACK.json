@@ -1,0 +1,1 @@
+{"schema_version":"1.0.0","id":"engineering","owner":"boris","status":"indexed","members":[{"kind":"local-skill","reference":"skills/factory-runtime-wiring/SKILL.md","relationship":"supporting","primary_pack":"operations"},{"kind":"upstream-workflow","reference":"gstack/SHIA_FACTORY_EXTENSION.md","surfaces":["/review","/qa","/ship"],"mode":"reference-only"}],"gaps":[]}
