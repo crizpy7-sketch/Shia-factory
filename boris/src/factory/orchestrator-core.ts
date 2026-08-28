@@ -6,6 +6,12 @@ import type { RiskTier } from './operating-system.js';
 type JsonObject = Record<string, unknown>;
 type ReuseState = 'verified' | 'unverified' | 'legacy' | 'candidate';
 
+export interface ReuseCertification {
+  provenanceVerified: boolean;
+  shelfAdmission: 'not-evaluated';
+  qualityCertification: 'not-evaluated';
+}
+
 export interface NormalizedAppProfile {
   schemaVersion: '1.0';
   app: { id: string; name: string; type: string; lifecycleStage: string };
@@ -62,6 +68,7 @@ export interface ReuseAsset {
   kind: 'block' | 'module' | 'blueprint' | 'skill' | 'implementation';
   path: string;
   state: ReuseState;
+  certification: ReuseCertification;
   capabilities: string[];
   evidence: string[];
 }
@@ -120,7 +127,13 @@ export interface OrchestratorTaskContract {
   requiredEvidence: string[];
   allowedActions: ActionDecision[];
   approvalGates: string[];
+  executionBlocked: boolean;
+  executionBlockers: string[];
+  certificationReleaseBlocked: boolean;
+  certificationReleaseBlockers: string[];
+  /** Compatibility alias for executionBlocked. */
   blocked: boolean;
+  /** Compatibility alias for executionBlockers. */
   blockers: string[];
 }
 
@@ -372,6 +385,7 @@ export async function scanReuseCatalog(repoRoot: string, registries: Orchestrato
       const manifest = await exists(path.join(repoRoot, relative, 'manifest.json'));
       assets.push({
         id: `${kind}:${name}`, kind, path: relative, state: manifest ? 'verified' : kind === 'block' ? 'legacy' : 'candidate',
+        certification: { provenanceVerified: manifest, shelfAdmission: 'not-evaluated', qualityCertification: 'not-evaluated' },
         capabilities: tokens(name), evidence: manifest ? [`${relative}/manifest.json`] : [relative],
       });
     }
@@ -384,6 +398,7 @@ export async function scanReuseCatalog(repoRoot: string, registries: Orchestrato
       const state: ReuseState = member.kind === 'local-skill' ? 'verified' : member.kind === 'imported-local-skill' ? 'legacy' : 'unverified';
       assets.push({
         id: `skill:${pack.id}:${member.reference}`, kind: 'skill', path: member.reference, state,
+        certification: { provenanceVerified: member.kind === 'local-skill', shelfAdmission: 'not-evaluated', qualityCertification: 'not-evaluated' },
         capabilities: [...tokens(pack.id), ...tokens(member.reference), ...(member.surfaces ?? []).flatMap(tokens)], evidence: [pack.index, member.reference],
       });
     }
@@ -394,6 +409,7 @@ export async function scanReuseCatalog(repoRoot: string, registries: Orchestrato
       assets.push({
         id: `implementation:${role.id}:${evidence}`, kind: 'implementation', path: evidence,
         state: role.implementation_status.startsWith('operational') ? 'unverified' : 'candidate',
+        certification: { provenanceVerified: false, shelfAdmission: 'not-evaluated', qualityCertification: 'not-evaluated' },
         capabilities: [...tokens(role.id), ...role.owns.flatMap(tokens), ...tokens(evidence)], evidence: [evidence],
       });
     }
@@ -549,7 +565,8 @@ export function buildTaskContract(profile: NormalizedAppProfile, registries: Orc
   });
 
   const approvalGates = new Set<string>();
-  const blockers: string[] = [];
+  const executionBlockers: string[] = [];
+  const certificationReleaseBlockers: string[] = [];
   const allowedActions: ActionDecision[] = request.requestedActions.map((action) => {
     const role = ACTION_OWNER[action];
     if (!role || !roleSet.has(role)) throw new Error(`action ${action} has no selected owner`);
@@ -557,18 +574,27 @@ export function buildTaskContract(profile: NormalizedAppProfile, registries: Orc
     if (!authority) throw new Error(`authority matrix missing ${role}.${action}`);
     const allowed = authority.startsWith('allow') || authority.startsWith('gated');
     if (authority.startsWith('gated:')) approvalGates.add(authority.slice('gated:'.length));
-    if (!allowed) blockers.push(`${role} cannot ${action}: ${authority}`);
+    if (!allowed) executionBlockers.push(`${role} cannot ${action}: ${authority}`);
     return { action, role, authority, allowed };
   });
-  for (const role of selectedRoles) if (role.availability === 'unavailable') blockers.push(`required role ${role.id} is unavailable (${role.implementationStatus})`);
+  for (const role of selectedRoles) {
+    if (role.availability !== 'unavailable') continue;
+    const missing = `selected role ${role.id} is unavailable (${role.implementationStatus}); its work and approval remain unsatisfied`;
+    certificationReleaseBlockers.push(missing);
+    const ownsRequestedExecution = request.requestedActions.some((action) => ACTION_OWNER[action] === role.id);
+    if (ownsRequestedExecution) executionBlockers.push(`${missing}; requested owned action cannot execute`);
+  }
   if (risk.tier === 'T4') approvalGates.add('Cristian');
   if (profile.approvals.human_before_merge === true && request.requestedActions.includes('merge')) approvalGates.add('Cristian');
   if (profile.approvals.human_before_deploy === true && request.requestedActions.includes('deploy')) approvalGates.add('Cristian');
+  if (certificationReleaseBlockers.length > 0 && request.requestedActions.some((action) => action === 'merge' || action === 'deploy')) {
+    executionBlockers.push('merge/deploy cannot execute while certification or release blockers remain');
+  }
 
-  const verified = findings.some((finding) => finding.state === 'verified');
+  const provenanceVerified = findings.some((finding) => finding.certification.provenanceVerified);
   const any = findings.length > 0;
   const creationDisposition = !request.capabilityCreationRequested ? 'reuse-search-recorded'
-    : verified ? 'reuse-required-before-creation'
+    : provenanceVerified ? 'reuse-required-before-creation'
       : any ? 'review-existing-candidates-before-creation'
         : 'creation-candidate-requires-future-shelf-admission';
   if (profile.reuseSearchRequired !== true) throw new Error('reuse search must be required');
@@ -578,7 +604,10 @@ export function buildTaskContract(profile: NormalizedAppProfile, registries: Orc
     outcome: request.outcome, repository: request.repository, profileDigest: digest(profile), risk,
     reuse: { searched: true, findings, creationDisposition }, selectedRoles, selectedSkillPacks, selectedTools,
     acceptanceCriteria: request.acceptanceCriteria, requiredEvidence: requiredEvidenceFor(risk.tier, profile, request),
-    allowedActions, approvalGates: [...approvalGates].sort(), blocked: blockers.length > 0, blockers,
+    allowedActions, approvalGates: [...approvalGates].sort(),
+    executionBlocked: executionBlockers.length > 0, executionBlockers,
+    certificationReleaseBlocked: certificationReleaseBlockers.length > 0, certificationReleaseBlockers,
+    blocked: executionBlockers.length > 0, blockers: executionBlockers,
   };
 }
 
@@ -588,7 +617,8 @@ export function createDecisionReceipt(profile: NormalizedAppProfile, contract: O
     { stage: 'reuse', decision: contract.reuse.creationDisposition, reason: `${contract.reuse.findings.length} matching existing assets classified before creation.`, evidence: contract.reuse.findings.flatMap((finding) => finding.evidence) },
     { stage: 'risk', decision: contract.risk.tier, reason: contract.risk.reasons.join(' '), evidence: ['docs/CORE_V2_ARCHITECTURE.md', 'docs/factory/OPERATING_SYSTEM.md'] },
     { stage: 'routing', decision: contract.selectedRoles.map((role) => `${role.id}:${role.availability}`).join(','), reason: 'Minimum roles, packs and owned tools selected from permanent registries.', evidence: ['factory/registry/core-v2.json', 'factory/registry/invocation-contracts.json', 'factory/registry/authority-matrix.json', 'skills/registry.json'] },
-    { stage: 'authority', decision: contract.blocked ? 'blocked' : 'routable', reason: contract.blockers.join('; ') || 'All requested actions are allowed or gated and required roles are available.', evidence: ['factory/registry/authority-matrix.json'] },
+    { stage: 'authority', decision: contract.executionBlocked ? 'execution-blocked' : 'execution-routable', reason: contract.executionBlockers.join('; ') || 'Requested actions have available owners and are allowed or gated.', evidence: ['factory/registry/authority-matrix.json'] },
+    { stage: 'certification-release', decision: contract.certificationReleaseBlocked ? 'blocked' : 'eligible-after-evidence', reason: contract.certificationReleaseBlockers.join('; ') || 'No unavailable selected role prevents certification or release.', evidence: ['factory/registry/core-v2.json', 'factory/registry/authority-matrix.json'] },
   ];
   const contractDigest = digest(contract);
   const base = { schemaVersion: '1.0.0' as const, taskId: contract.id, projectId: contract.projectId, repository: contract.repository, profileDigest: contract.profileDigest, contractDigest, decisions, createdAt: request.now };

@@ -78,9 +78,16 @@ test('reuse catalog searches blocks, pack members and known implementations befo
   assert.ok(findings.some((finding) => finding.path === 'skills/factory-runtime-wiring/SKILL.md' && finding.state === 'verified'));
 });
 
-test('verified reuse blocks capability creation from being treated as novel', async () => {
+test('provenance-verified reuse is not Shelf-admitted or Quality Gate certified', async () => {
   const catalog = await scanReuseCatalog(repoRoot, registries);
   const findings = discoverReuse(['runtime wiring'], catalog);
+  const existing = findings.find((finding) => finding.path === 'skills/factory-runtime-wiring/SKILL.md');
+  assert.equal(existing?.state, 'verified');
+  assert.deepEqual(existing?.certification, {
+    provenanceVerified: true,
+    shelfAdmission: 'not-evaluated',
+    qualityCertification: 'not-evaluated',
+  });
   const contract = buildTaskContract(profile(), registries, request({
     objective: 'Create runtime wiring capability.', requestedCapabilities: ['runtime wiring'],
     requestedActions: ['inspect', 'plan'], capabilityCreationRequested: true,
@@ -115,8 +122,44 @@ test('unavailable roles remain unavailable and block required work', () => {
   }), []);
   const design = contract.selectedRoles.find((role) => role.id === 'design-director');
   assert.equal(design?.availability, 'unavailable');
-  assert.equal(contract.blocked, true);
-  assert.ok(contract.blockers.some((blocker) => /design-director is unavailable/.test(blocker)));
+  assert.equal(contract.executionBlocked, true);
+  assert.ok(contract.executionBlockers.some((blocker) => /design-director is unavailable/.test(blocker)));
+  assert.equal(contract.certificationReleaseBlocked, true);
+});
+
+test('BORIS can build an isolated Design Director bootstrap candidate without self-certification', () => {
+  const contract = buildTaskContract(profile(), registries, request({
+    objective: 'Implement the missing Design Director runtime candidate.',
+    requestedCapabilities: ['design director implementation', 'engineering'],
+    requestedActions: ['inspect', 'plan', 'build'],
+  }), []);
+  assert.equal(contract.selectedRoles.find((role) => role.id === 'design-director')?.availability, 'unavailable');
+  assert.equal(contract.selectedRoles.find((role) => role.id === 'boris')?.availability, 'available');
+  assert.equal(contract.executionBlocked, false);
+  assert.equal(contract.blocked, false);
+  assert.equal(contract.certificationReleaseBlocked, true);
+  assert.ok(contract.certificationReleaseBlockers.some((blocker) => /design-director.*approval remain unsatisfied/.test(blocker)));
+});
+
+test('BORIS can build an isolated Quality Gate bootstrap candidate but cannot certify or release it', () => {
+  const contract = buildTaskContract(profile(), registries, request({
+    objective: 'Implement the missing unified Quality Gate runtime candidate.',
+    requestedCapabilities: ['quality gate implementation', 'engineering'],
+    requestedActions: ['inspect', 'plan', 'build'],
+  }), []);
+  assert.equal(contract.selectedRoles.find((role) => role.id === 'quality-gate')?.availability, 'unavailable');
+  assert.equal(contract.executionBlocked, false);
+  assert.equal(contract.certificationReleaseBlocked, true);
+  assert.ok(contract.certificationReleaseBlockers.some((blocker) => /quality-gate.*approval remain unsatisfied/.test(blocker)));
+
+  const release = buildTaskContract(profile(), registries, request({
+    objective: 'Deploy the Quality Gate candidate.', requestedCapabilities: ['quality gate implementation'],
+    requestedActions: ['inspect', 'plan', 'deploy'],
+  }), []);
+  assert.equal(release.executionBlocked, true);
+  assert.ok(release.executionBlockers.some((blocker) => /merge\/deploy cannot execute/.test(blocker)));
+  assert.ok(release.approvalGates.includes('Cristian+quality-receipt'));
+  assert.ok(release.approvalGates.includes('Cristian'));
 });
 
 test('authority enforcement denies direct secrets and gates merge/deploy', () => {
@@ -142,7 +185,8 @@ test('task contract emits acceptance, evidence, repository binding and honest Qu
   assert.equal(result.contract.risk.tier, 'T3');
   assert.ok(result.contract.requiredEvidence.includes('security'));
   assert.ok(result.contract.acceptanceCriteria.length > 0);
-  assert.ok(result.contract.blockers.some((blocker) => /quality-gate is unavailable/.test(blocker)));
+  assert.equal(result.contract.executionBlocked, false);
+  assert.ok(result.contract.certificationReleaseBlockers.some((blocker) => /quality-gate is unavailable/.test(blocker)));
 });
 
 test('decision receipt is deterministic, repository-bound and persisted idempotently', async () => {
