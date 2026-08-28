@@ -1,3 +1,3 @@
-# BORIS compatibility destination
+# Permanent BORIS compatibility destination
 
-The working portable identity remains at `agents/BORIS-001/`; the working runtime remains at `boris/`. Do not move or duplicate either until compatibility tests and human approval exist.
+The working portable identity remains at `agents/BORIS-001/`; the working runtime remains at `boris/`. The permanent `boris` role maps those paths through `boris/src/identity/permanent-workforce.ts` without rewriting its identity, personality, tests or runtime aliases.

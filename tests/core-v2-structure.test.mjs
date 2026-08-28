@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
 
 const root = new URL('../', import.meta.url);
@@ -24,11 +24,13 @@ test('canonical Core v2 structural homes exist without moving legacy paths', asy
   await access(new URL('skills/factory-learning-loop/SKILL.md', root));
 });
 
-test('Phase 1 pack and missing-role scaffolds do not masquerade as executable agents or skills', async () => {
+test('canonical destinations do not duplicate identity packages or standalone skills', async () => {
   const indexes = await Promise.all(requiredIndexes.filter((path) => path.endsWith('README.md'))
     .map((path) => readFile(new URL(path, root), 'utf8')));
-  assert.ok(indexes.some((text) => /Structural destination only/.test(text)));
   assert.ok(indexes.some((text) => /not an executable skill/.test(text)));
+  for (const role of ['shia-core', 'boris', 'design-director', 'gary', 'quality-gate']) {
+    assert.deepEqual(await readdir(new URL(`agents/${role}/`, root)), ['README.md']);
+  }
 });
 
 test('canonical architecture covers every required Core v2 contract', async () => {

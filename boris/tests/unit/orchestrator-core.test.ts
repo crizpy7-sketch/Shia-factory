@@ -117,7 +117,13 @@ test('minimum routing selects only Shia Core and BORIS for an isolated build', (
 });
 
 test('unavailable roles remain unavailable and block required work', () => {
-  const contract = buildTaskContract(profile(), registries, request({
+  const unavailableRegistries = structuredClone(registries);
+  const registryRole = unavailableRegistries.core.permanent_roles.find((role) => role.id === 'design-director');
+  const invocationRole = unavailableRegistries.invocation.roles.find((role) => role.role_id === 'design-director');
+  assert.ok(registryRole && invocationRole);
+  registryRole.implementation_status = 'missing';
+  invocationRole.implementation.status = 'missing';
+  const contract = buildTaskContract(profile(), unavailableRegistries, request({
     objective: 'Review responsive UX.', requestedCapabilities: ['ux', 'responsive design'], requestedActions: ['inspect', 'plan', 'design'],
   }), []);
   const design = contract.selectedRoles.find((role) => role.id === 'design-director');
@@ -133,12 +139,12 @@ test('BORIS can build an isolated Design Director bootstrap candidate without se
     requestedCapabilities: ['design director implementation', 'engineering'],
     requestedActions: ['inspect', 'plan', 'build'],
   }), []);
-  assert.equal(contract.selectedRoles.find((role) => role.id === 'design-director')?.availability, 'unavailable');
+  assert.equal(contract.selectedRoles.find((role) => role.id === 'design-director')?.availability, 'available');
   assert.equal(contract.selectedRoles.find((role) => role.id === 'boris')?.availability, 'available');
   assert.equal(contract.executionBlocked, false);
   assert.equal(contract.blocked, false);
   assert.equal(contract.certificationReleaseBlocked, true);
-  assert.ok(contract.certificationReleaseBlockers.some((blocker) => /design-director.*approval remain unsatisfied/.test(blocker)));
+  assert.ok(contract.certificationReleaseBlockers.some((blocker) => /design-director.*pending Cristian approval/.test(blocker)));
 });
 
 test('BORIS can build an isolated Quality Gate bootstrap candidate but cannot certify or release it', () => {
@@ -147,10 +153,10 @@ test('BORIS can build an isolated Quality Gate bootstrap candidate but cannot ce
     requestedCapabilities: ['quality gate implementation', 'engineering'],
     requestedActions: ['inspect', 'plan', 'build'],
   }), []);
-  assert.equal(contract.selectedRoles.find((role) => role.id === 'quality-gate')?.availability, 'unavailable');
+  assert.equal(contract.selectedRoles.find((role) => role.id === 'quality-gate')?.availability, 'available');
   assert.equal(contract.executionBlocked, false);
   assert.equal(contract.certificationReleaseBlocked, true);
-  assert.ok(contract.certificationReleaseBlockers.some((blocker) => /quality-gate.*approval remain unsatisfied/.test(blocker)));
+  assert.ok(contract.certificationReleaseBlockers.some((blocker) => /quality-gate.*pending Cristian approval/.test(blocker)));
 
   const release = buildTaskContract(profile(), registries, request({
     objective: 'Deploy the Quality Gate candidate.', requestedCapabilities: ['quality gate implementation'],
@@ -176,7 +182,7 @@ test('authority enforcement denies direct secrets and gates merge/deploy', () =>
   assert.ok(gated.approvalGates.includes('Cristian'));
 });
 
-test('task contract emits acceptance, evidence, repository binding and honest Quality Gate blocker', async () => {
+test('task contract emits acceptance, evidence, repository binding and honest Quality Gate certification blocker', async () => {
   const result = await orchestrate(repoRoot, profileSource, request({
     objective: 'Add a normal integration feature.', requestedCapabilities: ['integration'], requestedActions: ['inspect', 'plan', 'build'],
   }));
@@ -186,7 +192,7 @@ test('task contract emits acceptance, evidence, repository binding and honest Qu
   assert.ok(result.contract.requiredEvidence.includes('security'));
   assert.ok(result.contract.acceptanceCriteria.length > 0);
   assert.equal(result.contract.executionBlocked, false);
-  assert.ok(result.contract.certificationReleaseBlockers.some((blocker) => /quality-gate is unavailable/.test(blocker)));
+  assert.ok(result.contract.certificationReleaseBlockers.some((blocker) => /quality-gate.*pending Cristian approval/.test(blocker)));
 });
 
 test('decision receipt is deterministic, repository-bound and persisted idempotently', async () => {
