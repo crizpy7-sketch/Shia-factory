@@ -1,0 +1,34 @@
+{
+  "schema_version": "2.0.0",
+  "status": "migration",
+  "authority": "Shia Factory Core v2 Project Brief",
+  "permanent_roles": [
+    {"id":"shia-core","name":"Shia Core","owns":["orchestration","planning","context","risk","capability-selection"],"implementation_status":"partial","current_evidence":["AGENTS.md","docs/factory/OPERATING_SYSTEM.md","boris/src/factory/operating-system.ts","boris/src/factory/runtime-wiring.ts"]},
+    {"id":"boris","name":"BORIS","owns":["engineering","architecture","frontend","backend","database","ai-integration","debugging","devops","release-engineering"],"implementation_status":"operational-uncertified","current_evidence":["agents/BORIS-001","boris/src","boris/tests"]},
+    {"id":"design-director","name":"Design Director","owns":["ux","visual-design","figma","design-systems","responsive-design","motion","accessibility","taste"],"implementation_status":"missing","current_evidence":[]},
+    {"id":"gary","name":"Gary","owns":["product-strategy","customer-research","positioning","marketing","launch","growth","analytics-interpretation"],"implementation_status":"partial","current_evidence":["agents/GARY-001","agents/gary.js","boris/src/identity/roster.ts"]},
+    {"id":"quality-gate","name":"Quality Gate","owns":["functional-testing","browser-testing","visual-qa","accessibility-testing","security-testing","performance-testing","adversarial-review","release-verification"],"implementation_status":"partial-unified-gate-missing","current_evidence":["boris/tests",".github/workflows/boris-ci.yml","agents/advisory.js"]}
+  ],
+  "skill_packs": [
+    {"id":"product","status":"missing"},
+    {"id":"design","status":"missing"},
+    {"id":"engineering","status":"partial"},
+    {"id":"ai","status":"partial"},
+    {"id":"quality","status":"partial"},
+    {"id":"growth","status":"partial"},
+    {"id":"operations","status":"partial"}
+  ],
+  "tool_ownership": {
+    "github":"boris",
+    "figma":"design-director",
+    "supabase":"boris",
+    "openai":"boris",
+    "browser-testing":"quality-gate",
+    "vercel":"boris",
+    "vps":"boris",
+    "stripe":"boris",
+    "analytics":"gary",
+    "gbrain":"shia-core",
+    "gstack":"shia-core"
+  }
+}
