@@ -68,7 +68,7 @@ Production CI, BORIS, browser and GStack evidence adapters still require real en
 
 ## Phase 6 — Reusable Factory Shelf
 
-- [x] Shelf manifest, lifecycle, trusted Phase 5 admission and factual trust-manifest standard — exact-source Git-tree proof and admitted dependency chain required; `factory/shelf/shelf-asset.schema.json`, `factory/shelf/trust-manifest.schema.json`, `factory/shelf/admission-policy.json`, `boris/src/factory/reusable-shelf.ts`
+- [x] Shelf manifest, lifecycle, trusted Phase 5 admission and factual trust-manifest standard — exact-source Git-tree proof is bound to an independently configured repository identity and admitted dependency chain; `factory/shelf/shelf-asset.schema.json`, `factory/shelf/trust-manifest.schema.json`, `factory/shelf/admission-policy.json`, `boris/src/factory/reusable-shelf.ts`
 - [x] Existing reusable-surface inventory completed without false certification — `factory/shelf/inventory.json`; Forms and Records are candidates, not admitted
 - [x] Block/Module/Blueprint dependency and cycle rules implemented — no Module was manufactured from BORIS-coupled scheduling surfaces
 - [x] Blueprint contract defined — no Blueprint was created because no evidence-backed reusable application architecture exists yet

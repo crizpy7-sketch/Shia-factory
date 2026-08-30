@@ -99,7 +99,8 @@ export interface ShelfSourceVerification {
 }
 
 export interface ShelfSourceVerifier {
-  id: string;
+  readonly id: string;
+  readonly trustedRepositoryId: string;
   verify(manifest: ShelfAssetManifest): ShelfSourceVerification | null;
 }
 
@@ -351,16 +352,23 @@ export function sourceVerificationDigest(verification: Omit<ShelfSourceVerificat
   return digest(verification);
 }
 
-export function createGitTreeSourceVerifier(repoRoot: string, now: () => string = () => new Date().toISOString()): ShelfSourceVerifier {
+export function createGitTreeSourceVerifier(
+  repoRoot: string,
+  expectedRepositoryId: string,
+  now: () => string = () => new Date().toISOString(),
+): ShelfSourceVerifier {
   const root = path.resolve(repoRoot);
+  const trustedRepositoryId = expectedRepositoryId.trim();
+  if (!trustedRepositoryId) throw new Error('A trusted canonical repository identity is required for exact-source verification');
   const git = (args: string[]): string => execFileSync('git', ['-C', root, ...args], {
     encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: { PATH: process.env.PATH ?? '', LANG: 'C' }, timeout: 10_000,
   }).trim();
   const verifier: ShelfSourceVerifier = {
     id: 'git-tree-exact-source-v1',
+    trustedRepositoryId,
     verify(manifest) {
       if (!manifest.exactSource || !manifest.repository) return null;
-      if (manifest.repository.id !== manifest.exactSource.repository) return null;
+      if (manifest.repository.id !== trustedRepositoryId || manifest.exactSource.repository !== trustedRepositoryId) return null;
       if (!SHA.test(manifest.exactSource.candidateSha)) return null;
       const requiredPaths = shelfManifestSourcePaths(manifest);
       if (requiredPaths.length === 0 || requiredPaths.some((item) => !repositoryRelativePath(item))) return null;
@@ -373,12 +381,13 @@ export function createGitTreeSourceVerifier(repoRoot: string, now: () => string 
           if (objectType !== 'blob' && objectType !== 'tree') throw new Error(`unsupported source object ${objectType}`);
           return { path: relative, objectId, objectType };
         });
-        const base = { verifierId: verifier.id, repository: manifest.exactSource.repository, candidateSha,
+        const base = { verifierId: verifier.id, repository: trustedRepositoryId, candidateSha,
           assetId: manifest.assetId, objects, verifiedAt: now() };
         return deepFreeze({ ...base, integrityDigest: sourceVerificationDigest(base) });
       } catch { return null; }
     },
   };
+  deepFreeze(verifier);
   trustedSourceVerifiers.add(verifier);
   return verifier;
 }
@@ -536,6 +545,9 @@ export function createTrustedQualityReceiptAdapter(
 
 function verifyExactSource(manifest: ShelfAssetManifest, verifier: ShelfSourceVerifier): { verification: ShelfSourceVerification | null; findings: string[] } {
   if (!trustedSourceVerifiers.has(verifier)) return { verification: null, findings: ['Exact-source verifier is not a trusted Factory repository adapter.'] };
+  if (manifest.repository.id !== verifier.trustedRepositoryId || manifest.exactSource.repository !== verifier.trustedRepositoryId) {
+    return { verification: null, findings: ['Manifest repository identity does not match the verifier trusted repository context.'] };
+  }
   const verification = verifier.verify(manifest);
   if (!verification) return { verification: null, findings: ['Exact-source Git-tree verification failed for one or more declared asset/provenance/documentation/example/test paths.'] };
   const { integrityDigest, ...base } = verification;
@@ -544,7 +556,7 @@ function verifyExactSource(manifest: ShelfAssetManifest, verifier: ShelfSourceVe
   const findings: string[] = [];
   if (sourceVerificationDigest(base) !== integrityDigest.toLowerCase()) findings.push('Exact-source verification integrity digest is invalid.');
   if (verification.verifierId !== verifier.id || verification.assetId !== manifest.assetId
-    || verification.repository !== manifest.exactSource.repository
+    || verification.repository !== verifier.trustedRepositoryId
     || verification.candidateSha !== manifest.exactSource.candidateSha.toLowerCase()) findings.push('Exact-source verification is not bound to this asset/repository/candidate.');
   if (stable(actualPaths) !== stable(expectedPaths)) findings.push('Exact-source verification does not cover every required declared path.');
   if (verification.objects.some((item) => !repositoryRelativePath(item.path) || !SHA.test(item.objectId)
@@ -798,7 +810,7 @@ export function deriveFactoryTrustManifest(asset: AdmittedShelfAsset, receipt: Q
     schemaVersion: '1.0.0', documentType: 'shia-factory-trust-manifest',
     identity: { assetId: asset.assetId, type: asset.type, version: asset.version }, trustState: 'admitted',
     maintainer: asset.maintenance.maintainer,
-    provenance: { repository: asset.exactSource.repository, sourceCandidate: asset.exactSource.candidateSha,
+    provenance: { repository: admissionProof.source.repository, sourceCandidate: asset.exactSource.candidateSha,
       sourceVersion: asset.exactSource.version, sourceVerificationDigest: admissionProof.source.integrityDigest,
       evidenceReferences: [...asset.provenance.evidence] },
     quality: { receiptReferences: [receipt.receiptId], lastVerifiedAt: receipt.evaluatedAt, state: 'verified-factory-evidence' },

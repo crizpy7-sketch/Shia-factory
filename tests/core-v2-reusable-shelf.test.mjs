@@ -54,6 +54,8 @@ test('admission policy requires trusted Phase 5 evidence and forbids existence-b
   assert.equal(policy.principles.raw_caller_claims_may_admit, false);
   assert.equal(policy.principles.trusted_phase_5_receipt_required, true);
   assert.equal(policy.principles.exact_source_git_tree_verification_required, true);
+  assert.equal(policy.principles.trusted_repository_identity_required, true);
+  assert.equal(policy.principles.manifest_repository_identity_is_trusted, false);
   assert.equal(policy.principles.current_checkout_path_existence_is_admission_evidence, false);
   assert.equal(policy.principles.production_dependencies_must_be_admitted, true);
   assert.equal(policy.principles.quality_gate_grants_action_authority, false);
@@ -70,6 +72,7 @@ test('trust contract is factual, provider-neutral and excludes independent/AI ce
   assert.equal(schema.properties.claims.properties.aiApproved.const, false);
   assert.equal(schema.properties.claims.properties.sourceCodeIncluded.const, false);
   assert.ok(schema.properties.provenance.required.includes('sourceVerificationDigest'));
+  assert.match(schema.properties.provenance.properties.repository.description, /trusted exact-source verifier/);
   assert.ok(schema.properties.identity.properties.type.enum.includes('application'));
   assert.equal(JSON.stringify(schema).includes('OpenAI'), false);
   assert.equal(JSON.stringify(schema).includes('Anthropic'), false);

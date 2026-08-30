@@ -36,7 +36,8 @@ execFileSync('git', ['config', 'user.email', 'shelf@example.invalid'], { cwd: so
 execFileSync('git', ['add', '.'], { cwd: sourceRoot });
 execFileSync('git', ['commit', '-qm', 'exact source fixture'], { cwd: sourceRoot });
 const CANDIDATE = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, encoding: 'utf8' }).trim();
-const sourceVerifier = createGitTreeSourceVerifier(sourceRoot, () => '2026-08-30T00:00:00Z');
+const TRUSTED_REPOSITORY_ID = 'repo';
+const sourceVerifier = createGitTreeSourceVerifier(sourceRoot, TRUSTED_REPOSITORY_ID, () => '2026-08-30T00:00:00Z');
 await write('blocks/working-tree-only/index.ts');
 after(async () => rm(sourceRoot, { recursive: true, force: true }));
 
@@ -142,6 +143,31 @@ test('admission requires trusted Phase 5 evidence and exact-source Git-tree proo
   assert.ok(result.admittedAsset && isAdmittedShelfAsset(result.admittedAsset));
 });
 
+test('exact-source verifier owns immutable repository identity instead of trusting manifest strings', () => {
+  const receipt = passingReceipt();
+  const valid = manifest(receipt);
+  const verification = sourceVerifier.verify(valid);
+  assert.ok(verification);
+  assert.equal(sourceVerifier.trustedRepositoryId, TRUSTED_REPOSITORY_ID);
+  assert.equal(Object.isFrozen(sourceVerifier), true);
+  assert.equal(Object.isFrozen(verification), true);
+  assert.equal(verification.repository, TRUSTED_REPOSITORY_ID);
+
+  const wrongRepositoryId = manifest(receipt, { repository: { id: 'false-repository', path: 'blocks/test-forms' } });
+  assert.equal(sourceVerifier.verify(wrongRepositoryId), null);
+  assert.notEqual(admitShelfCandidate(wrongRepositoryId, context([receipt])).state, 'admitted');
+
+  const coordinatedSpoof = manifest(receipt, {
+    repository: { id: 'false-repository', path: 'blocks/test-forms' },
+    exactSource: { repository: 'false-repository', candidateSha: CANDIDATE, version: '1.0.0' },
+  });
+  assert.deepEqual(validateShelfManifest(coordinatedSpoof), []);
+  assert.equal(sourceVerifier.verify(coordinatedSpoof), null);
+  const spoofResult = admitShelfCandidate(coordinatedSpoof, context([receipt]));
+  assert.notEqual(spoofResult.state, 'admitted');
+  assert.match(spoofResult.findings.join(' '), /trusted repository context/);
+});
+
 test('stored admitted verification rechecks source and dependency context before returning an admitted object', () => {
   const receiptA = passingReceipt('block:a'); const receiptB = passingReceipt('block:b'); const receiptM = passingReceipt('module:m');
   const blockA = typedManifest('block:a', 'block', '1.0.0', receiptA, 'blocks/a/index.ts');
@@ -186,6 +212,27 @@ test('catalog files remain candidates and current-checkout stat is not admission
   const candidate = manifest();
   assert.deepEqual(await shelfManifestPathsExist(sourceRoot, candidate), []);
   assert.equal(isAdmittedShelfAsset(candidate), false);
+});
+
+test('stored admitted asset without trusted repository context remains needs-evidence and cannot REUSE', async () => {
+  const catalogRoot = await mkdtemp(path.join(tmpdir(), 'shia-shelf-no-repository-context-'));
+  try {
+    const receipt = passingReceipt();
+    const stored = manifest(receipt);
+    stored.lifecycle = 'admitted';
+    stored.qualityGate.admissionEvidenceState = 'verified';
+    await mkdir(path.join(catalogRoot, 'factory/shelf'), { recursive: true });
+    await mkdir(path.join(catalogRoot, 'blocks/test-forms'), { recursive: true });
+    await writeFile(path.join(catalogRoot, 'factory/shelf/catalog.json'), `${JSON.stringify({ manifests: ['blocks/test-forms/manifest.json'] })}\n`);
+    await writeFile(path.join(catalogRoot, 'blocks/test-forms/manifest.json'), `${JSON.stringify(stored)}\n`);
+    const catalog = await loadShelfCatalog(catalogRoot, { qualityReceiptAdapters: [trusted(receipt)] });
+    assert.equal(catalog[0]?.admission?.state, 'needs-evidence');
+    assert.equal(catalog[0]?.admitted, null);
+    assert.match(catalog[0]?.admission?.findings.join(' ') ?? '', /trusted exact-source verifier/);
+    assert.notEqual(decideShelfReuse({ capabilities: ['forms'], targetPlatforms: ['browser'] }, catalog).disposition, 'REUSE');
+  } finally {
+    await rm(catalogRoot, { recursive: true, force: true });
+  }
 });
 
 test('dependency admission rejects candidate, missing, retired and incompatible dependencies', () => {
@@ -277,6 +324,7 @@ test('trust manifest still requires admitted evidence and includes exact-source 
   const admitted = admitShelfCandidate(manifest(receipt), context([receipt])).admittedAsset;
   assert.ok(admitted);
   const trust = deriveFactoryTrustManifest(admitted, receipt);
+  assert.equal(trust.provenance.repository, TRUSTED_REPOSITORY_ID);
   assert.match(trust.provenance.sourceVerificationDigest, /^[0-9a-f]{64}$/);
   assert.deepEqual(trust.claims, { independentCertification: false, aiApproved: false, sourceCodeIncluded: false });
   assert.throws(() => deriveFactoryTrustManifest(manifest(receipt) as never, receipt), /trusted Shelf boundary/);

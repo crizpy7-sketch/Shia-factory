@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { RiskTier } from './operating-system.js';
-import { createGitTreeSourceVerifier, decideShelfReuse, loadShelfCatalog,
+import { decideShelfReuse, loadShelfCatalog,
   type LoadedShelfAsset, type ShelfCatalogVerificationDependencies, type ShelfReuseDecision } from './reusable-shelf.js';
 
 type JsonObject = Record<string, unknown>;
@@ -697,8 +697,7 @@ export async function orchestrate(
 ): Promise<OrchestrationResult> {
   const registries = await loadOrchestratorRegistries(repoRoot);
   const profile = parseAndValidateAppProfile(profileSource, registries.core);
-  const shelfCatalog = await loadShelfCatalog(repoRoot, { ...shelfAdmissionDependencies,
-    sourceVerifier: shelfAdmissionDependencies.sourceVerifier ?? createGitTreeSourceVerifier(repoRoot) });
+  const shelfCatalog = await loadShelfCatalog(repoRoot, shelfAdmissionDependencies);
   const catalog = await scanReuseCatalog(repoRoot, registries, shelfCatalog);
   const findings = discoverReuse(request.requestedCapabilities, catalog);
   const shelfDecision = decideShelfReuse({ capabilities: request.requestedCapabilities, targetPlatforms: targetPlatforms(profile, request),

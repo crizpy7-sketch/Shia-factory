@@ -45,6 +45,14 @@ all declared provenance/evidence paths exist. The receipt records each path, Git
 an integrity digest bound to the asset, repository and exact source SHA. Missing, outside-repository
 or working-tree-only paths fail admission.
 
+The adapter is created with an immutable canonical repository identity from trusted Factory wiring.
+Both manifest repository fields must equal that independent identity, and the verification receipt
+copies its repository value from the adapter context rather than either manifest field. Coordinated
+changes to `repository.id` and `exactSource.repository` therefore cannot impersonate another
+repository. Trust manifests inherit the repository from this verified receipt. When Shia Core has no
+trusted repository adapter/context, a stored `admitted` string remains `needs-evidence` and cannot
+satisfy normal `REUSE`.
+
 The receipt task is asset-scoped as `SHELF-ADMISSION-<type>-<name>-<version>`. A passing receipt from
 another task, asset, version, repository or SHA cannot be replayed for admission.
 
@@ -136,6 +144,10 @@ action authority.
 - Forms and Records remain candidate assets; their embedded self-tests are audit context only.
 - No production CI, BORIS, browser, GStack or application evidence adapter is claimed to be wired by
   this work. The Phase 5 environment-specific wiring limitation remains.
+- Trusted repository identity must be supplied by application-lifecycle wiring when constructing an
+  exact-source verifier; Shia Core deliberately does not infer it from a manifest or raw task input.
+- Cross-repository fetching/cloning is not implemented. A configured repository's exact commit must
+  already exist in its local Git object database.
 - No asset was admitted in this candidate because no retained trusted Phase 5 receipt exists for the
   two exact block source candidates.
 - No Module or Blueprint was created. Their first instances require real extracted interfaces and

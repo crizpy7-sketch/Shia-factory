@@ -16,3 +16,7 @@ checks, trust derivation and `REUSE / EXTEND / CREATE` selection live at
 proof. Canonical capability IDs/explicit aliases may establish exact reuse; fuzzy similarity may only
 support discovery or extension. See
 `docs/factory/REUSABLE_SHELF_V1.md` for the complete contract and limitations.
+
+The exact-source verifier carries a frozen canonical repository identity supplied by trusted Factory
+wiring; manifest repository strings cannot establish or replace that identity. Without this context,
+a stored admitted asset remains `needs-evidence` and is excluded from normal reuse.
