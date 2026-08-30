@@ -73,18 +73,17 @@ Production CI, BORIS, browser and GStack evidence adapters still require real en
 - [x] Block/Module/Blueprint dependency and cycle rules implemented — no Module was manufactured from BORIS-coupled scheduling surfaces
 - [x] Blueprint contract defined — no Blueprint was created because no evidence-backed reusable application architecture exists yet
 - [x] Shelf-first `REUSE / EXTEND / CREATE` workflow integrated with the single Phase 3 orchestrator and decision receipt — exact `REUSE` requires canonical capability IDs/explicit aliases; fuzzy similarity is `EXTEND`/discovery only
-- [ ] Phase 6 completion reviewed and approved by Cristian — draft PR pending
-- **Phase 6 candidate: 5/5 official technical tracker items have repository evidence; final approval is pending**
+- [x] Phase 6 completion reviewed and approved by Cristian for exact candidate `3d142d37c37886a8df9e7fd37e5a340cc9f31f70` — merged PR #15, `ae40e2274004af88d980aa748023c390dc145a81`
+- **Phase 6: 100% complete** — all five official technical tracker items have merged repository evidence and Cristian approved the exact candidate
 
-Approved progress remains **25/41 = 60.98%** through merged Phase 5. If Cristian approves and merges
-this exact Phase 6 candidate, approved progress becomes **30/41 = 73.17%**. Candidate evidence never
-increments the approved numerator before the exact PR is approved and merged.
+Approved Core v2 progress is **30/41 = 73.17%** through merged Phase 6.
 
 The original component-family tracker is not treated as proof that missing Blocks exist. Current
 coverage is: Forms and Records have candidate manifests; general application identity/auth,
 files/media, scheduling/notifications/realtime, AI Gateway/analytics/audit/background jobs and
-Stripe/payments remain confirmed gaps or extraction candidates. No Shelf asset is admitted by this
-candidate.
+Stripe/payments remain confirmed gaps or extraction candidates. No Shelf asset was automatically admitted by Phase 6. Forms and Records remain candidates;
+cross-repository fetching/cloning remains deferred; and production application adapters still
+require lifecycle proof.
 
 ## Phase 7 — Pilot Migration: Michel OS
 
