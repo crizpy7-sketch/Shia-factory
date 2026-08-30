@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "authority": "Shia Factory Core v2 Phase 6",
+  "principles": {
+    "existing_means_admitted": false,
+    "manifest_means_admitted": false,
+    "raw_caller_claims_may_admit": false,
+    "trusted_phase_5_receipt_required": true,
+    "exact_source_git_tree_verification_required": true,
+    "trusted_repository_identity_required": true,
+    "manifest_repository_identity_is_trusted": false,
+    "current_checkout_path_existence_is_admission_evidence": false,
+    "production_dependencies_must_be_admitted": true,
+    "quality_gate_grants_action_authority": false,
+    "independent_certification_claimed": false
+  },
+  "lifecycle": {
+    "candidate": "Discoverable or under evaluation; not certified for normal production reuse.",
+    "admitted": "A trusted adapter verified a passing Phase 5 receipt for the exact source candidate and the admission contract passed.",
+    "deprecated": "Previously catalogued but superseded; excluded from normal reuse and retained for migration/audit.",
+    "revoked": "Explicitly unsafe or invalid; excluded from reuse even when an older receipt exists."
+  },
+  "admission_requires": [
+    "valid-shelf-manifest",
+    "canonical-layer-and-dependency-graph",
+    "documentation",
+    "examples",
+    "tests",
+    "semantic-version",
+    "trusted-phase-5-quality-receipt",
+    "asset-and-version-scoped-admission-task",
+    "exact-source-candidate-binding",
+    "trusted-repository-identity-binding",
+    "exact-source-repository-path-and-declared-artifact-verification",
+    "trusted-dependency-chain",
+    "valid-and-satisfied-dependency-version-ranges",
+    "all-applicable-gates-pass",
+    "all-acceptance-criteria-pass",
+    "no-stale-or-unverified-evidence",
+    "all-required-approval-gates-satisfied",
+    "known-limitations-recorded",
+    "no-secret-shaped-manifest-content"
+  ],
+  "dependency_rules": {
+    "block": [],
+    "module": ["block"],
+    "blueprint": ["block", "module"],
+    "same_or_higher_layer_dependency": "reject",
+    "circular_dependency": "reject",
+    "application_coupling": "reject",
+    "missing_dependency": "reject",
+    "deprecated_or_revoked_dependency": "reject",
+    "candidate_or_unverified_dependency_for_production": "reject",
+    "invalid_or_unsatisfied_version_range": "reject",
+    "non_production_escape_hatch": "none-defined"
+  },
+  "capability_matching": {
+    "exact_reuse": "all requested capabilities must resolve through canonical capability IDs or explicit aliases, with compatible platforms and interfaces",
+    "fuzzy_similarity": "discovery-or-extend-only",
+    "token_overlap_establishes_exact_reuse": false
+  },
+  "normal_reuse": {
+    "admitted_compatible": "prefer",
+    "candidate": "only-with-explicit-policy-and-visible-unverified-state",
+    "deprecated": "exclude",
+    "revoked": "exclude"
+  }
+}

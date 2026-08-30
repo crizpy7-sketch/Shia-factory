@@ -5,6 +5,13 @@
   "invocation_contracts": "factory/registry/invocation-contracts.json",
   "authority_matrix": "factory/registry/authority-matrix.json",
   "skill_pack_registry": "skills/registry.json",
+  "reusable_shelf": {
+    "catalog": "factory/shelf/catalog.json",
+    "asset_schema": "factory/shelf/shelf-asset.schema.json",
+    "admission_policy": "factory/shelf/admission-policy.json",
+    "trust_manifest_schema": "factory/shelf/trust-manifest.schema.json",
+    "runtime": "boris/src/factory/reusable-shelf.ts"
+  },
   "permanent_roles": [
     {"id":"shia-core","name":"Shia Core","owns":["orchestration","planning","context","risk","capability-selection"],"implementation_status":"operational-deterministic-core-v1","certification_status":"approved-phase-3","current_evidence":["AGENTS.md","docs/factory/OPERATING_SYSTEM.md","boris/src/factory/operating-system.ts","boris/src/factory/runtime-wiring.ts","boris/src/factory/orchestrator-core.ts","boris/src/identity/permanent-workforce.ts","boris/tests/unit/orchestrator-core.test.ts"]},
     {"id":"boris","name":"BORIS","owns":["engineering","architecture","frontend","backend","database","ai-integration","debugging","devops","release-engineering"],"implementation_status":"operational-uncertified","certification_status":"legacy-runtime-mapped","current_evidence":["agents/BORIS-001","boris/src","boris/tests","boris/src/identity/roster.ts","boris/src/identity/permanent-workforce.ts"]},

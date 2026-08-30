@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shia.factory/.well-known/trust-manifest-v1.schema.json",
+  "title": "Shia Factory factual trust manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "documentType", "identity", "trustState", "maintainer", "provenance", "quality", "security", "supported", "maintenance", "knownLimitations", "deprecation", "claims"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "documentType": { "const": "shia-factory-trust-manifest" },
+    "identity": { "type": "object", "additionalProperties": false, "required": ["assetId", "type", "version"], "properties": { "assetId": { "type": "string" }, "type": { "enum": ["block", "module", "blueprint", "application"] }, "version": { "type": "string" } } },
+    "trustState": { "enum": ["candidate", "admitted", "deprecated", "revoked"] },
+    "maintainer": { "type": "string", "minLength": 1 },
+    "provenance": { "type": "object", "additionalProperties": false, "required": ["repository", "sourceCandidate", "sourceVersion", "sourceVerificationDigest", "evidenceReferences"], "properties": { "repository": { "type": "string", "description": "Canonical repository identity inherited from the trusted exact-source verifier, never from caller claims." }, "sourceCandidate": { "type": "string", "pattern": "^[0-9a-fA-F]{40,64}$" }, "sourceVersion": { "type": "string" }, "sourceVerificationDigest": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" }, "evidenceReferences": { "type": "array", "items": { "type": "string" } } } },
+    "quality": { "type": "object", "additionalProperties": false, "required": ["receiptReferences", "lastVerifiedAt", "state"], "properties": { "receiptReferences": { "type": "array", "items": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" } }, "lastVerifiedAt": { "type": ["string", "null"], "format": "date-time" }, "state": { "enum": ["verified-factory-evidence", "needs-evidence"] } } },
+    "security": { "type": "object", "additionalProperties": false, "required": ["riskTier", "reviewState"], "properties": { "riskTier": { "enum": ["T0", "T1", "T2", "T3", "T4"] }, "reviewState": { "type": "string" } } },
+    "supported": { "type": "object", "additionalProperties": false, "required": ["platforms", "interfaces", "factoryCore"], "properties": { "platforms": { "type": "array", "items": { "type": "string" } }, "interfaces": { "type": "array", "items": { "type": "string" } }, "factoryCore": { "type": "string" } } },
+    "maintenance": { "type": "object" },
+    "knownLimitations": { "type": "array", "items": { "type": "string" } },
+    "deprecation": { "type": "object" },
+    "claims": { "type": "object", "additionalProperties": false, "required": ["independentCertification", "aiApproved", "sourceCodeIncluded"], "properties": { "independentCertification": { "const": false }, "aiApproved": { "const": false }, "sourceCodeIncluded": { "const": false } } }
+  },
+  "allOf": [{ "if": { "properties": { "trustState": { "const": "admitted" } }, "required": ["trustState"] }, "then": { "properties": { "quality": { "properties": { "receiptReferences": { "minItems": 1 }, "lastVerifiedAt": { "type": "string" }, "state": { "const": "verified-factory-evidence" } } } } } }]
+}

@@ -71,7 +71,8 @@ test('strict YAML parser rejects duplicate keys, tabs, anchors and unsupported i
 
 test('reuse catalog searches blocks, pack members and known implementations before creation', async () => {
   const catalog = await scanReuseCatalog(repoRoot, registries);
-  assert.ok(catalog.some((asset) => asset.id === 'block:forms-001' && asset.state === 'legacy'));
+  assert.ok(catalog.some((asset) => asset.id === 'block:forms-001' && asset.state === 'verified'
+    && asset.certification.shelfAdmission === 'candidate'));
   assert.ok(catalog.some((asset) => asset.path === 'skills/factory-runtime-wiring/SKILL.md' && asset.state === 'verified'));
   assert.ok(catalog.some((asset) => asset.kind === 'implementation' && asset.id.includes('boris')));
   const findings = discoverReuse(['runtime wiring'], catalog);
@@ -202,6 +203,21 @@ test('approved Phase 5 Quality Gate no longer creates a registry certification b
   assert.equal(result.contract.executionBlocked, false);
   assert.equal(result.contract.certificationReleaseBlockers.some((blocker) => /quality-gate.*pending Cristian approval/.test(blocker)), false);
   assert.equal(result.contract.executionBlocked, false);
+  assert.equal(result.contract.reuse.shelfDecision?.disposition, 'CREATE');
+  assert.ok((result.contract.reuse.shelfDecision?.noMatchEvidence.length ?? 0) > 0);
+});
+
+test('orchestrator records an explicit non-admitted extension policy without calling it exact reuse', async () => {
+  const result = await orchestrate(repoRoot, profileSource, request({
+    objective: 'Extend the existing forms browser capability.', requestedCapabilities: ['forms'],
+    requestedActions: ['inspect', 'plan', 'build'], capabilityCreationRequested: true,
+    targetPlatforms: ['browser'], allowNonAdmittedAssetIds: ['block:forms-001'],
+  }));
+  assert.equal(result.contract.reuse.shelfDecision?.disposition, 'EXTEND');
+  assert.deepEqual(result.contract.reuse.shelfDecision?.nonAdmittedUse, { permitted: true, assetIds: ['block:forms-001'] });
+  const decision = result.receipt.decisions.find((item) => item.stage === 'shelf-reuse');
+  assert.equal(decision?.decision, 'EXTEND');
+  assert.match(decision?.reason ?? '', /not treated as certified reuse/);
 });
 
 test('decision receipt is deterministic, repository-bound and persisted idempotently', async () => {

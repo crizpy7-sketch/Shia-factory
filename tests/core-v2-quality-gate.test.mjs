@@ -56,13 +56,11 @@ test('permanent invocation contract delegates complete Quality Gate packets to o
   assert.doesNotMatch(source, /gstackMayAcceptTask:\s*true/);
 });
 
-test('Phase 5 creates no standalone skill or sixth agent and leaves Phase 6 untouched', async () => {
+test('Phase 5 creates no standalone skill or sixth agent and preserves its environment-wiring limitation', async () => {
   const qualityFiles = await readdir(new URL('skills/quality/', root));
   assert.deepEqual(qualityFiles.sort(), ['PACK.json', 'README.md']);
   assert.equal(qualityFiles.includes('SKILL.md'), false);
   const status = await readFile(new URL('docs/STATUS.md', root), 'utf8');
-  const phase6 = status.split('## Phase 6')[1]?.split('## Phase 7')[0] ?? '';
-  assert.doesNotMatch(phase6, /\[x\]/);
   assert.match(status, /Phase 5: 100% complete/);
   assert.match(status, /Production CI, BORIS, browser and GStack evidence adapters still require real environment-specific wiring/);
 });

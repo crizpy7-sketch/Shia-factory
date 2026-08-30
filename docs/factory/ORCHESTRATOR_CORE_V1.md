@@ -32,12 +32,24 @@ Phase 3 adds a deterministic-first Shia Core pipeline at
 
 ## Reuse verification is not certification
 
-The legacy reuse state `verified` means only that existing provenance was found, such as a local manifest or registered local `SKILL.md`. Every reuse finding also carries explicit certification fields. In Phase 3, `shelfAdmission` and `qualityCertification` are always `not-evaluated`. A manifest, path or skill registration never implies production readiness, Quality Gate certification or Phase 6 Shelf admission.
+The legacy reuse state `verified` means only that existing provenance was found, such as a local
+manifest or registered local `SKILL.md`. Every reuse finding also carries explicit certification
+fields. In the Phase 3 baseline, `shelfAdmission` and `qualityCertification` were always
+`not-evaluated`. Phase 6 preserves that legacy meaning while adding a separate trusted Shelf loader.
+A manifest, path or skill registration still never implies production readiness or Quality Gate
+certification. Only authorized Phase 5 evidence plus exact-source Git-tree and admitted dependency
+verification can yield `shelfAdmission: admitted`. A `REUSE` decision additionally requires an
+explicit canonical capability ID or alias and compatible platforms/interfaces; fuzzy token overlap
+is discovery/`EXTEND` evidence only.
+
+The Phase 6 decision is `REUSE`, `EXTEND` or `CREATE`. `CREATE` includes deterministic no-match
+evidence; non-admitted assets may be extended only when an explicit task policy names them, and their
+unverified state stays visible in the task contract and decision receipt.
 
 ## Intentionally not implemented
 
 - Phase 3 itself creates no role implementation or agent identity;
-- no Shelf admission or asset certification is performed;
+- the Phase 3 baseline performs no Shelf admission; Phase 6 adds this as a separate trusted boundary;
 - the Phase 5 Quality Gate candidate consumes Phase 3 task contracts but cannot alter their risk, authority, approval or repair-budget decisions;
 - no agent consolidation is performed;
 - no app, including Michel OS, is migrated;
