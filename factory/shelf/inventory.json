@@ -1,0 +1,158 @@
+{
+  "schema_version": "1.0.0",
+  "audited_repository": "shia-factory",
+  "audited_candidate": "ab3f1eea8760055b15eb0b24f44e859b2107b6d5",
+  "audited_at": "2026-08-29T00:00:00Z",
+  "classification_rule": "Inventory classification describes extraction/reuse potential, never Shelf admission or certification.",
+  "searched_paths": ["blocks", "modules", "blueprints", "adapters", "agents", "boris/src", "skills", "factory", ".github/workflows", "docs"],
+  "findings": [
+    {
+      "id": "forms-browser-block",
+      "category": "forms-records",
+      "classification": "reusable-now",
+      "paths": ["blocks/forms-001/index.html", "blocks/forms-001/manifest.json"],
+      "shelf_asset_id": "block:forms-001",
+      "shelf_lifecycle": "candidate",
+      "notes": ["Generic schema/config surface exists.", "Embedded self-test and Stable UI label do not constitute trusted admission evidence."]
+    },
+    {
+      "id": "records-browser-block",
+      "category": "forms-records",
+      "classification": "reusable-now",
+      "paths": ["blocks/records-002/index.html", "blocks/records-002/manifest.json"],
+      "shelf_asset_id": "block:records-002",
+      "shelf_lifecycle": "candidate",
+      "notes": ["Generic configuration/search/filter/sort/export surface exists.", "In-memory data and development status limit production use."]
+    },
+    {
+      "id": "runtime-auth-permissions",
+      "category": "identity-auth-permissions",
+      "classification": "reusable-after-extraction",
+      "paths": ["boris/src/api/server.ts", "boris/src/policy/permissions.ts", "boris/src/identity/loader.ts"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Bearer authentication, path/tool permission checks and identity loading are BORIS-runtime infrastructure.", "They are not a general application auth/profiles/households/organizations block."]
+    },
+    {
+      "id": "portable-agent-identities",
+      "category": "identity-auth-permissions",
+      "classification": "application-specific",
+      "paths": ["agents/BORIS-001", "agents/GARY-001"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Portable named-agent identity/provenance must remain preserved.", "It must not be relabelled as an end-user identity block."]
+    },
+    {
+      "id": "scheduler-runtime",
+      "category": "scheduling-coordination",
+      "classification": "reusable-after-extraction",
+      "paths": ["boris/src/scheduler/scheduler.ts", "boris/src/api/server.ts", "boris/src/storage/sqlite.ts"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Durable scheduled task behavior exists inside BORIS runtime and storage.", "No stable application scheduling Module interface or independent receipt exists."]
+    },
+    {
+      "id": "factory-block-handoff",
+      "category": "coordination-realtime",
+      "classification": "legacy",
+      "paths": ["index.html", "agents/advisory.js", "blocks/forms-001/index.html", "blocks/records-002/index.html"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["postMessage port delivery/acknowledgement exists for the static workbench.", "It is local browser coordination, not network realtime synchronization or notifications."]
+    },
+    {
+      "id": "ai-provider-adapters",
+      "category": "ai-provider-integration",
+      "classification": "reusable-after-extraction",
+      "paths": ["boris/src/providers/types.ts", "boris/src/providers/index.ts", "boris/src/providers/openai.ts", "boris/src/providers/anthropic.ts"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Provider-neutral runtime interface with OpenAI and Anthropic implementations exists.", "It is coupled to BORIS task execution and is not yet an application AI Gateway block."]
+    },
+    {
+      "id": "sqlite-storage-pattern",
+      "category": "data-backend",
+      "classification": "reusable-after-extraction",
+      "paths": ["boris/src/storage/types.ts", "boris/src/storage/sqlite.ts", "boris/src/domain/types.ts"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Typed storage contracts and SQLite implementation cover tasks, evidence, approvals, events, schedules and memory.", "The schema is BORIS-domain-specific and not a generic CRUD/backend block."]
+    },
+    {
+      "id": "event-audit-runtime",
+      "category": "analytics-audit-background-jobs",
+      "classification": "reusable-after-extraction",
+      "paths": ["boris/src/events/bus.ts", "boris/src/storage/sqlite.ts", "boris/src/worker/worker.ts", "boris/src/scheduler/scheduler.ts"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Event persistence, worker and schedule primitives exist.", "No stable analytics/events, audit-log or background-jobs block contract has been extracted."]
+    },
+    {
+      "id": "static-design-patterns",
+      "category": "ui-design-patterns",
+      "classification": "duplicate",
+      "paths": ["blocks/forms-001/index.html", "blocks/records-002/index.html", "hq/index.html", "boris/public/index.html"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Responsive cards, tokens and controls recur as embedded CSS.", "No canonical design-token/component block exists; extraction requires Design Director review and real visual/accessibility evidence."]
+    },
+    {
+      "id": "quality-gate-runtime",
+      "category": "quality-runtime",
+      "classification": "reusable-now",
+      "paths": ["boris/src/quality/evidence-admission.ts", "boris/src/quality/quality-gate.ts", "factory/quality"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Canonical Factory Core Quality Gate and trusted evidence boundary are operational Phase 5 control-plane capabilities.", "Core capabilities are searchable but are not relabelled as Blocks or self-admitted Shelf assets."]
+    },
+    {
+      "id": "runtime-and-ci-operations",
+      "category": "deployment-operations",
+      "classification": "reusable-after-extraction",
+      "paths": ["boris/docker-compose.yml", "boris/docker-compose.solo.yml", ".github/workflows/boris-ci.yml", "boris/docs/deployment.md", "boris/docs/operations.md"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["BORIS deployment and CI patterns exist.", "They require application-specific environment wiring and do not prove Vercel/VPS adapter portability."]
+    },
+    {
+      "id": "legacy-council-routing",
+      "category": "legacy-control-plane",
+      "classification": "deprecated",
+      "paths": ["agents/registry.js", "agents/routing.js", "agents/advisory.js"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Compatibility remains preserved.", "Council-first routing is superseded by the five permanent roles and must not become a Shelf asset."]
+    },
+    {
+      "id": "empty-module-layer",
+      "category": "modules",
+      "classification": "application-specific",
+      "paths": ["modules/README.md"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["No existing combination has a stable multi-Block interface and admission evidence.", "No Module was manufactured for Phase 6."]
+    },
+    {
+      "id": "empty-blueprint-layer",
+      "category": "blueprints",
+      "classification": "application-specific",
+      "paths": ["blueprints/README.md"],
+      "shelf_asset_id": null,
+      "shelf_lifecycle": null,
+      "notes": ["Family OS, Business OS, Tutor and AI Kiosk are concepts only in this repository.", "No evidence-backed Blueprint was created and Michel OS was not inspected."]
+    }
+  ],
+  "confirmed_gaps": [
+    "general end-user auth/profiles/households/organizations/roles block",
+    "files/media upload block",
+    "notification block",
+    "network realtime synchronization block",
+    "application AI Gateway block",
+    "analytics/events block",
+    "audit-log block",
+    "background-jobs block",
+    "Stripe/payment block",
+    "admitted Module",
+    "admitted Blueprint"
+  ]
+}

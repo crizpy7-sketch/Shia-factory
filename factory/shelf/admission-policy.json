@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0.0",
+  "authority": "Shia Factory Core v2 Phase 6",
+  "principles": {
+    "existing_means_admitted": false,
+    "manifest_means_admitted": false,
+    "raw_caller_claims_may_admit": false,
+    "trusted_phase_5_receipt_required": true,
+    "quality_gate_grants_action_authority": false,
+    "independent_certification_claimed": false
+  },
+  "lifecycle": {
+    "candidate": "Discoverable or under evaluation; not certified for normal production reuse.",
+    "admitted": "A trusted adapter verified a passing Phase 5 receipt for the exact source candidate and the admission contract passed.",
+    "deprecated": "Previously catalogued but superseded; excluded from normal reuse and retained for migration/audit.",
+    "revoked": "Explicitly unsafe or invalid; excluded from reuse even when an older receipt exists."
+  },
+  "admission_requires": [
+    "valid-shelf-manifest",
+    "canonical-layer-and-dependency-graph",
+    "documentation",
+    "examples",
+    "tests",
+    "semantic-version",
+    "trusted-phase-5-quality-receipt",
+    "asset-and-version-scoped-admission-task",
+    "exact-source-candidate-binding",
+    "all-applicable-gates-pass",
+    "all-acceptance-criteria-pass",
+    "no-stale-or-unverified-evidence",
+    "all-required-approval-gates-satisfied",
+    "known-limitations-recorded",
+    "no-secret-shaped-manifest-content"
+  ],
+  "dependency_rules": {
+    "block": [],
+    "module": ["block"],
+    "blueprint": ["block", "module"],
+    "same_or_higher_layer_dependency": "reject",
+    "circular_dependency": "reject",
+    "application_coupling": "reject"
+  },
+  "normal_reuse": {
+    "admitted_compatible": "prefer",
+    "candidate": "only-with-explicit-policy-and-visible-unverified-state",
+    "deprecated": "exclude",
+    "revoked": "exclude"
+  }
+}

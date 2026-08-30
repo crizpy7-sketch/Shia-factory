@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "assetId": "block:forms-001",
+  "type": "block",
+  "lifecycle": "candidate",
+  "version": "1.1.0",
+  "owner": "boris",
+  "purpose": "Schema-configurable browser form rendering, validation and record emission.",
+  "repository": { "id": "shia-factory", "path": "blocks/forms-001" },
+  "capabilities": ["forms", "schema-driven fields", "client validation", "record submission"],
+  "dependencies": [],
+  "supportedPlatforms": ["browser"],
+  "interfaces": [
+    { "id": "configure", "direction": "input", "schema": "shia-block-config", "description": "Form schema, labels and theme tokens." },
+    { "id": "submitted", "direction": "output", "schema": "Record", "description": "Validated record payload." },
+    { "id": "validationFailed", "direction": "output", "schema": "FieldError[]", "description": "Invalid field identifiers." },
+    { "id": "cancelled", "direction": "output", "schema": "void", "description": "Form reset notification." }
+  ],
+  "blueprint": null,
+  "compatibility": {
+    "factoryCore": ">=2.0.0",
+    "runtimes": ["standalone-browser", "shia-static-workbench"],
+    "notes": ["Zero-build HTML", "Uses the legacy shia-block-runtime postMessage protocol"]
+  },
+  "provenance": {
+    "sourceType": "repository",
+    "sourcePath": "blocks/forms-001/index.html",
+    "evidence": ["blocks/forms-001/index.html", "agents/BORIS-001/evals/BORIS-EXAM-001-diagnosis.md"]
+  },
+  "exactSource": {
+    "repository": "shia-factory",
+    "candidateSha": "ab3f1eea8760055b15eb0b24f44e859b2107b6d5",
+    "version": "1.1.0"
+  },
+  "qualityGate": { "receipt": null, "admissionEvidenceState": "missing" },
+  "security": { "riskTier": "T2", "dataSensitivity": "internal", "reviewState": "not-reviewed-for-shelf-admission" },
+  "documentation": ["blocks/forms-001/index.html"],
+  "examples": ["blocks/forms-001/index.html"],
+  "tests": ["blocks/forms-001/index.html"],
+  "knownLimitations": [
+    "Embedded self-test is not trusted Quality Gate evidence.",
+    "No retained browser, visual or accessibility evidence is bound to the exact source candidate.",
+    "Legacy postMessage replies use a wildcard target origin and require security review before admission.",
+    "Configure rebuilds form fields and emits an additional ready event."
+  ],
+  "maintenance": { "status": "maintenance", "maintainer": "boris", "lastReviewedAt": "2026-08-29T00:00:00Z" },
+  "deprecation": { "replacementAssetId": null, "reason": null, "effectiveAt": null }
+}

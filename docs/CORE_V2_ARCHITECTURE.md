@@ -98,6 +98,12 @@ Shelf admission later requires a manifest, ownership, documentation, examples, t
 security/permission review appropriate to risk, and a passing Quality Gate receipt. Phase 1 creates
 the structural homes only; it does not admit existing assets automatically.
 
+Phase 6 implements that boundary at `factory/shelf/` and
+`boris/src/factory/reusable-shelf.ts`. Stored status is not authority: a trusted adapter must resolve
+and verify the Phase 5 exact-candidate receipt before an asset is eligible for normal reuse. The
+provider-neutral factual trust contract is designed for future `/.well-known/` exposure without
+source code, secret material, “AI approved” language or claims of independent certification.
+
 ## 6. Golden App Stack and adapters
 
 The default stack is Next.js + TypeScript, GitHub, Figma/design tokens, Supabase when appropriate,

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "assetId": "block:records-002",
+  "type": "block",
+  "lifecycle": "candidate",
+  "version": "0.3.0",
+  "owner": "boris",
+  "purpose": "Configurable in-browser record intake, search, filter, sort, view, delete and JSON export.",
+  "repository": { "id": "shia-factory", "path": "blocks/records-002" },
+  "capabilities": ["records", "CRUD presentation", "search", "filter", "sort", "JSON export"],
+  "dependencies": [],
+  "supportedPlatforms": ["browser"],
+  "interfaces": [
+    { "id": "configure", "direction": "input", "schema": "shia-records-config", "description": "Columns, searchable fields, filters and theme." },
+    { "id": "addRecord", "direction": "input", "schema": "Record", "description": "Adds one record through the workbench port protocol." },
+    { "id": "ack", "direction": "output", "schema": "delivery-receipt", "description": "Acknowledges a delivered record." },
+    { "id": "recordsExported", "direction": "output", "schema": "export-summary", "description": "Reports a local JSON export." }
+  ],
+  "blueprint": null,
+  "compatibility": {
+    "factoryCore": ">=2.0.0",
+    "runtimes": ["standalone-browser", "shia-static-workbench"],
+    "notes": ["Zero-build HTML", "Uses the legacy shia-block-runtime postMessage protocol"]
+  },
+  "provenance": {
+    "sourceType": "repository",
+    "sourcePath": "blocks/records-002/index.html",
+    "evidence": ["blocks/records-002/index.html", "agents/BORIS-001/evals/BORIS-EXAM-001-diagnosis.md"]
+  },
+  "exactSource": {
+    "repository": "shia-factory",
+    "candidateSha": "ab3f1eea8760055b15eb0b24f44e859b2107b6d5",
+    "version": "0.3.0"
+  },
+  "qualityGate": { "receipt": null, "admissionEvidenceState": "missing" },
+  "security": { "riskTier": "T2", "dataSensitivity": "internal", "reviewState": "not-reviewed-for-shelf-admission" },
+  "documentation": ["blocks/records-002/index.html"],
+  "examples": ["blocks/records-002/index.html"],
+  "tests": ["blocks/records-002/index.html"],
+  "knownLimitations": [
+    "Development label and embedded self-test are not trusted Quality Gate evidence.",
+    "No retained browser, visual or accessibility evidence is bound to the exact source candidate.",
+    "Records are in-memory only; this is not a durable backend or authorization layer.",
+    "Event history is unbounded and re-serialized on every emitted event."
+  ],
+  "maintenance": { "status": "maintenance", "maintainer": "boris", "lastReviewedAt": "2026-08-29T00:00:00Z" },
+  "deprecation": { "replacementAssetId": null, "reason": null, "effectiveAt": null }
+}

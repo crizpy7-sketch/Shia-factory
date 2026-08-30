@@ -63,11 +63,20 @@ Production CI, BORIS, browser and GStack evidence adapters still require real en
 
 ## Phase 6 — Reusable Factory Shelf
 
-- [ ] Shelf manifest and admission standard
-- [ ] Inventory existing blocks
-- [ ] Define modules
-- [ ] Define blueprints
-- [ ] Reuse search and extraction workflow
+- [x] Shelf manifest, lifecycle and trusted Phase 5 admission standard — `factory/shelf/shelf-asset.schema.json`, `factory/shelf/admission-policy.json`, `boris/src/factory/reusable-shelf.ts`
+- [x] Existing reusable-surface inventory completed without false certification — `factory/shelf/inventory.json`; Forms and Records are candidates, not admitted
+- [x] Block/Module/Blueprint dependency and cycle rules implemented — no Module was manufactured from BORIS-coupled scheduling surfaces
+- [x] Blueprint contract defined — no Blueprint was created because no evidence-backed reusable application architecture exists yet
+- [x] Shelf-first `REUSE / EXTEND / CREATE` workflow integrated with the single Phase 3 orchestrator and decision receipt
+- [x] Provider-neutral factual trust-manifest contract derives only from trusted admitted evidence and excludes source/secrets/certification marketing
+- [ ] Phase 6 completion reviewed and approved by Cristian — draft PR pending
+- **Phase 6 candidate: 6/6 scoped technical deliverables have repository evidence; final approval is pending**
+
+The original component-family tracker is not treated as proof that missing Blocks exist. Current
+coverage is: Forms and Records have candidate manifests; general application identity/auth,
+files/media, scheduling/notifications/realtime, AI Gateway/analytics/audit/background jobs and
+Stripe/payments remain confirmed gaps or extraction candidates. No Shelf asset is admitted by this
+candidate.
 
 ## Phase 7 — Pilot Migration: Michel OS
 

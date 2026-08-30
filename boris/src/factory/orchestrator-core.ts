@@ -2,14 +2,16 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { RiskTier } from './operating-system.js';
+import { decideShelfReuse, loadShelfCatalog,
+  type LoadedShelfAsset, type ShelfAdmissionDependencies, type ShelfReuseDecision } from './reusable-shelf.js';
 
 type JsonObject = Record<string, unknown>;
 type ReuseState = 'verified' | 'unverified' | 'legacy' | 'candidate';
 
 export interface ReuseCertification {
   provenanceVerified: boolean;
-  shelfAdmission: 'not-evaluated';
-  qualityCertification: 'not-evaluated';
+  shelfAdmission: 'not-evaluated' | 'candidate' | 'admitted' | 'deprecated' | 'revoked';
+  qualityCertification: 'not-evaluated' | 'trusted-pass';
 }
 
 export interface NormalizedAppProfile {
@@ -88,6 +90,8 @@ export interface OrchestrationRequest {
   acceptanceCriteria: Array<{ id: string; statement: string; evidence: string[] }>;
   changedPaths?: string[];
   capabilityCreationRequested?: boolean;
+  targetPlatforms?: string[];
+  allowNonAdmittedAssetIds?: string[];
   now: string;
 }
 
@@ -120,7 +124,7 @@ export interface OrchestratorTaskContract {
   repository: { commit: string; branch: string };
   profileDigest: string;
   risk: { tier: RiskTier; reasons: string[] };
-  reuse: { searched: true; findings: ReuseFinding[]; creationDisposition: string };
+  reuse: { searched: true; findings: ReuseFinding[]; creationDisposition: string; shelfDecision?: ShelfReuseDecision };
   selectedRoles: RoleSelection[];
   selectedSkillPacks: Array<{ id: string; reason: string }>;
   selectedTools: ToolSelection[];
@@ -378,11 +382,25 @@ export async function loadOrchestratorRegistries(repoRoot: string): Promise<Orch
   };
 }
 
-export async function scanReuseCatalog(repoRoot: string, registries: OrchestratorRegistries): Promise<ReuseAsset[]> {
+export async function scanReuseCatalog(repoRoot: string, registries: OrchestratorRegistries, shelfCatalog?: LoadedShelfAsset[]): Promise<ReuseAsset[]> {
   const assets: ReuseAsset[] = [];
+  const loadedShelf = shelfCatalog ?? await loadShelfCatalog(repoRoot);
+  const shelfPaths = new Set<string>();
+  for (const item of loadedShelf) {
+    const manifest = item.manifest;
+    shelfPaths.add(manifest.repository.path);
+    const shelfAdmission = item.admitted ? 'admitted' : manifest.lifecycle;
+    assets.push({
+      id: manifest.assetId, kind: manifest.type, path: manifest.repository.path, state: 'verified',
+      certification: { provenanceVerified: true, shelfAdmission, qualityCertification: item.admitted ? 'trusted-pass' : 'not-evaluated' },
+      capabilities: [...manifest.capabilities],
+      evidence: [`${manifest.repository.path}/manifest.json`, ...manifest.provenance.evidence],
+    });
+  }
   for (const [kind, folder] of [['block', 'blocks'], ['module', 'modules'], ['blueprint', 'blueprints']] as const) {
     for (const name of await directories(path.join(repoRoot, folder))) {
       const relative = `${folder}/${name}`;
+      if (shelfPaths.has(relative)) continue;
       const manifest = await exists(path.join(repoRoot, relative, 'manifest.json'));
       assets.push({
         id: `${kind}:${name}`, kind, path: relative, state: manifest ? 'verified' : kind === 'block' ? 'legacy' : 'candidate',
@@ -517,7 +535,7 @@ function requiredEvidenceFor(tier: RiskTier, profile: NormalizedAppProfile, requ
   return [...evidence].sort();
 }
 
-export function buildTaskContract(profile: NormalizedAppProfile, registries: OrchestratorRegistries, request: OrchestrationRequest, findings: ReuseFinding[]): OrchestratorTaskContract {
+export function buildTaskContract(profile: NormalizedAppProfile, registries: OrchestratorRegistries, request: OrchestrationRequest, findings: ReuseFinding[], shelfDecision?: ShelfReuseDecision): OrchestratorTaskContract {
   if (!request.taskId.trim() || !request.objective.trim() || !request.outcome.trim()) throw new Error('taskId, objective and outcome are required');
   if (!/^[A-Za-z0-9._-]+$/.test(request.taskId)) throw new Error('taskId contains unsupported characters');
   if (!/^[0-9a-f]{7,64}$/i.test(request.repository.commit)) throw new Error('repository.commit must be a Git SHA');
@@ -601,16 +619,18 @@ export function buildTaskContract(profile: NormalizedAppProfile, registries: Orc
 
   const provenanceVerified = findings.some((finding) => finding.certification.provenanceVerified);
   const any = findings.length > 0;
-  const creationDisposition = !request.capabilityCreationRequested ? 'reuse-search-recorded'
-    : provenanceVerified ? 'reuse-required-before-creation'
-      : any ? 'review-existing-candidates-before-creation'
-        : 'creation-candidate-requires-future-shelf-admission';
+  const creationDisposition = shelfDecision
+    ? (!request.capabilityCreationRequested ? `reuse-search-recorded:${shelfDecision.disposition}` : shelfDecision.disposition)
+    : !request.capabilityCreationRequested ? 'reuse-search-recorded'
+      : provenanceVerified ? 'reuse-required-before-creation'
+        : any ? 'review-existing-candidates-before-creation'
+          : 'creation-candidate-requires-future-shelf-admission';
   if (profile.reuseSearchRequired !== true) throw new Error('reuse search must be required');
 
   return {
     schemaVersion: '1.0.0', id: request.taskId, projectId: profile.app.id, objective: request.objective,
     outcome: request.outcome, repository: request.repository, profileDigest: digest(profile), risk,
-    reuse: { searched: true, findings, creationDisposition }, selectedRoles, selectedSkillPacks, selectedTools,
+    reuse: { searched: true, findings, creationDisposition, shelfDecision }, selectedRoles, selectedSkillPacks, selectedTools,
     acceptanceCriteria: request.acceptanceCriteria, requiredEvidence: requiredEvidenceFor(risk.tier, profile, request),
     allowedActions, approvalGates: [...approvalGates].sort(),
     executionBlocked: executionBlockers.length > 0, executionBlockers,
@@ -623,6 +643,11 @@ export function createDecisionReceipt(profile: NormalizedAppProfile, contract: O
   const decisions = [
     { stage: 'profile', decision: 'validated', reason: `APP_PROFILE ${profile.schemaVersion} normalized for ${profile.app.id}.`, evidence: ['APP_PROFILE.yaml'] },
     { stage: 'reuse', decision: contract.reuse.creationDisposition, reason: `${contract.reuse.findings.length} matching existing assets classified before creation.`, evidence: contract.reuse.findings.flatMap((finding) => finding.evidence) },
+    ...(contract.reuse.shelfDecision ? [{ stage: 'shelf-reuse', decision: contract.reuse.shelfDecision.disposition,
+      reason: contract.reuse.shelfDecision.reason,
+      evidence: contract.reuse.shelfDecision.selectedAssetIds.length > 0
+        ? contract.reuse.shelfDecision.selectedAssetIds
+        : contract.reuse.shelfDecision.noMatchEvidence }] : []),
     { stage: 'risk', decision: contract.risk.tier, reason: contract.risk.reasons.join(' '), evidence: ['docs/CORE_V2_ARCHITECTURE.md', 'docs/factory/OPERATING_SYSTEM.md'] },
     { stage: 'routing', decision: contract.selectedRoles.map((role) => `${role.id}:${role.availability}`).join(','), reason: 'Minimum roles, packs and owned tools selected from permanent registries.', evidence: ['factory/registry/core-v2.json', 'factory/registry/invocation-contracts.json', 'factory/registry/authority-matrix.json', 'skills/registry.json'] },
     { stage: 'authority', decision: contract.executionBlocked ? 'execution-blocked' : 'execution-routable', reason: contract.executionBlockers.join('; ') || 'Requested actions have available owners and are allowed or gated.', evidence: ['factory/registry/authority-matrix.json'] },
@@ -655,12 +680,29 @@ export async function persistDecisionReceipt(receipt: DecisionReceipt, directory
   return target;
 }
 
-export async function orchestrate(repoRoot: string, profileSource: string, request: OrchestrationRequest, receiptDirectory?: string): Promise<OrchestrationResult> {
+function targetPlatforms(profile: NormalizedAppProfile, request: OrchestrationRequest): string[] {
+  if (request.targetPlatforms?.length) return request.targetPlatforms;
+  const frontend = profile.stack.frontend;
+  const values = Array.isArray(frontend) ? frontend : frontend ? [frontend] : [];
+  if (values.some((value) => /html|next|browser|web/i.test(value))) return ['browser'];
+  return [profile.app.type];
+}
+
+export async function orchestrate(
+  repoRoot: string,
+  profileSource: string,
+  request: OrchestrationRequest,
+  receiptDirectory?: string,
+  shelfAdmissionDependencies: ShelfAdmissionDependencies = { qualityReceiptAdapters: [] },
+): Promise<OrchestrationResult> {
   const registries = await loadOrchestratorRegistries(repoRoot);
   const profile = parseAndValidateAppProfile(profileSource, registries.core);
-  const catalog = await scanReuseCatalog(repoRoot, registries);
+  const shelfCatalog = await loadShelfCatalog(repoRoot, shelfAdmissionDependencies);
+  const catalog = await scanReuseCatalog(repoRoot, registries, shelfCatalog);
   const findings = discoverReuse(request.requestedCapabilities, catalog);
-  const contract = buildTaskContract(profile, registries, request, findings);
+  const shelfDecision = decideShelfReuse({ capabilities: request.requestedCapabilities, targetPlatforms: targetPlatforms(profile, request),
+    allowNonAdmittedAssetIds: request.allowNonAdmittedAssetIds }, shelfCatalog);
+  const contract = buildTaskContract(profile, registries, request, findings, shelfDecision);
   const receipt = createDecisionReceipt(profile, contract, request);
   if (receiptDirectory) await persistDecisionReceipt(receipt, receiptDirectory);
   return { contract, receipt };
