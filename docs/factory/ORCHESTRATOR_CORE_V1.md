@@ -37,8 +37,10 @@ manifest or registered local `SKILL.md`. Every reuse finding also carries explic
 fields. In the Phase 3 baseline, `shelfAdmission` and `qualityCertification` were always
 `not-evaluated`. Phase 6 preserves that legacy meaning while adding a separate trusted Shelf loader.
 A manifest, path or skill registration still never implies production readiness or Quality Gate
-certification. Only an authorized adapter resolving a passing exact-candidate Phase 5 receipt can
-yield `shelfAdmission: admitted` and a `REUSE` decision.
+certification. Only authorized Phase 5 evidence plus exact-source Git-tree and admitted dependency
+verification can yield `shelfAdmission: admitted`. A `REUSE` decision additionally requires an
+explicit canonical capability ID or alias and compatible platforms/interfaces; fuzzy token overlap
+is discovery/`EXTEND` evidence only.
 
 The Phase 6 decision is `REUSE`, `EXTEND` or `CREATE`. `CREATE` includes deterministic no-match
 evidence; non-admitted assets may be extended only when an explicit task policy names them, and their

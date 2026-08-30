@@ -38,6 +38,13 @@ risk coverage, admitted evidence provenance, passing criteria/applicable gates, 
 and Shia Core control-plane invariants. Raw caller receipts and a stored `lifecycle: admitted` value
 remain untrusted without that resolution.
 
+Admission also invokes the trusted `git-tree-exact-source-v1` repository adapter. It resolves
+`exactSource.candidateSha` as a commit and reads Git objects from that tree—not from the current
+checkout—to prove that `repository.path`, `provenance.sourcePath`, documentation, examples, tests and
+all declared provenance/evidence paths exist. The receipt records each path, Git object ID/type and
+an integrity digest bound to the asset, repository and exact source SHA. Missing, outside-repository
+or working-tree-only paths fail admission.
+
 The receipt task is asset-scoped as `SHELF-ADMISSION-<type>-<name>-<version>`. A passing receipt from
 another task, asset, version, repository or SHA cannot be replayed for admission.
 
@@ -54,9 +61,13 @@ another task, asset, version, repository or SHA cannot be replayed for admission
   it is never a dependency of a Shelf asset.
 
 The runtime rejects missing assets, type drift, same/higher-layer dependencies, application coupling
-and cycles. The current catalog contains no Module and no Blueprint because no existing pattern has
-the required stable interface and trusted admission evidence. Family OS remains a future outcome of
-the Phase 7 pilot, not a Phase 6 artifact.
+and cycles. Admission additionally requires every dependency to resolve from the actual catalog, use
+a valid semantic version range, satisfy that range, remain non-deprecated/non-revoked, and already be
+admitted through the trusted boundary. A Module cannot hide candidate Blocks; a Blueprint cannot
+hide candidate Blocks or Modules. No non-production escape hatch is currently defined, so no weaker
+path can receive normal `admitted` status. The current catalog contains no Module and no Blueprint
+because no existing pattern has the required stable interface and trusted admission evidence.
+Family OS remains a future outcome of the Phase 7 pilot, not a Phase 6 artifact.
 
 ## Existing-asset inventory
 
@@ -89,8 +100,10 @@ jobs and Stripe/payments. Those gaps are evidence, not permission to manufacture
 normalized capability need
   → load + validate Shelf catalog
   → verify admission through trusted Phase 5 adapter
-  → check capability/platform/interface compatibility
-  → REUSE exact compatible admitted asset
+  → resolve canonical capability IDs and explicit aliases
+  → use fuzzy similarity only for discovery/extension suggestions
+  → check platform/interface compatibility
+  → REUSE only an explicit compatible admitted capability match
   → EXTEND partial admitted asset
   → EXTEND explicit-policy non-admitted asset (state remains visible)
   → CREATE only with recorded per-asset/no-catalog no-match evidence
@@ -100,6 +113,11 @@ Deprecated/revoked assets cannot satisfy normal reuse. A non-admitted asset is n
 exact `REUSE`. The disposition and selected/no-match evidence are embedded in the Phase 3 task
 contract and decision receipt. Existing legacy skill/implementation discovery remains compatible and
 keeps provenance verification separate from Shelf admission.
+
+Token overlap alone never establishes `REUSE`. For example, an admitted `forms` capability may be a
+useful `EXTEND` suggestion for `secure-payment-forms`, but it is not an exact match unless that full
+capability is declared as a canonical ID or explicit alias and its platform/interface requirements
+also match.
 
 ## Factual trust manifest
 

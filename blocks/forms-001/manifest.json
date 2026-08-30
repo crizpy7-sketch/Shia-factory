@@ -7,7 +7,13 @@
   "owner": "boris",
   "purpose": "Schema-configurable browser form rendering, validation and record emission.",
   "repository": { "id": "shia-factory", "path": "blocks/forms-001" },
-  "capabilities": ["forms", "schema-driven fields", "client validation", "record submission"],
+  "capabilities": ["forms", "schema-driven-fields", "client-validation", "record-submission"],
+  "capabilityAliases": {
+    "forms": ["form", "form-builder"],
+    "schema-driven-fields": ["schema fields"],
+    "client-validation": ["browser validation"],
+    "record-submission": ["submit record"]
+  },
   "dependencies": [],
   "supportedPlatforms": ["browser"],
   "interfaces": [

@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { RiskTier } from './operating-system.js';
-import { decideShelfReuse, loadShelfCatalog,
-  type LoadedShelfAsset, type ShelfAdmissionDependencies, type ShelfReuseDecision } from './reusable-shelf.js';
+import { createGitTreeSourceVerifier, decideShelfReuse, loadShelfCatalog,
+  type LoadedShelfAsset, type ShelfCatalogVerificationDependencies, type ShelfReuseDecision } from './reusable-shelf.js';
 
 type JsonObject = Record<string, unknown>;
 type ReuseState = 'verified' | 'unverified' | 'legacy' | 'candidate';
@@ -693,11 +693,12 @@ export async function orchestrate(
   profileSource: string,
   request: OrchestrationRequest,
   receiptDirectory?: string,
-  shelfAdmissionDependencies: ShelfAdmissionDependencies = { qualityReceiptAdapters: [] },
+  shelfAdmissionDependencies: ShelfCatalogVerificationDependencies = { qualityReceiptAdapters: [] },
 ): Promise<OrchestrationResult> {
   const registries = await loadOrchestratorRegistries(repoRoot);
   const profile = parseAndValidateAppProfile(profileSource, registries.core);
-  const shelfCatalog = await loadShelfCatalog(repoRoot, shelfAdmissionDependencies);
+  const shelfCatalog = await loadShelfCatalog(repoRoot, { ...shelfAdmissionDependencies,
+    sourceVerifier: shelfAdmissionDependencies.sourceVerifier ?? createGitTreeSourceVerifier(repoRoot) });
   const catalog = await scanReuseCatalog(repoRoot, registries, shelfCatalog);
   const findings = discoverReuse(request.requestedCapabilities, catalog);
   const shelfDecision = decideShelfReuse({ capabilities: request.requestedCapabilities, targetPlatforms: targetPlatforms(profile, request),

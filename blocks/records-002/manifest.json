@@ -7,7 +7,15 @@
   "owner": "boris",
   "purpose": "Configurable in-browser record intake, search, filter, sort, view, delete and JSON export.",
   "repository": { "id": "shia-factory", "path": "blocks/records-002" },
-  "capabilities": ["records", "CRUD presentation", "search", "filter", "sort", "JSON export"],
+  "capabilities": ["records", "crud-presentation", "search", "filter", "sort", "json-export"],
+  "capabilityAliases": {
+    "records": ["record-browser"],
+    "crud-presentation": ["crud table", "data table"],
+    "search": ["record search"],
+    "filter": ["record filter"],
+    "sort": ["record sort"],
+    "json-export": ["export json"]
+  },
   "dependencies": [],
   "supportedPlatforms": ["browser"],
   "interfaces": [

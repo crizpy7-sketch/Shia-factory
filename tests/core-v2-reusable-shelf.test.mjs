@@ -8,7 +8,7 @@ const json = async (relative) => JSON.parse(await readFile(new URL(relative, roo
 test('Shelf schema carries the canonical identity, provenance, evidence, risk and lifecycle fields', async () => {
   const schema = await json('factory/shelf/shelf-asset.schema.json');
   for (const field of ['assetId', 'type', 'lifecycle', 'version', 'owner', 'purpose', 'repository', 'dependencies',
-    'supportedPlatforms', 'interfaces', 'compatibility', 'provenance', 'exactSource', 'qualityGate', 'security',
+    'capabilities', 'capabilityAliases', 'supportedPlatforms', 'interfaces', 'compatibility', 'provenance', 'exactSource', 'qualityGate', 'security',
     'knownLimitations', 'maintenance', 'deprecation']) assert.ok(schema.required.includes(field), field);
   assert.deepEqual(schema.properties.lifecycle.enum, ['candidate', 'admitted', 'deprecated', 'revoked']);
   assert.deepEqual(schema.properties.type.enum, ['block', 'module', 'blueprint']);
@@ -27,6 +27,7 @@ test('canonical catalog contains only honest candidates and does not imply admis
     assert.equal(manifest.lifecycle, 'candidate');
     assert.equal(manifest.qualityGate.receipt, null);
     assert.equal(manifest.qualityGate.admissionEvidenceState, 'missing');
+    assert.equal(typeof manifest.capabilityAliases, 'object');
     await access(new URL(manifest.repository.path, root));
   }
 });
@@ -52,8 +53,14 @@ test('admission policy requires trusted Phase 5 evidence and forbids existence-b
   assert.equal(policy.principles.manifest_means_admitted, false);
   assert.equal(policy.principles.raw_caller_claims_may_admit, false);
   assert.equal(policy.principles.trusted_phase_5_receipt_required, true);
+  assert.equal(policy.principles.exact_source_git_tree_verification_required, true);
+  assert.equal(policy.principles.current_checkout_path_existence_is_admission_evidence, false);
+  assert.equal(policy.principles.production_dependencies_must_be_admitted, true);
   assert.equal(policy.principles.quality_gate_grants_action_authority, false);
   assert.equal(policy.dependency_rules.circular_dependency, 'reject');
+  assert.equal(policy.dependency_rules.candidate_or_unverified_dependency_for_production, 'reject');
+  assert.equal(policy.dependency_rules.non_production_escape_hatch, 'none-defined');
+  assert.equal(policy.capability_matching.token_overlap_establishes_exact_reuse, false);
 });
 
 test('trust contract is factual, provider-neutral and excludes independent/AI certification claims', async () => {
@@ -62,6 +69,7 @@ test('trust contract is factual, provider-neutral and excludes independent/AI ce
   assert.equal(schema.properties.claims.properties.independentCertification.const, false);
   assert.equal(schema.properties.claims.properties.aiApproved.const, false);
   assert.equal(schema.properties.claims.properties.sourceCodeIncluded.const, false);
+  assert.ok(schema.properties.provenance.required.includes('sourceVerificationDigest'));
   assert.ok(schema.properties.identity.properties.type.enum.includes('application'));
   assert.equal(JSON.stringify(schema).includes('OpenAI'), false);
   assert.equal(JSON.stringify(schema).includes('Anthropic'), false);
@@ -84,4 +92,15 @@ test('Phase 7 Michel OS remains untouched and unstarted', async () => {
   assert.match(phase7, /Inspect and profile Michel OS/);
   const changedScope = await readFile(new URL('docs/factory/REUSABLE_SHELF_V1.md', root), 'utf8');
   assert.match(changedScope, /Michel OS was not inspected or modified/);
+});
+
+test('docs/STATUS.md is authoritative and keeps Phase 6 trust work inside the five-task denominator', async () => {
+  const status = await readFile(new URL('docs/STATUS.md', root), 'utf8');
+  assert.match(status, /authoritative Core v2 scoreboard/);
+  assert.match(status, /41 official tasks/);
+  assert.match(status, /Phase 6 has five official technical tracker items/);
+  assert.match(status, /5\/5 official technical tracker items/);
+  assert.match(status, /25\/41 = 60\.98%/);
+  assert.match(status, /30\/41 = 73\.17%/);
+  assert.doesNotMatch(status, /Phase 6 candidate: 6\/6/);
 });

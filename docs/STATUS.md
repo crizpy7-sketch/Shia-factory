@@ -2,6 +2,11 @@
 
 Evidence rule: an item is complete only when the linked repository evidence exists and verification passes.
 
+Canonical progress rule: this file is the authoritative Core v2 scoreboard. The denominator remains
+41 official tasks. Phase 6 has five official technical tracker items; its factual trust-manifest is
+a required sub-component of the Shelf admission/trust standard, not a sixth top-level task. The
+manual HTML tracker must not override this repository state.
+
 ## Phase 1 — Foundation & Audit
 
 - [x] Core v2 governing brief recorded as the migration authority — `factory/registry/core-v2.json`
@@ -63,14 +68,17 @@ Production CI, BORIS, browser and GStack evidence adapters still require real en
 
 ## Phase 6 — Reusable Factory Shelf
 
-- [x] Shelf manifest, lifecycle and trusted Phase 5 admission standard — `factory/shelf/shelf-asset.schema.json`, `factory/shelf/admission-policy.json`, `boris/src/factory/reusable-shelf.ts`
+- [x] Shelf manifest, lifecycle, trusted Phase 5 admission and factual trust-manifest standard — exact-source Git-tree proof and admitted dependency chain required; `factory/shelf/shelf-asset.schema.json`, `factory/shelf/trust-manifest.schema.json`, `factory/shelf/admission-policy.json`, `boris/src/factory/reusable-shelf.ts`
 - [x] Existing reusable-surface inventory completed without false certification — `factory/shelf/inventory.json`; Forms and Records are candidates, not admitted
 - [x] Block/Module/Blueprint dependency and cycle rules implemented — no Module was manufactured from BORIS-coupled scheduling surfaces
 - [x] Blueprint contract defined — no Blueprint was created because no evidence-backed reusable application architecture exists yet
-- [x] Shelf-first `REUSE / EXTEND / CREATE` workflow integrated with the single Phase 3 orchestrator and decision receipt
-- [x] Provider-neutral factual trust-manifest contract derives only from trusted admitted evidence and excludes source/secrets/certification marketing
+- [x] Shelf-first `REUSE / EXTEND / CREATE` workflow integrated with the single Phase 3 orchestrator and decision receipt — exact `REUSE` requires canonical capability IDs/explicit aliases; fuzzy similarity is `EXTEND`/discovery only
 - [ ] Phase 6 completion reviewed and approved by Cristian — draft PR pending
-- **Phase 6 candidate: 6/6 scoped technical deliverables have repository evidence; final approval is pending**
+- **Phase 6 candidate: 5/5 official technical tracker items have repository evidence; final approval is pending**
+
+Approved progress remains **25/41 = 60.98%** through merged Phase 5. If Cristian approves and merges
+this exact Phase 6 candidate, approved progress becomes **30/41 = 73.17%**. Candidate evidence never
+increments the approved numerator before the exact PR is approved and merged.
 
 The original component-family tracker is not treated as proof that missing Blocks exist. Current
 coverage is: Forms and Records have candidate manifests; general application identity/auth,
