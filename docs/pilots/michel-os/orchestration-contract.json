@@ -1,0 +1,1039 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "phase7-michel-release-provenance",
+  "projectId": "michel-os",
+  "objective": "Prepare a bounded Michel OS release-provenance improvement for isolated implementation, exact-candidate verification and approval-gated production deployment.",
+  "outcome": "Michel OS can report its exact deployed Git candidate through a non-secret readiness response, while retaining the existing health check, rollback workflow and production data.",
+  "repository": {
+    "commit": "50403bcd52425d3f49788905ebd81962647e2d39",
+    "branch": "main"
+  },
+  "profileDigest": "a506529a9db63940e4745e049e8f45712bb9a298bf1c63254c1d3ae204c041f3",
+  "risk": {
+    "tier": "T3",
+    "reasons": [
+      "APP_PROFILE baseline T3: Existing production application used by a household.; Stores private household, schedule, business, employee, inventory, sales and expense data.; Uses authentication, authorization, PostgreSQL persistence and an approval-gated VPS deployment path.",
+      "T3 consequence: authentication, payment, secrets, private data, or important migration/deployment",
+      "Consequence overrides superficial diff size"
+    ]
+  },
+  "reuse": {
+    "searched": true,
+    "findings": [
+      {
+        "id": "implementation:boris:agents/BORIS-001",
+        "kind": "implementation",
+        "path": "agents/BORIS-001",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "boris",
+          "engineering",
+          "architecture",
+          "frontend",
+          "backend",
+          "database",
+          "ai",
+          "integration",
+          "debugging",
+          "devops",
+          "release",
+          "engineering",
+          "agents",
+          "boris",
+          "001"
+        ],
+        "evidence": [
+          "agents/BORIS-001"
+        ],
+        "matchedCapabilities": [
+          "release-provenance"
+        ]
+      },
+      {
+        "id": "implementation:boris:boris/src",
+        "kind": "implementation",
+        "path": "boris/src",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "boris",
+          "engineering",
+          "architecture",
+          "frontend",
+          "backend",
+          "database",
+          "ai",
+          "integration",
+          "debugging",
+          "devops",
+          "release",
+          "engineering",
+          "boris",
+          "src"
+        ],
+        "evidence": [
+          "boris/src"
+        ],
+        "matchedCapabilities": [
+          "release-provenance"
+        ]
+      },
+      {
+        "id": "implementation:boris:boris/src/identity/permanent-workforce.ts",
+        "kind": "implementation",
+        "path": "boris/src/identity/permanent-workforce.ts",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "boris",
+          "engineering",
+          "architecture",
+          "frontend",
+          "backend",
+          "database",
+          "ai",
+          "integration",
+          "debugging",
+          "devops",
+          "release",
+          "engineering",
+          "boris",
+          "src",
+          "identity",
+          "permanent",
+          "workforce",
+          "ts"
+        ],
+        "evidence": [
+          "boris/src/identity/permanent-workforce.ts"
+        ],
+        "matchedCapabilities": [
+          "release-provenance"
+        ]
+      },
+      {
+        "id": "implementation:boris:boris/src/identity/roster.ts",
+        "kind": "implementation",
+        "path": "boris/src/identity/roster.ts",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "boris",
+          "engineering",
+          "architecture",
+          "frontend",
+          "backend",
+          "database",
+          "ai",
+          "integration",
+          "debugging",
+          "devops",
+          "release",
+          "engineering",
+          "boris",
+          "src",
+          "identity",
+          "roster",
+          "ts"
+        ],
+        "evidence": [
+          "boris/src/identity/roster.ts"
+        ],
+        "matchedCapabilities": [
+          "release-provenance"
+        ]
+      },
+      {
+        "id": "implementation:boris:boris/tests",
+        "kind": "implementation",
+        "path": "boris/tests",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "boris",
+          "engineering",
+          "architecture",
+          "frontend",
+          "backend",
+          "database",
+          "ai",
+          "integration",
+          "debugging",
+          "devops",
+          "release",
+          "engineering",
+          "boris",
+          "tests"
+        ],
+        "evidence": [
+          "boris/tests"
+        ],
+        "matchedCapabilities": [
+          "release-provenance"
+        ]
+      },
+      {
+        "id": "implementation:design-director:boris/tests/unit/permanent-workforce.test.ts",
+        "kind": "implementation",
+        "path": "boris/tests/unit/permanent-workforce.test.ts",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "design",
+          "director",
+          "ux",
+          "visual",
+          "design",
+          "figma",
+          "design",
+          "systems",
+          "responsive",
+          "design",
+          "motion",
+          "accessibility",
+          "taste",
+          "boris",
+          "tests",
+          "unit",
+          "permanent",
+          "workforce",
+          "test",
+          "ts"
+        ],
+        "evidence": [
+          "boris/tests/unit/permanent-workforce.test.ts"
+        ],
+        "matchedCapabilities": [
+          "test-verification"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:.github/workflows/boris-ci.yml",
+        "kind": "implementation",
+        "path": ".github/workflows/boris-ci.yml",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "github",
+          "workflows",
+          "boris",
+          "ci",
+          "yml"
+        ],
+        "evidence": [
+          ".github/workflows/boris-ci.yml"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:boris/src/quality/evidence-admission.ts",
+        "kind": "implementation",
+        "path": "boris/src/quality/evidence-admission.ts",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "boris",
+          "src",
+          "quality",
+          "evidence",
+          "admission",
+          "ts"
+        ],
+        "evidence": [
+          "boris/src/quality/evidence-admission.ts"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:boris/src/quality/quality-gate.ts",
+        "kind": "implementation",
+        "path": "boris/src/quality/quality-gate.ts",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "boris",
+          "src",
+          "quality",
+          "gate",
+          "ts"
+        ],
+        "evidence": [
+          "boris/src/quality/quality-gate.ts"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:boris/tests/security/evidence-admission.test.ts",
+        "kind": "implementation",
+        "path": "boris/tests/security/evidence-admission.test.ts",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "boris",
+          "tests",
+          "security",
+          "evidence",
+          "admission",
+          "test",
+          "ts"
+        ],
+        "evidence": [
+          "boris/tests/security/evidence-admission.test.ts"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:boris/tests/security/quality-gate-authority.test.ts",
+        "kind": "implementation",
+        "path": "boris/tests/security/quality-gate-authority.test.ts",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "boris",
+          "tests",
+          "security",
+          "quality",
+          "gate",
+          "authority",
+          "test",
+          "ts"
+        ],
+        "evidence": [
+          "boris/tests/security/quality-gate-authority.test.ts"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:docs/factory/QUALITY_GATE_V1.md",
+        "kind": "implementation",
+        "path": "docs/factory/QUALITY_GATE_V1.md",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "docs",
+          "factory",
+          "quality",
+          "gate",
+          "v1",
+          "md"
+        ],
+        "evidence": [
+          "docs/factory/QUALITY_GATE_V1.md"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:docs/STATUS.md#phase-5--quality--safety",
+        "kind": "implementation",
+        "path": "docs/STATUS.md#phase-5--quality--safety",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "docs",
+          "status",
+          "md",
+          "phase",
+          "quality",
+          "safety"
+        ],
+        "evidence": [
+          "docs/STATUS.md#phase-5--quality--safety"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:factory/quality/evidence-admission.schema.json",
+        "kind": "implementation",
+        "path": "factory/quality/evidence-admission.schema.json",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "factory",
+          "quality",
+          "evidence",
+          "admission",
+          "schema",
+          "json"
+        ],
+        "evidence": [
+          "factory/quality/evidence-admission.schema.json"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:factory/quality/quality-gate-receipt.schema.json",
+        "kind": "implementation",
+        "path": "factory/quality/quality-gate-receipt.schema.json",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "factory",
+          "quality",
+          "gate",
+          "receipt",
+          "schema",
+          "json"
+        ],
+        "evidence": [
+          "factory/quality/quality-gate-receipt.schema.json"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:factory/quality/risk-gate-policy.json",
+        "kind": "implementation",
+        "path": "factory/quality/risk-gate-policy.json",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "factory",
+          "quality",
+          "risk",
+          "gate",
+          "policy",
+          "json"
+        ],
+        "evidence": [
+          "factory/quality/risk-gate-policy.json"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:quality-gate:gstack/SHIA_FACTORY_EXTENSION.md",
+        "kind": "implementation",
+        "path": "gstack/SHIA_FACTORY_EXTENSION.md",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gate",
+          "functional",
+          "testing",
+          "browser",
+          "testing",
+          "visual",
+          "qa",
+          "accessibility",
+          "testing",
+          "security",
+          "testing",
+          "performance",
+          "testing",
+          "adversarial",
+          "review",
+          "release",
+          "verification",
+          "gstack",
+          "shia",
+          "factory",
+          "extension",
+          "md"
+        ],
+        "evidence": [
+          "gstack/SHIA_FACTORY_EXTENSION.md"
+        ],
+        "matchedCapabilities": [
+          "release-provenance",
+          "test-verification",
+          "security-review"
+        ]
+      },
+      {
+        "id": "implementation:shia-core:boris/tests/unit/orchestrator-core.test.ts",
+        "kind": "implementation",
+        "path": "boris/tests/unit/orchestrator-core.test.ts",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "shia",
+          "core",
+          "orchestration",
+          "planning",
+          "context",
+          "risk",
+          "capability",
+          "selection",
+          "boris",
+          "tests",
+          "unit",
+          "orchestrator",
+          "core",
+          "test",
+          "ts"
+        ],
+        "evidence": [
+          "boris/tests/unit/orchestrator-core.test.ts"
+        ],
+        "matchedCapabilities": [
+          "test-verification"
+        ]
+      },
+      {
+        "id": "skill:engineering:gstack/SHIA_FACTORY_EXTENSION.md",
+        "kind": "skill",
+        "path": "gstack/SHIA_FACTORY_EXTENSION.md",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "engineering",
+          "gstack",
+          "shia",
+          "factory",
+          "extension",
+          "md",
+          "review",
+          "qa",
+          "ship"
+        ],
+        "evidence": [
+          "skills/engineering/PACK.json",
+          "gstack/SHIA_FACTORY_EXTENSION.md"
+        ],
+        "matchedCapabilities": [
+          "security-review"
+        ]
+      },
+      {
+        "id": "skill:quality:gstack/SHIA_FACTORY_EXTENSION.md",
+        "kind": "skill",
+        "path": "gstack/SHIA_FACTORY_EXTENSION.md",
+        "state": "unverified",
+        "certification": {
+          "provenanceVerified": false,
+          "shelfAdmission": "not-evaluated",
+          "qualityCertification": "not-evaluated"
+        },
+        "capabilities": [
+          "quality",
+          "gstack",
+          "shia",
+          "factory",
+          "extension",
+          "md",
+          "review",
+          "qa",
+          "cso"
+        ],
+        "evidence": [
+          "skills/quality/PACK.json",
+          "gstack/SHIA_FACTORY_EXTENSION.md"
+        ],
+        "matchedCapabilities": [
+          "security-review"
+        ]
+      }
+    ],
+    "creationDisposition": "CREATE",
+    "shelfDecision": {
+      "schemaVersion": "1.0.0",
+      "disposition": "CREATE",
+      "normalizedNeed": {
+        "capabilities": [
+          "postgres-backup-rollback",
+          "readiness-health",
+          "release-provenance",
+          "security-review",
+          "test-verification",
+          "vps-deployment"
+        ],
+        "targetPlatforms": [
+          "docker",
+          "node",
+          "vps"
+        ],
+        "requiredInterfaces": []
+      },
+      "selectedAssetIds": [],
+      "evaluated": [
+        {
+          "assetId": "block:forms-001",
+          "lifecycle": "candidate",
+          "provenanceState": "manifest-validated",
+          "admissionState": "not-admitted",
+          "compatible": false,
+          "exactCapabilityMatch": false,
+          "matchedCapabilities": [],
+          "fuzzyMatchedCapabilities": [],
+          "missingCapabilities": [
+            "postgres-backup-rollback",
+            "readiness-health",
+            "release-provenance",
+            "security-review",
+            "test-verification",
+            "vps-deployment"
+          ],
+          "reasons": [
+            "No canonical capability, explicit alias or fuzzy discovery tokens matched.",
+            "Unsupported platforms: docker, node, vps.",
+            "Asset is not admitted; existence or a manifest alone is not certification."
+          ]
+        },
+        {
+          "assetId": "block:records-002",
+          "lifecycle": "candidate",
+          "provenanceState": "manifest-validated",
+          "admissionState": "not-admitted",
+          "compatible": false,
+          "exactCapabilityMatch": false,
+          "matchedCapabilities": [],
+          "fuzzyMatchedCapabilities": [],
+          "missingCapabilities": [
+            "postgres-backup-rollback",
+            "readiness-health",
+            "release-provenance",
+            "security-review",
+            "test-verification",
+            "vps-deployment"
+          ],
+          "reasons": [
+            "No canonical capability, explicit alias or fuzzy discovery tokens matched.",
+            "Unsupported platforms: docker, node, vps.",
+            "Asset is not admitted; existence or a manifest alone is not certification."
+          ]
+        }
+      ],
+      "noMatchEvidence": [
+        "block:forms-001: No canonical capability, explicit alias or fuzzy discovery tokens matched. Unsupported platforms: docker, node, vps. Asset is not admitted; existence or a manifest alone is not certification.",
+        "block:records-002: No canonical capability, explicit alias or fuzzy discovery tokens matched. Unsupported platforms: docker, node, vps. Asset is not admitted; existence or a manifest alone is not certification."
+      ],
+      "nonAdmittedUse": {
+        "permitted": false,
+        "assetIds": []
+      },
+      "reason": "No compatible admitted asset or explicitly permitted non-admitted extension matched; CREATE is allowed only with this no-match evidence."
+    }
+  },
+  "selectedRoles": [
+    {
+      "id": "shia-core",
+      "reason": "Owns requested action plan.",
+      "availability": "available",
+      "implementationStatus": "operational-deterministic-core-v1"
+    },
+    {
+      "id": "boris",
+      "reason": "Owns requested action deploy.",
+      "availability": "available",
+      "implementationStatus": "operational-uncertified"
+    },
+    {
+      "id": "quality-gate",
+      "reason": "Owns requested action test.",
+      "availability": "available",
+      "implementationStatus": "operational-quality-gate-v1"
+    }
+  ],
+  "selectedSkillPacks": [
+    {
+      "id": "operations",
+      "reason": "Supports selected role shia-core."
+    },
+    {
+      "id": "engineering",
+      "reason": "Supports selected role boris."
+    },
+    {
+      "id": "quality",
+      "reason": "Supports selected role quality-gate."
+    }
+  ],
+  "selectedTools": [
+    {
+      "id": "github",
+      "owner": "boris",
+      "reason": "Required by the requested objective/capabilities and owned by boris."
+    },
+    {
+      "id": "supabase",
+      "owner": "boris",
+      "reason": "Required by the requested objective/capabilities and owned by boris."
+    },
+    {
+      "id": "vps",
+      "owner": "boris",
+      "reason": "Required by the requested objective/capabilities and owned by boris."
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "statement": "A future isolated candidate exposes an immutable 40-hex release SHA in the existing readiness response without exposing secrets or environment values.",
+      "evidence": [
+        "unit",
+        "integration",
+        "security"
+      ]
+    },
+    {
+      "id": "AC-2",
+      "statement": "The readiness route continues to verify PostgreSQL connectivity and returns a non-ready response when the database is unavailable.",
+      "evidence": [
+        "integration"
+      ]
+    },
+    {
+      "id": "AC-3",
+      "statement": "The deployment path binds the reported release SHA, deployed-sha stamp and exact approved candidate to the same commit.",
+      "evidence": [
+        "runtime",
+        "review"
+      ]
+    },
+    {
+      "id": "AC-4",
+      "statement": "The future change introduces no database migration, preserves the current production revision for rollback and is not deployed without a verified Quality Gate receipt and Cristian approval.",
+      "evidence": [
+        "review",
+        "security",
+        "human_approval"
+      ]
+    }
+  ],
+  "requiredEvidence": [
+    "integration",
+    "review",
+    "runtime",
+    "security",
+    "test",
+    "unit"
+  ],
+  "allowedActions": [
+    {
+      "action": "inspect",
+      "role": "shia-core",
+      "authority": "allow",
+      "allowed": true
+    },
+    {
+      "action": "plan",
+      "role": "shia-core",
+      "authority": "allow",
+      "allowed": true
+    },
+    {
+      "action": "build",
+      "role": "boris",
+      "authority": "allow",
+      "allowed": true
+    },
+    {
+      "action": "test",
+      "role": "quality-gate",
+      "authority": "allow",
+      "allowed": true
+    },
+    {
+      "action": "deploy",
+      "role": "boris",
+      "authority": "gated:Cristian+quality-receipt",
+      "allowed": true
+    }
+  ],
+  "approvalGates": [
+    "Cristian",
+    "Cristian+quality-receipt"
+  ],
+  "executionBlocked": false,
+  "executionBlockers": [],
+  "certificationReleaseBlocked": false,
+  "certificationReleaseBlockers": [],
+  "blocked": false,
+  "blockers": []
+}

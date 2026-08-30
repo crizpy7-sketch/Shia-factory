@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "1.0.0",
+  "taskId": "phase7-michel-release-provenance",
+  "projectId": "michel-os",
+  "repository": {
+    "commit": "50403bcd52425d3f49788905ebd81962647e2d39",
+    "branch": "main"
+  },
+  "profileDigest": "a506529a9db63940e4745e049e8f45712bb9a298bf1c63254c1d3ae204c041f3",
+  "contractDigest": "31d36bfff8d1454dbd4c96e5f4d13ecbfcfd776d5d0b014620185bc365c97ef7",
+  "decisions": [
+    {
+      "stage": "profile",
+      "decision": "validated",
+      "reason": "APP_PROFILE 1.0 normalized for michel-os.",
+      "evidence": [
+        "APP_PROFILE.yaml"
+      ]
+    },
+    {
+      "stage": "reuse",
+      "decision": "CREATE",
+      "reason": "20 matching existing assets classified before creation.",
+      "evidence": [
+        "agents/BORIS-001",
+        "boris/src",
+        "boris/src/identity/permanent-workforce.ts",
+        "boris/src/identity/roster.ts",
+        "boris/tests",
+        "boris/tests/unit/permanent-workforce.test.ts",
+        ".github/workflows/boris-ci.yml",
+        "boris/src/quality/evidence-admission.ts",
+        "boris/src/quality/quality-gate.ts",
+        "boris/tests/security/evidence-admission.test.ts",
+        "boris/tests/security/quality-gate-authority.test.ts",
+        "docs/factory/QUALITY_GATE_V1.md",
+        "docs/STATUS.md#phase-5--quality--safety",
+        "factory/quality/evidence-admission.schema.json",
+        "factory/quality/quality-gate-receipt.schema.json",
+        "factory/quality/risk-gate-policy.json",
+        "gstack/SHIA_FACTORY_EXTENSION.md",
+        "boris/tests/unit/orchestrator-core.test.ts",
+        "skills/engineering/PACK.json",
+        "gstack/SHIA_FACTORY_EXTENSION.md",
+        "skills/quality/PACK.json",
+        "gstack/SHIA_FACTORY_EXTENSION.md"
+      ]
+    },
+    {
+      "stage": "shelf-reuse",
+      "decision": "CREATE",
+      "reason": "No compatible admitted asset or explicitly permitted non-admitted extension matched; CREATE is allowed only with this no-match evidence.",
+      "evidence": [
+        "block:forms-001: No canonical capability, explicit alias or fuzzy discovery tokens matched. Unsupported platforms: docker, node, vps. Asset is not admitted; existence or a manifest alone is not certification.",
+        "block:records-002: No canonical capability, explicit alias or fuzzy discovery tokens matched. Unsupported platforms: docker, node, vps. Asset is not admitted; existence or a manifest alone is not certification."
+      ]
+    },
+    {
+      "stage": "risk",
+      "decision": "T3",
+      "reason": "APP_PROFILE baseline T3: Existing production application used by a household.; Stores private household, schedule, business, employee, inventory, sales and expense data.; Uses authentication, authorization, PostgreSQL persistence and an approval-gated VPS deployment path. T3 consequence: authentication, payment, secrets, private data, or important migration/deployment Consequence overrides superficial diff size",
+      "evidence": [
+        "docs/CORE_V2_ARCHITECTURE.md",
+        "docs/factory/OPERATING_SYSTEM.md"
+      ]
+    },
+    {
+      "stage": "routing",
+      "decision": "shia-core:available,boris:available,quality-gate:available",
+      "reason": "Minimum roles, packs and owned tools selected from permanent registries.",
+      "evidence": [
+        "factory/registry/core-v2.json",
+        "factory/registry/invocation-contracts.json",
+        "factory/registry/authority-matrix.json",
+        "skills/registry.json"
+      ]
+    },
+    {
+      "stage": "authority",
+      "decision": "execution-routable",
+      "reason": "Requested actions have available owners and are allowed or gated.",
+      "evidence": [
+        "factory/registry/authority-matrix.json"
+      ]
+    },
+    {
+      "stage": "certification-release",
+      "decision": "eligible-after-evidence",
+      "reason": "No unavailable selected role prevents certification or release.",
+      "evidence": [
+        "factory/registry/core-v2.json",
+        "factory/registry/authority-matrix.json"
+      ]
+    }
+  ],
+  "createdAt": "2026-08-30T22:07:47Z",
+  "receiptId": "3c7c3f2d438e08ca6cd91bef65c009e0747b98a084a17b06f227ce96f27011a4"
+}

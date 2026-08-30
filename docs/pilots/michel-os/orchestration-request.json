@@ -1,0 +1,44 @@
+{
+  "taskId": "phase7-michel-release-provenance",
+  "objective": "Prepare a bounded Michel OS release-provenance improvement for isolated implementation, exact-candidate verification and approval-gated production deployment.",
+  "outcome": "Michel OS can report its exact deployed Git candidate through a non-secret readiness response, while retaining the existing health check, rollback workflow and production data.",
+  "repository": {
+    "commit": "50403bcd52425d3f49788905ebd81962647e2d39",
+    "branch": "main"
+  },
+  "requestedCapabilities": [
+    "release-provenance",
+    "readiness-health",
+    "vps-deployment",
+    "postgres-backup-rollback",
+    "test-verification",
+    "security-review"
+  ],
+  "requestedActions": ["inspect", "plan", "build", "test", "deploy"],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "statement": "A future isolated candidate exposes an immutable 40-hex release SHA in the existing readiness response without exposing secrets or environment values.",
+      "evidence": ["unit", "integration", "security"]
+    },
+    {
+      "id": "AC-2",
+      "statement": "The readiness route continues to verify PostgreSQL connectivity and returns a non-ready response when the database is unavailable.",
+      "evidence": ["integration"]
+    },
+    {
+      "id": "AC-3",
+      "statement": "The deployment path binds the reported release SHA, deployed-sha stamp and exact approved candidate to the same commit.",
+      "evidence": ["runtime", "review"]
+    },
+    {
+      "id": "AC-4",
+      "statement": "The future change introduces no database migration, preserves the current production revision for rollback and is not deployed without a verified Quality Gate receipt and Cristian approval.",
+      "evidence": ["review", "security", "human_approval"]
+    }
+  ],
+  "changedPaths": [],
+  "capabilityCreationRequested": true,
+  "targetPlatforms": ["node", "docker", "vps"],
+  "now": "2026-08-30T22:07:47Z"
+}

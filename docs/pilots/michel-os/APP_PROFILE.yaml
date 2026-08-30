@@ -1,0 +1,41 @@
+schema_version: "1.0"
+app:
+  id: michel-os
+  name: Michel OS
+  type: private-household-operations
+  lifecycle_stage: production-pilot-migration
+blueprint: null
+risk:
+  baseline_tier: T3
+  reasons:
+    - Existing production application used by a household.
+    - Stores private household, schedule, business, employee, inventory, sales and expense data.
+    - Uses authentication, authorization, PostgreSQL persistence and an approval-gated VPS deployment path.
+data:
+  sensitivity: private
+  irreversible_authority: false
+stack:
+  frontend: server-rendered-html-vanilla-javascript-pwa
+  language: [TypeScript, JavaScript, SQL, Shell]
+  backend: node-http-service
+  database: PostgreSQL-16
+  test_database: PGlite
+  source_control: GitHub
+  deployment: [VPS, Docker-Compose]
+  reverse_proxy: host-managed-or-Caddy
+  ai: OpenAI-Responses-API-with-local-fallback
+required_roles: [shia-core, boris, quality-gate]
+conditional_roles: [design-director, gary]
+quality:
+  unit: required
+  integration: required
+  browser_e2e: required-for-ui-changes
+  visual_qa: required-for-ui-changes
+  accessibility: required-for-ui-changes
+  security: required
+  performance: required-for-runtime-or-performance-sensitive-changes
+approvals:
+  human_before_merge: true
+  human_before_deploy: true
+reuse_search_required: true
+status_document: docs/pilots/michel-os/BASELINE.md
