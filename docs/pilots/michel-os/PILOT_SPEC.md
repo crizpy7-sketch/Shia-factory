@@ -39,6 +39,23 @@ Minimum permanent roles:
 
 Design Director is conditional and not selected for this non-UI pilot. Gary is not required. Cristian remains the human merge/deploy approval gate.
 
+The current task contract permits isolated implementation and verification but marks production
+deployment `precondition-blocked`. A gated authority string is not deployment eligibility. Eligibility
+requires all seven trusted production preconditions in `orchestration-contract.json` to be satisfied
+against the same task, repository and exact candidate.
+
+## Migration preservation rule
+
+Phase 6 Shelf disposition and Michel OS application action are separate decisions:
+
+- Existing working authentication, PostgreSQL persistence, scheduling, notifications/search, AI
+  integration and business workflows are `PRESERVE` even though the Shelf has no matching admitted
+  asset and reports `CREATE`.
+- The missing release-provenance/readiness capability is `IMPLEMENT`.
+- Potential Factory extraction is `CANDIDATE_AFTER_LIFECYCLE_PROOF`; it is not automatically admitted.
+
+No Shelf no-match result authorizes rebuilding Michel OS.
+
 ## Backup and rollback prerequisite
 
 Before any future deployment:

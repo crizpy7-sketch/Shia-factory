@@ -7,7 +7,7 @@
     "branch": "main"
   },
   "profileDigest": "a506529a9db63940e4745e049e8f45712bb9a298bf1c63254c1d3ae204c041f3",
-  "contractDigest": "31d36bfff8d1454dbd4c96e5f4d13ecbfcfd776d5d0b014620185bc365c97ef7",
+  "contractDigest": "13797731e1ae13053a1f13931f8c3a9671714f7c94126de634e1d9d8dbcedbc9",
   "decisions": [
     {
       "stage": "profile",
@@ -84,9 +84,41 @@
       ]
     },
     {
+      "stage": "production-deployment",
+      "decision": "precondition-blocked",
+      "reason": "deployed-production-revision: Independently observed deployed production revision/SHA is missing.; runtime-identity: Live runtime/container/process identity is missing.; health-baseline: Production health baseline is missing.; rollback-revision: Identified rollback revision is missing.; backup-recovery: Required backup/recovery evidence is missing.; exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.; cristian-deploy-approval: Cristian deployment approval is missing.",
+      "evidence": []
+    },
+    {
+      "stage": "application-migration",
+      "decision": "identity-auth-household-permissions:PRESERVE,postgresql-persistence:PRESERVE,scheduling-coordination:PRESERVE,notifications-search:PRESERVE,ai-provider-proposal-gateway:PRESERVE,business-workflows:PRESERVE,release-provenance-readiness:IMPLEMENT",
+      "reason": "Application migration actions are separate from Factory Shelf dispositions.",
+      "evidence": [
+        "server/auth",
+        "server/api/routes.ts",
+        "tests/http/auth.test.ts",
+        "server/db/client.ts",
+        "server/db/migrations",
+        "tests/db",
+        "domains/scheduling",
+        "server/api/routes.ts",
+        "tests/unit/recurrence.test.ts",
+        "domains/platform",
+        "tests/unit/platform.test.ts",
+        "server/api/assistant-provider.ts",
+        "domains/ai",
+        "tests/http/assistant.test.ts",
+        "domains/shia-baby",
+        "server/api/business-availability.ts",
+        "tests/unit/staffing.test.ts",
+        "server/main.ts:/api/ready",
+        "docs/deploy/auto-deploy.sh:.swarm/deployed-sha"
+      ]
+    },
+    {
       "stage": "certification-release",
-      "decision": "eligible-after-evidence",
-      "reason": "No unavailable selected role prevents certification or release.",
+      "decision": "blocked",
+      "reason": "production deploy precondition: deployed-production-revision: Independently observed deployed production revision/SHA is missing.; production deploy precondition: runtime-identity: Live runtime/container/process identity is missing.; production deploy precondition: health-baseline: Production health baseline is missing.; production deploy precondition: rollback-revision: Identified rollback revision is missing.; production deploy precondition: backup-recovery: Required backup/recovery evidence is missing.; production deploy precondition: exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.; production deploy precondition: cristian-deploy-approval: Cristian deployment approval is missing.",
       "evidence": [
         "factory/registry/core-v2.json",
         "factory/registry/authority-matrix.json"
@@ -94,5 +126,5 @@
     }
   ],
   "createdAt": "2026-08-30T22:07:47Z",
-  "receiptId": "3c7c3f2d438e08ca6cd91bef65c009e0747b98a084a17b06f227ce96f27011a4"
+  "receiptId": "12d96b525369b29daca6b677912e2595d4fbcdf18ef79871f3d8180ce72ef4bd"
 }

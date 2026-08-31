@@ -64,6 +64,27 @@ No values were read or recorded.
 
 The absence of live evidence blocks deployment approval. It does not invalidate the repository architecture inventory.
 
+### Action-specific production gate
+
+The deterministic task contract now keeps safe engineering work separate from production mutation:
+
+- inspect, plan, isolated build and test remain routable;
+- production deploy is `precondition-blocked`;
+- `executionBlocked` remains false because the isolated candidate may be built and tested;
+- `certificationReleaseBlocked` remains true while production prerequisites are missing;
+- evaluation records `productionMutationPerformed: false`.
+
+The deployment action has seven explicit missing preconditions: independently observed deployed SHA,
+live runtime identity, live health baseline, identified rollback revision, backup/recovery evidence,
+an exact-candidate trusted Quality Gate receipt and Cristian deploy approval. Approval or Quality
+evidence alone cannot replace the live baseline, and stale SHA-bound evidence cannot clear the gate.
+
+### Corrected provider routing
+
+The corrected selected tools are `github` and `vps`. Self-hosted PostgreSQL is provider-neutral and
+does not select Supabase. Supabase remains supported only when APP_PROFILE, an integration or the task
+itself explicitly identifies Supabase.
+
 ## Verification performed
 
 At Michel OS commit `50403bcd52425d3f49788905ebd81962647e2d39`:

@@ -941,11 +941,6 @@
       "reason": "Required by the requested objective/capabilities and owned by boris."
     },
     {
-      "id": "supabase",
-      "owner": "boris",
-      "reason": "Required by the requested objective/capabilities and owned by boris."
-    },
-    {
       "id": "vps",
       "owner": "boris",
       "reason": "Required by the requested objective/capabilities and owned by boris."
@@ -999,41 +994,220 @@
       "action": "inspect",
       "role": "shia-core",
       "authority": "allow",
-      "allowed": true
+      "allowed": true,
+      "executable": true,
+      "executionState": "allowed",
+      "blockers": []
     },
     {
       "action": "plan",
       "role": "shia-core",
       "authority": "allow",
-      "allowed": true
+      "allowed": true,
+      "executable": true,
+      "executionState": "allowed",
+      "blockers": []
     },
     {
       "action": "build",
       "role": "boris",
       "authority": "allow",
-      "allowed": true
+      "allowed": true,
+      "executable": true,
+      "executionState": "allowed",
+      "blockers": []
     },
     {
       "action": "test",
       "role": "quality-gate",
       "authority": "allow",
-      "allowed": true
+      "allowed": true,
+      "executable": true,
+      "executionState": "allowed",
+      "blockers": []
     },
     {
       "action": "deploy",
       "role": "boris",
       "authority": "gated:Cristian+quality-receipt",
-      "allowed": true
+      "allowed": true,
+      "executable": false,
+      "executionState": "precondition-blocked",
+      "blockers": [
+        "deployed-production-revision: Independently observed deployed production revision/SHA is missing.",
+        "runtime-identity: Live runtime/container/process identity is missing.",
+        "health-baseline: Production health baseline is missing.",
+        "rollback-revision: Identified rollback revision is missing.",
+        "backup-recovery: Required backup/recovery evidence is missing.",
+        "exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.",
+        "cristian-deploy-approval: Cristian deployment approval is missing."
+      ]
     }
   ],
   "approvalGates": [
     "Cristian",
     "Cristian+quality-receipt"
   ],
+  "deployment": {
+    "requested": true,
+    "environment": "production",
+    "existingApplication": true,
+    "state": "precondition-blocked",
+    "candidateSha": "50403bcd52425d3f49788905ebd81962647e2d39",
+    "preconditions": [
+      {
+        "id": "deployed-production-revision",
+        "state": "missing",
+        "evidenceReference": null,
+        "reason": "Independently observed deployed production revision/SHA is missing."
+      },
+      {
+        "id": "runtime-identity",
+        "state": "missing",
+        "evidenceReference": null,
+        "reason": "Live runtime/container/process identity is missing."
+      },
+      {
+        "id": "health-baseline",
+        "state": "missing",
+        "evidenceReference": null,
+        "reason": "Production health baseline is missing."
+      },
+      {
+        "id": "rollback-revision",
+        "state": "missing",
+        "evidenceReference": null,
+        "reason": "Identified rollback revision is missing."
+      },
+      {
+        "id": "backup-recovery",
+        "state": "missing",
+        "evidenceReference": null,
+        "reason": "Required backup/recovery evidence is missing."
+      },
+      {
+        "id": "exact-candidate-quality-receipt",
+        "state": "missing",
+        "evidenceReference": null,
+        "reason": "Exact-candidate Quality Gate receipt reference is missing."
+      },
+      {
+        "id": "cristian-deploy-approval",
+        "state": "missing",
+        "evidenceReference": null,
+        "reason": "Cristian deployment approval is missing."
+      }
+    ],
+    "blockers": [
+      "deployed-production-revision: Independently observed deployed production revision/SHA is missing.",
+      "runtime-identity: Live runtime/container/process identity is missing.",
+      "health-baseline: Production health baseline is missing.",
+      "rollback-revision: Identified rollback revision is missing.",
+      "backup-recovery: Required backup/recovery evidence is missing.",
+      "exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.",
+      "cristian-deploy-approval: Cristian deployment approval is missing."
+    ],
+    "productionMutationPerformed": false
+  },
+  "migration": {
+    "analyzed": true,
+    "actions": [
+      {
+        "capability": "identity-auth-household-permissions",
+        "factoryShelfDisposition": "CREATE",
+        "applicationAction": "PRESERVE",
+        "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+        "evidence": [
+          "server/auth",
+          "server/api/routes.ts",
+          "tests/http/auth.test.ts"
+        ],
+        "reason": "The application already has evidence of a working capability; Shelf CREATE does not authorize a rebuild."
+      },
+      {
+        "capability": "postgresql-persistence",
+        "factoryShelfDisposition": "CREATE",
+        "applicationAction": "PRESERVE",
+        "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+        "evidence": [
+          "server/db/client.ts",
+          "server/db/migrations",
+          "tests/db"
+        ],
+        "reason": "The application already has evidence of a working capability; Shelf CREATE does not authorize a rebuild."
+      },
+      {
+        "capability": "scheduling-coordination",
+        "factoryShelfDisposition": "CREATE",
+        "applicationAction": "PRESERVE",
+        "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+        "evidence": [
+          "domains/scheduling",
+          "server/api/routes.ts",
+          "tests/unit/recurrence.test.ts"
+        ],
+        "reason": "The application already has evidence of a working capability; Shelf CREATE does not authorize a rebuild."
+      },
+      {
+        "capability": "notifications-search",
+        "factoryShelfDisposition": "CREATE",
+        "applicationAction": "PRESERVE",
+        "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+        "evidence": [
+          "domains/platform",
+          "tests/unit/platform.test.ts"
+        ],
+        "reason": "The application already has evidence of a working capability; Shelf CREATE does not authorize a rebuild."
+      },
+      {
+        "capability": "ai-provider-proposal-gateway",
+        "factoryShelfDisposition": "CREATE",
+        "applicationAction": "PRESERVE",
+        "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+        "evidence": [
+          "server/api/assistant-provider.ts",
+          "domains/ai",
+          "tests/http/assistant.test.ts"
+        ],
+        "reason": "The application already has evidence of a working capability; Shelf CREATE does not authorize a rebuild."
+      },
+      {
+        "capability": "business-workflows",
+        "factoryShelfDisposition": "CREATE",
+        "applicationAction": "PRESERVE",
+        "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+        "evidence": [
+          "domains/shia-baby",
+          "server/api/business-availability.ts",
+          "tests/unit/staffing.test.ts"
+        ],
+        "reason": "The application already has evidence of a working capability; Shelf CREATE does not authorize a rebuild."
+      },
+      {
+        "capability": "release-provenance-readiness",
+        "factoryShelfDisposition": "CREATE",
+        "applicationAction": "IMPLEMENT",
+        "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+        "evidence": [
+          "server/main.ts:/api/ready",
+          "docs/deploy/auto-deploy.sh:.swarm/deployed-sha"
+        ],
+        "reason": "The application lacks this bounded capability; Shelf CREATE permits implementation with recorded no-match evidence."
+      }
+    ]
+  },
   "executionBlocked": false,
   "executionBlockers": [],
-  "certificationReleaseBlocked": false,
-  "certificationReleaseBlockers": [],
+  "certificationReleaseBlocked": true,
+  "certificationReleaseBlockers": [
+    "production deploy precondition: deployed-production-revision: Independently observed deployed production revision/SHA is missing.",
+    "production deploy precondition: runtime-identity: Live runtime/container/process identity is missing.",
+    "production deploy precondition: health-baseline: Production health baseline is missing.",
+    "production deploy precondition: rollback-revision: Identified rollback revision is missing.",
+    "production deploy precondition: backup-recovery: Required backup/recovery evidence is missing.",
+    "production deploy precondition: exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.",
+    "production deploy precondition: cristian-deploy-approval: Cristian deployment approval is missing."
+  ],
   "blocked": false,
   "blockers": []
 }

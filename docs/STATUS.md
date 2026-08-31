@@ -96,7 +96,9 @@ Phase 7 inspection evidence is staged in `docs/pilots/michel-os/` for review. Th
 `50403bcd52425d3f49788905ebd81962647e2d39` is profiled and its local gauntlet passes, but the first
 tracker item remains incomplete because the live VPS, deployed SHA, health, backup inventory and
 environment-specific integrations could not be independently observed. No production mutation has
-occurred, and approved progress remains **30/41 = 73.17%**.
+occurred. The draft contract keeps isolated build/test routable while production deploy is
+precondition-blocked, and migration actions preserve working Michel OS capabilities independently
+of Shelf no-match results. Approved progress remains **30/41 = 73.17%**.
 
 ## Phase 8 — Factory Proven
 

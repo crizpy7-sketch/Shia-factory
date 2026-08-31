@@ -22,10 +22,32 @@ test('persisted Shia Core contract records minimum routing and honest Shelf CREA
   assert.equal(contract.risk.tier, 'T3');
   assert.deepEqual(contract.selectedRoles.map((role) => role.id), ['shia-core', 'boris', 'quality-gate']);
   assert.deepEqual(contract.selectedSkillPacks.map((pack) => pack.id), ['operations', 'engineering', 'quality']);
+  assert.deepEqual(contract.selectedTools.map((tool) => tool.id), ['github', 'vps']);
   assert.equal(contract.reuse.shelfDecision.disposition, 'CREATE');
   assert.deepEqual(contract.reuse.shelfDecision.selectedAssetIds, []);
   assert.equal(contract.reuse.shelfDecision.nonAdmittedUse.permitted, false);
   assert.deepEqual(contract.approvalGates, ['Cristian', 'Cristian+quality-receipt']);
+  assert.equal(contract.executionBlocked, false);
+  assert.equal(contract.deployment.state, 'precondition-blocked');
+  assert.equal(contract.deployment.productionMutationPerformed, false);
+  assert.deepEqual(contract.deployment.preconditions.map((item) => [item.id, item.state]), [
+    ['deployed-production-revision', 'missing'],
+    ['runtime-identity', 'missing'],
+    ['health-baseline', 'missing'],
+    ['rollback-revision', 'missing'],
+    ['backup-recovery', 'missing'],
+    ['exact-candidate-quality-receipt', 'missing'],
+    ['cristian-deploy-approval', 'missing'],
+  ]);
+  assert.deepEqual(contract.migration.actions.map((item) => [item.capability, item.applicationAction]), [
+    ['identity-auth-household-permissions', 'PRESERVE'],
+    ['postgresql-persistence', 'PRESERVE'],
+    ['scheduling-coordination', 'PRESERVE'],
+    ['notifications-search', 'PRESERVE'],
+    ['ai-provider-proposal-gateway', 'PRESERVE'],
+    ['business-workflows', 'PRESERVE'],
+    ['release-provenance-readiness', 'IMPLEMENT'],
+  ]);
 });
 
 test('Shelf analysis admits nothing and keeps Forms and Records as candidates', async () => {
@@ -37,6 +59,13 @@ test('Shelf analysis admits nothing and keeps Forms and Records as candidates', 
   ]);
   assert.equal(analysis.normalReuseOutcome, 'CREATE');
   assert.equal(analysis.nonAdmittedUsePermitted, false);
+  assert.equal(analysis.correctedRouting.supabaseSelected, false);
+  assert.deepEqual(analysis.correctedRouting.selfHostedPostgreSQL, ['github', 'vps']);
+  const release = analysis.capabilityDecisions.find((item) => item.capability === 'release-provenance-readiness');
+  assert.equal(release.applicationAction, 'IMPLEMENT');
+  assert.ok(analysis.capabilityDecisions.filter((item) => item.capability !== 'release-provenance-readiness')
+    .every((item) => item.applicationAction === 'PRESERVE'));
+  assert.equal(analysis.capabilityDecisions.some((item) => item.applicationAction === 'REBUILD'), false);
 });
 
 test('pilot remains a non-mutating proposal with explicit production gaps', async () => {
