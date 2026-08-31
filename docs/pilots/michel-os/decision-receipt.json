@@ -7,7 +7,7 @@
     "branch": "main"
   },
   "profileDigest": "a506529a9db63940e4745e049e8f45712bb9a298bf1c63254c1d3ae204c041f3",
-  "contractDigest": "13797731e1ae13053a1f13931f8c3a9671714f7c94126de634e1d9d8dbcedbc9",
+  "contractDigest": "0295fd8f5247a6c9b8dceddb255eefe34e70a90f06936f5f89b0f17d840f9f2f",
   "decisions": [
     {
       "stage": "profile",
@@ -86,8 +86,15 @@
     {
       "stage": "production-deployment",
       "decision": "precondition-blocked",
-      "reason": "deployed-production-revision: Independently observed deployed production revision/SHA is missing.; runtime-identity: Live runtime/container/process identity is missing.; health-baseline: Production health baseline is missing.; rollback-revision: Identified rollback revision is missing.; backup-recovery: Required backup/recovery evidence is missing.; exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.; cristian-deploy-approval: Cristian deployment approval is missing.",
-      "evidence": []
+      "reason": "rollback-revision: Rollback revision exists, but an executable rollback procedure is not evidenced for it.; backup-recovery: Backup-file integrity is recorded, but adequate recovery/restore evidence is not proven.; exact-release-provenance: Repository/deployment markers do not independently bind the running image to the exact Git revision.; exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.; cristian-deploy-approval: Cristian deployment approval is missing.",
+      "evidence": [
+        "michel-os-live-baseline-2026-08-31",
+        "michel-os-live-baseline-2026-08-31",
+        "michel-os-live-baseline-2026-08-31",
+        "michel-os-live-baseline-2026-08-31",
+        "michel-os-live-baseline-2026-08-31",
+        "michel-os-live-baseline-2026-08-31"
+      ]
     },
     {
       "stage": "application-migration",
@@ -118,13 +125,13 @@
     {
       "stage": "certification-release",
       "decision": "blocked",
-      "reason": "production deploy precondition: deployed-production-revision: Independently observed deployed production revision/SHA is missing.; production deploy precondition: runtime-identity: Live runtime/container/process identity is missing.; production deploy precondition: health-baseline: Production health baseline is missing.; production deploy precondition: rollback-revision: Identified rollback revision is missing.; production deploy precondition: backup-recovery: Required backup/recovery evidence is missing.; production deploy precondition: exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.; production deploy precondition: cristian-deploy-approval: Cristian deployment approval is missing.",
+      "reason": "production deploy precondition: rollback-revision: Rollback revision exists, but an executable rollback procedure is not evidenced for it.; production deploy precondition: backup-recovery: Backup-file integrity is recorded, but adequate recovery/restore evidence is not proven.; production deploy precondition: exact-release-provenance: Repository/deployment markers do not independently bind the running image to the exact Git revision.; production deploy precondition: exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.; production deploy precondition: cristian-deploy-approval: Cristian deployment approval is missing.",
       "evidence": [
         "factory/registry/core-v2.json",
         "factory/registry/authority-matrix.json"
       ]
     }
   ],
-  "createdAt": "2026-08-30T22:07:47Z",
-  "receiptId": "12d96b525369b29daca6b677912e2595d4fbcdf18ef79871f3d8180ce72ef4bd"
+  "createdAt": "2026-08-31T08:12:21Z",
+  "receiptId": "474f23d1a23c1133f6180eadc62b0e05a7c2700d86bdaba6dfbf5cbedcc17cb0"
 }

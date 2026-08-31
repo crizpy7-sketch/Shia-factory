@@ -1034,11 +1034,9 @@
       "executable": false,
       "executionState": "precondition-blocked",
       "blockers": [
-        "deployed-production-revision: Independently observed deployed production revision/SHA is missing.",
-        "runtime-identity: Live runtime/container/process identity is missing.",
-        "health-baseline: Production health baseline is missing.",
-        "rollback-revision: Identified rollback revision is missing.",
-        "backup-recovery: Required backup/recovery evidence is missing.",
+        "rollback-revision: Rollback revision exists, but an executable rollback procedure is not evidenced for it.",
+        "backup-recovery: Backup-file integrity is recorded, but adequate recovery/restore evidence is not proven.",
+        "exact-release-provenance: Repository/deployment markers do not independently bind the running image to the exact Git revision.",
         "exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.",
         "cristian-deploy-approval: Cristian deployment approval is missing."
       ]
@@ -1057,33 +1055,39 @@
     "preconditions": [
       {
         "id": "deployed-production-revision",
-        "state": "missing",
-        "evidenceReference": null,
-        "reason": "Independently observed deployed production revision/SHA is missing."
+        "state": "satisfied",
+        "evidenceReference": "michel-os-live-baseline-2026-08-31",
+        "reason": "Trusted production baseline satisfies this precondition."
       },
       {
         "id": "runtime-identity",
-        "state": "missing",
-        "evidenceReference": null,
-        "reason": "Live runtime/container/process identity is missing."
+        "state": "satisfied",
+        "evidenceReference": "michel-os-live-baseline-2026-08-31",
+        "reason": "Trusted production baseline satisfies this precondition."
       },
       {
         "id": "health-baseline",
-        "state": "missing",
-        "evidenceReference": null,
-        "reason": "Production health baseline is missing."
+        "state": "satisfied",
+        "evidenceReference": "michel-os-live-baseline-2026-08-31",
+        "reason": "Trusted production baseline satisfies this precondition."
       },
       {
         "id": "rollback-revision",
-        "state": "missing",
-        "evidenceReference": null,
-        "reason": "Identified rollback revision is missing."
+        "state": "mismatch",
+        "evidenceReference": "michel-os-live-baseline-2026-08-31",
+        "reason": "Rollback revision exists, but an executable rollback procedure is not evidenced for it."
       },
       {
         "id": "backup-recovery",
-        "state": "missing",
-        "evidenceReference": null,
-        "reason": "Required backup/recovery evidence is missing."
+        "state": "mismatch",
+        "evidenceReference": "michel-os-live-baseline-2026-08-31",
+        "reason": "Backup-file integrity is recorded, but adequate recovery/restore evidence is not proven."
+      },
+      {
+        "id": "exact-release-provenance",
+        "state": "mismatch",
+        "evidenceReference": "michel-os-live-baseline-2026-08-31",
+        "reason": "Repository/deployment markers do not independently bind the running image to the exact Git revision."
       },
       {
         "id": "exact-candidate-quality-receipt",
@@ -1099,11 +1103,9 @@
       }
     ],
     "blockers": [
-      "deployed-production-revision: Independently observed deployed production revision/SHA is missing.",
-      "runtime-identity: Live runtime/container/process identity is missing.",
-      "health-baseline: Production health baseline is missing.",
-      "rollback-revision: Identified rollback revision is missing.",
-      "backup-recovery: Required backup/recovery evidence is missing.",
+      "rollback-revision: Rollback revision exists, but an executable rollback procedure is not evidenced for it.",
+      "backup-recovery: Backup-file integrity is recorded, but adequate recovery/restore evidence is not proven.",
+      "exact-release-provenance: Repository/deployment markers do not independently bind the running image to the exact Git revision.",
       "exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.",
       "cristian-deploy-approval: Cristian deployment approval is missing."
     ],
@@ -1200,11 +1202,9 @@
   "executionBlockers": [],
   "certificationReleaseBlocked": true,
   "certificationReleaseBlockers": [
-    "production deploy precondition: deployed-production-revision: Independently observed deployed production revision/SHA is missing.",
-    "production deploy precondition: runtime-identity: Live runtime/container/process identity is missing.",
-    "production deploy precondition: health-baseline: Production health baseline is missing.",
-    "production deploy precondition: rollback-revision: Identified rollback revision is missing.",
-    "production deploy precondition: backup-recovery: Required backup/recovery evidence is missing.",
+    "production deploy precondition: rollback-revision: Rollback revision exists, but an executable rollback procedure is not evidenced for it.",
+    "production deploy precondition: backup-recovery: Backup-file integrity is recorded, but adequate recovery/restore evidence is not proven.",
+    "production deploy precondition: exact-release-provenance: Repository/deployment markers do not independently bind the running image to the exact Git revision.",
     "production deploy precondition: exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.",
     "production deploy precondition: cristian-deploy-approval: Cristian deployment approval is missing."
   ],

@@ -4,7 +4,11 @@
 
 Add exact deployed-release provenance to the existing Michel OS readiness surface and deployment workflow.
 
-This is a real operational defect: repository evidence defines `.swarm/deployed-sha` as the deployed revision, but `/api/ready` currently returns only `{"ready":true}`. Without trusted VPS access, the Factory cannot remotely bind observed production health to a Git candidate. The pilot closes that observability gap without rebuilding Michel OS or changing household features.
+This is a confirmed operational defect. Live observation found repository HEAD and
+`.swarm/deployed-sha` at `50403bcd52425d3f49788905ebd81962647e2d39`, while `/api/ready`
+returns only `{"ready":true}` and the running image has no OCI revision/source/version labels. The
+Factory therefore cannot independently bind observed production health to the image's Git candidate.
+The pilot closes that observability gap without rebuilding Michel OS or changing household features.
 
 No implementation is included in this inspection PR.
 
@@ -41,7 +45,7 @@ Design Director is conditional and not selected for this non-UI pilot. Gary is n
 
 The current task contract permits isolated implementation and verification but marks production
 deployment `precondition-blocked`. A gated authority string is not deployment eligibility. Eligibility
-requires all seven trusted production preconditions in `orchestration-contract.json` to be satisfied
+requires all eight trusted production preconditions in `orchestration-contract.json` to be satisfied
 against the same task, repository and exact candidate.
 
 ## Migration preservation rule
@@ -58,6 +62,11 @@ No Shelf no-match result authorizes rebuilding Michel OS.
 
 ## Backup and rollback prerequisite
 
+Cristian observed multiple retained PostgreSQL dumps. The latest supplied baseline file,
+`/opt/michel-os/docs/deploy/backups/michel-20260828T045731Z.sql.gz`, passed `gzip -t` and has SHA-256
+`d354b4efe2e9732708971c35b15688dbfd501f25f6cf46eae50f608c0eedcb29`. That proves retained-byte
+integrity only, not restore success or adequate recovery.
+
 Before any future deployment:
 
 1. Read the current live `.swarm/deployed-sha`; stop if it cannot be resolved to a repository commit.
@@ -69,7 +78,10 @@ Before any future deployment:
 7. Deploy only the Cristian-approved exact candidate after admitted Quality Gate evidence.
 8. On failed readiness, stop the candidate, restore the previous revision/configuration and verify `/api/ready`. Because the proposed pilot has no schema migration, database rollback should not be required.
 
-The unresolved current production revision and unverified backup inventory are hard pre-deployment evidence gaps.
+The current marker revision is resolved and available locally for rollback, but an executable rollback
+procedure, adequate restore/recovery proof, exact running-image provenance, an exact-candidate Quality
+Gate PASS, Cristian deployment approval and post-deployment observation remain required. These are
+hard pre-deployment evidence gaps.
 
 ## Expected reusable extraction
 

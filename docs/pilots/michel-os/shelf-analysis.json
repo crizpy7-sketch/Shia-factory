@@ -93,9 +93,18 @@
     "Michel OS product language, navigation and visual identity",
     "Current business and household database schema"
   ],
+  "liveBaselineEvidence": {
+    "reference": "docs/pilots/michel-os/live-production-baseline.json",
+    "repositoryAndDeploymentMarkersMatch": true,
+    "runtimeAndReadinessObserved": true,
+    "backupFileIntegrityObserved": true,
+    "restoreProven": false,
+    "runningImageGitProvenanceProven": false,
+    "productionMutationPerformed": false
+  },
   "factoryAdapterGaps": [
-    "No callable trusted Hostinger/VPS inventory and read-only observation adapter in the current Work session.",
-    "No production hostname or SSH target resolver tied to Factory governance.",
+    "No reusable callable Hostinger/VPS inventory and read-only observation adapter is wired into the Factory lifecycle; this baseline used Cristian-collected evidence.",
+    "No persistent production hostname or SSH target resolver is tied to Factory governance.",
     "No environment-specific CI/BORIS/browser/GStack evidence adapters proven through an application lifecycle.",
     "No deployed-SHA attestation adapter that reconciles Git, image, process, readiness and Factory receipt.",
     "No backup inventory/off-box-copy/restore-verification evidence adapter."

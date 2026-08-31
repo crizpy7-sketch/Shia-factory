@@ -115,10 +115,27 @@ export interface TrustedProductionBaselineRecord {
   repository: string;
   deployedSha: string;
   runtimeIdentity: { id: string; source: string };
-  healthBaseline: { state: 'healthy'; observedSha: string; source: string };
-  rollbackRevision: { sha: string; source: string };
-  backupRecovery: { state: 'verified'; productionSha: string; backupId: string; recoveryPlanId: string; source: string };
+  healthBaseline: { state: 'healthy'; observedSha: string | null; source: string };
+  rollbackRevision: { sha: string; source: string; procedureId: string | null };
+  backupRecovery: {
+    state: 'integrity-verified' | 'restore-verified';
+    productionSha: string | null;
+    backupId: string;
+    recoveryPlanId: string | null;
+    source: string;
+    integrityDigest?: string;
+    integrityCheck?: 'pass';
+    restoreTested: boolean;
+  };
+  releaseProvenance: {
+    state: 'verified' | 'marker-only' | 'missing';
+    source: string;
+    repositoryRevision: string | null;
+    deploymentStampRevision: string | null;
+    imageRevision: string | null;
+  };
   observedAt: string;
+  observedAtPrecision?: 'instant' | 'date';
   collector: string;
   integrityDigest: string;
 }
@@ -142,7 +159,8 @@ export interface ProductionDeploymentDependencies {
 }
 
 export type DeploymentPreconditionId = 'deployed-production-revision' | 'runtime-identity' | 'health-baseline'
-  | 'rollback-revision' | 'backup-recovery' | 'exact-candidate-quality-receipt' | 'cristian-deploy-approval';
+  | 'rollback-revision' | 'backup-recovery' | 'exact-release-provenance'
+  | 'exact-candidate-quality-receipt' | 'cristian-deploy-approval';
 
 export interface DeploymentPreconditionResult {
   id: DeploymentPreconditionId;
@@ -687,14 +705,22 @@ export function evaluateProductionDeployment(
     baselineResult('runtime-identity', (record) => record.runtimeIdentity.id.trim() !== '' && record.runtimeIdentity.source.trim() !== '',
       'Live runtime/container/process identity is missing.', 'Live runtime identity is incomplete.'),
     baselineResult('health-baseline', (record) => record.healthBaseline.state === 'healthy'
-      && record.healthBaseline.observedSha === record.deployedSha && record.healthBaseline.source.trim() !== '',
-      'Production health baseline is missing.', 'Production health baseline is stale or bound to a different deployed SHA.'),
-    baselineResult('rollback-revision', (record) => record.rollbackRevision.sha === record.deployedSha && record.rollbackRevision.source.trim() !== '',
-      'Identified rollback revision is missing.', 'Rollback revision does not match the independently observed current production SHA.'),
-    baselineResult('backup-recovery', (record) => record.backupRecovery.state === 'verified'
-      && record.backupRecovery.productionSha === record.deployedSha && record.backupRecovery.backupId.trim() !== ''
-      && record.backupRecovery.recoveryPlanId.trim() !== '' && record.backupRecovery.source.trim() !== '',
-      'Required backup/recovery evidence is missing.', 'Backup/recovery evidence is incomplete or bound to a different production SHA.'),
+      && record.healthBaseline.source.trim() !== '',
+      'Production health baseline is missing.', 'Production health baseline is incomplete.'),
+    baselineResult('rollback-revision', (record) => record.rollbackRevision.sha === record.deployedSha
+      && record.rollbackRevision.source.trim() !== '' && (record.rollbackRevision.procedureId?.trim() ?? '') !== '',
+      'Identified rollback revision is missing.', 'Rollback revision exists, but an executable rollback procedure is not evidenced for it.'),
+    baselineResult('backup-recovery', (record) => record.backupRecovery.state === 'restore-verified'
+      && record.backupRecovery.restoreTested && record.backupRecovery.productionSha === record.deployedSha
+      && record.backupRecovery.backupId.trim() !== '' && (record.backupRecovery.recoveryPlanId?.trim() ?? '') !== ''
+      && record.backupRecovery.source.trim() !== '',
+      'Required backup/recovery evidence is missing.', 'Backup-file integrity is recorded, but adequate recovery/restore evidence is not proven.'),
+    baselineResult('exact-release-provenance', (record) => record.releaseProvenance.state === 'verified'
+      && record.releaseProvenance.repositoryRevision === record.deployedSha
+      && record.releaseProvenance.deploymentStampRevision === record.deployedSha
+      && record.releaseProvenance.imageRevision === record.deployedSha
+      && record.releaseProvenance.source.trim() !== '',
+      'Exact running-release provenance is missing.', 'Repository/deployment markers do not independently bind the running image to the exact Git revision.'),
   );
   preconditions.push(verifiedQualityReceipt(deployment.qualityReceiptReferenceId, dependencies.qualityReceiptResolver, request, deployment, profile.app.id));
 

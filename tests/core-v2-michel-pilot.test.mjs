@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const pilot = new URL('docs/pilots/michel-os/', root);
 const json = async (name) => JSON.parse(await readFile(new URL(name, pilot), 'utf8'));
+const stable = (value) => Array.isArray(value)
+  ? `[${value.map(stable).join(',')}]`
+  : value && typeof value === 'object'
+    ? `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(',')}}`
+    : JSON.stringify(value);
 
 test('Michel OS profile is evidence-bound, private and T3', async () => {
   const profile = await readFile(new URL('APP_PROFILE.yaml', pilot), 'utf8');
@@ -31,11 +37,12 @@ test('persisted Shia Core contract records minimum routing and honest Shelf CREA
   assert.equal(contract.deployment.state, 'precondition-blocked');
   assert.equal(contract.deployment.productionMutationPerformed, false);
   assert.deepEqual(contract.deployment.preconditions.map((item) => [item.id, item.state]), [
-    ['deployed-production-revision', 'missing'],
-    ['runtime-identity', 'missing'],
-    ['health-baseline', 'missing'],
-    ['rollback-revision', 'missing'],
-    ['backup-recovery', 'missing'],
+    ['deployed-production-revision', 'satisfied'],
+    ['runtime-identity', 'satisfied'],
+    ['health-baseline', 'satisfied'],
+    ['rollback-revision', 'mismatch'],
+    ['backup-recovery', 'mismatch'],
+    ['exact-release-provenance', 'mismatch'],
     ['exact-candidate-quality-receipt', 'missing'],
     ['cristian-deploy-approval', 'missing'],
   ]);
@@ -48,6 +55,32 @@ test('persisted Shia Core contract records minimum routing and honest Shelf CREA
     ['business-workflows', 'PRESERVE'],
     ['release-provenance-readiness', 'IMPLEMENT'],
   ]);
+});
+
+test('Cristian-observed live baseline is integrity-bound and keeps provenance/recovery gaps explicit', async () => {
+  const evidence = await json('live-production-baseline.json');
+  const { integrityDigest, ...baseline } = evidence.baseline;
+  assert.equal(createHash('sha256').update(stable(baseline)).digest('hex'), integrityDigest);
+  assert.equal(evidence.collection.recordedSecrets, false);
+  assert.equal(evidence.collection.productionMutationPerformed, false);
+  assert.deepEqual(evidence.observations.repository, {
+    path: '/opt/michel-os',
+    head: '50403bcd52425d3f49788905ebd81962647e2d39',
+    workingTreeClean: true,
+    deploymentStamp: '50403bcd52425d3f49788905ebd81962647e2d39',
+    githubMain: '50403bcd52425d3f49788905ebd81962647e2d39',
+  });
+  assert.deepEqual([evidence.observations.runtime.applicationContainer.state, evidence.observations.runtime.applicationContainer.health], ['running', 'healthy']);
+  assert.deepEqual([evidence.observations.runtime.databaseContainer.image, evidence.observations.runtime.databaseContainer.health], ['postgres:16-alpine', 'healthy']);
+  assert.equal(evidence.observations.runtime.persistentPostgreSQLVolumePresent, true);
+  assert.equal(evidence.observations.network.applicationListen, '127.0.0.1:3100');
+  assert.equal(evidence.observations.network.hostname, 'michel-2-24-81-191.sslip.io');
+  assert.deepEqual(evidence.observations.health.response, { ready: true });
+  assert.deepEqual([evidence.observations.deploymentAutomation.enabled, evidence.observations.deploymentAutomation.active], [true, true]);
+  assert.equal(evidence.baseline.backupRecovery.integrityDigest, 'd354b4efe2e9732708971c35b15688dbfd501f25f6cf46eae50f608c0eedcb29');
+  assert.equal(evidence.baseline.backupRecovery.restoreTested, false);
+  assert.equal(evidence.observations.imageProvenance.independentlyBindsRunningImageToGitSha, false);
+  assert.equal(evidence.baseline.releaseProvenance.imageRevision, null);
 });
 
 test('Shelf analysis admits nothing and keeps Forms and Records as candidates', async () => {
@@ -72,13 +105,14 @@ test('pilot remains a non-mutating proposal with explicit production gaps', asyn
   const baseline = await readFile(new URL('BASELINE.md', pilot), 'utf8');
   const specification = await readFile(new URL('PILOT_SPEC.md', pilot), 'utf8');
   assert.match(baseline, /Production mutations performed: none/);
-  assert.match(baseline, /Deployed Git SHA \| needs-evidence/);
+  assert.match(baseline, /marker-reconciled, image-unverified/);
+  assert.match(baseline, /Backup-file integrity is not restore proof/);
   assert.match(specification, /No implementation is included/);
   assert.match(specification, /No SQL migration or production data mutation/);
   assert.match(specification, /Cristian approval/);
 });
 
-test('Phase 7 adds no role or standalone skill and marks no tracker item complete', async () => {
+test('Phase 7 adds no role or standalone skill and marks only inspection/profile complete', async () => {
   const registry = JSON.parse(await readFile(new URL('factory/registry/core-v2.json', root), 'utf8'));
   assert.deepEqual(registry.permanent_roles.map((role) => role.id), ['shia-core', 'boris', 'design-director', 'gary', 'quality-gate']);
   for (const pack of ['product', 'design', 'engineering', 'ai', 'quality', 'growth', 'operations']) {
@@ -86,6 +120,12 @@ test('Phase 7 adds no role or standalone skill and marks no tracker item complet
   }
   const status = await readFile(new URL('docs/STATUS.md', root), 'utf8');
   const phase7 = status.split('## Phase 7')[1]?.split('## Phase 8')[0] ?? '';
-  assert.doesNotMatch(phase7, /\[x\]/);
-  assert.match(phase7, /30\/41 = 73\.17%/);
+  const tracker = phase7.split('\n').filter((line) => /^- \[[ x]\]/.test(line));
+  assert.equal(tracker.length, 4);
+  assert.equal(tracker.filter((line) => /^- \[x\]/.test(line)).length, 1);
+  assert.match(tracker[0], /^- \[x\] Inspect and profile Michel OS/);
+  assert.ok(tracker.slice(1).every((line) => /^- \[ \]/.test(line)));
+  assert.match(phase7, /31\/41 = 75\.61%/);
+  const phase8 = status.split('## Phase 8')[1] ?? '';
+  assert.doesNotMatch(phase8, /\[x\]/);
 });

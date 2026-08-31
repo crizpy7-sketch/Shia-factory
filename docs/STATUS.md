@@ -76,7 +76,8 @@ Production CI, BORIS, browser and GStack evidence adapters still require real en
 - [x] Phase 6 completion reviewed and approved by Cristian for exact candidate `3d142d37c37886a8df9e7fd37e5a340cc9f31f70` — merged PR #15, `ae40e2274004af88d980aa748023c390dc145a81`
 - **Phase 6: 100% complete** — 5/5 official technical tracker items have merged repository evidence and Cristian approved the exact candidate
 
-Approved Core v2 progress is **30/41 = 73.17%** through merged Phase 6.
+The merged Phase 6 checkpoint established **30/41 = 73.17%** progress; the current authoritative
+total is recorded in the latest evidenced phase below.
 
 The original component-family tracker is not treated as proof that missing Blocks exist. Current
 coverage is: Forms and Records have candidate manifests; general application identity/auth,
@@ -87,7 +88,7 @@ require lifecycle proof.
 
 ## Phase 7 — Pilot Migration: Michel OS
 
-- [ ] Inspect and profile Michel OS
+- [x] Inspect and profile Michel OS — repository evidence plus Cristian's independently observed read-only VPS baseline in `docs/pilots/michel-os/live-production-baseline.json`
 - [ ] Run lifecycle through deploy/observe
 - [ ] Record Quality Gate evidence
 - [ ] Extract reusable improvements
@@ -95,15 +96,19 @@ require lifecycle proof.
 Phase 7 baseline-checkpoint evidence is merged in `docs/pilots/michel-os/`. Cristian approved the
 exact candidate `9361f1e3bff47f15780070a93ce8b0d31a33bec4`; PR #16 was merged at
 `6fa7a19e76c8227a5e0e3ae66e24cf914956e8ba`. This approval records the read-only baseline
-checkpoint only: it does not complete Phase 7 or satisfy any of the four tracker items above.
+checkpoint only: at merge time it did not complete Phase 7 or satisfy any of the four tracker items.
 
-The Michel OS repository at
-`50403bcd52425d3f49788905ebd81962647e2d39` is profiled and its local gauntlet passes, but the first
-tracker item remains incomplete because the live VPS, deployed SHA, health, backup inventory and
-environment-specific integrations could not be independently observed. No production mutation has
-occurred. The merged baseline contract keeps isolated build/test routable while production deploy is
-precondition-blocked, and migration actions preserve working Michel OS capabilities independently
-of Shelf no-match results. Approved progress remains **30/41 = 73.17%**.
+The Michel OS repository and live VPS baseline are now profiled at
+`50403bcd52425d3f49788905ebd81962647e2d39`. Cristian independently observed the clean VPS
+checkout/deployment stamp, healthy Compose app and PostgreSQL containers, loopback/Nginx topology,
+readiness response, deployment timer and retained backup-file integrity. No production mutation
+occurred. The running image has no OCI revision/source/version labels, backup integrity is not
+restore proof, and environment-specific integrations/log contents remain unverified. The contract
+keeps isolated build/test routable while production deploy remains precondition-blocked pending an
+executable rollback procedure, adequate recovery evidence, exact release-provenance reconciliation,
+an exact-candidate Quality Gate PASS, Cristian deployment approval and future post-deploy
+observation. The remaining three Phase 7 tracker items are incomplete. Approved progress is
+**31/41 = 75.61%**.
 
 ## Phase 8 — Factory Proven
 
