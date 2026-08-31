@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "1.0.0",
+  "application": "michel-os",
+  "applicationCandidate": "50403bcd52425d3f49788905ebd81962647e2d39",
+  "factoryCandidate": "cdd1a9299178e67432df2b2c0e64c71c0ff14623",
+  "evaluatedAt": "2026-08-30T22:07:47Z",
+  "policy": "Catalog membership and repository existence do not imply admission. Normal REUSE requires a compatible admitted asset with trusted exact-source and Quality Gate evidence.",
+  "migrationPolicy": "Factory Shelf disposition and existing-application action are independent. Shelf CREATE never authorizes rebuilding a working application capability.",
+  "admittedAssetsFound": [],
+  "catalogCandidates": [
+    {
+      "assetId": "block:forms-001",
+      "lifecycle": "candidate",
+      "decision": "not-reused",
+      "reason": "Browser-only legacy workbench protocol, no trusted Shelf admission, and no durable Michel OS backend/auth interface."
+    },
+    {
+      "assetId": "block:records-002",
+      "lifecycle": "candidate",
+      "decision": "not-reused",
+      "reason": "In-memory browser record surface, no trusted Shelf admission, and incompatible with Michel OS PostgreSQL tenant/authorization requirements."
+    }
+  ],
+  "capabilityDecisions": [
+    {
+      "capability": "release-provenance-readiness",
+      "factoryShelfDisposition": "CREATE",
+      "applicationAction": "IMPLEMENT",
+      "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+      "reason": "No compatible admitted Shelf asset exists; exact no-match evidence is recorded in orchestration-contract.json.",
+      "futureExtraction": "Candidate for a provider-neutral Operations/Quality adapter only after lifecycle proof."
+    },
+    {
+      "capability": "identity-auth-household-permissions",
+      "factoryShelfDisposition": "CREATE",
+      "applicationAction": "PRESERVE",
+      "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+      "reason": "Michel OS has a working application-specific implementation; Factory inventory confirms no general admitted identity/auth Block.",
+      "futureExtraction": "Reusable-after-extraction; preserve tenant and role rules until independently generalized and admitted."
+    },
+    {
+      "capability": "forms-record-entry",
+      "factoryShelfDisposition": "CREATE",
+      "applicationAction": "PRESERVE",
+      "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+      "reason": "Forms candidate exists but is non-admitted and interface/platform-incompatible with the production application.",
+      "futureExtraction": "Michel server/API validation patterns may inform a later extension; no candidate use is authorized now."
+    },
+    {
+      "capability": "durable-records-postgres",
+      "factoryShelfDisposition": "CREATE",
+      "applicationAction": "PRESERVE",
+      "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+      "reason": "Records candidate is in-memory and non-admitted; Michel OS already has PostgreSQL repositories and authorization.",
+      "futureExtraction": "Reusable-after-extraction from typed repositories and migration safeguards."
+    },
+    {
+      "capability": "scheduling-coordination",
+      "factoryShelfDisposition": "CREATE",
+      "applicationAction": "PRESERVE",
+      "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+      "reason": "No admitted Module exists; Michel OS has domain-specific recurrence, conflict and household scheduling behavior.",
+      "futureExtraction": "Strong Module candidate after dependency boundaries and cross-application interface evidence exist."
+    },
+    {
+      "capability": "notifications-search",
+      "factoryShelfDisposition": "CREATE",
+      "applicationAction": "PRESERVE",
+      "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+      "reason": "No admitted notification/search Block exists; current code is coupled to Michel OS contracts and database.",
+      "futureExtraction": "Reusable-after-extraction."
+    },
+    {
+      "capability": "ai-provider-proposal-gateway",
+      "factoryShelfDisposition": "CREATE",
+      "applicationAction": "PRESERVE",
+      "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+      "reason": "Factory has a BORIS-coupled provider abstraction but no admitted application AI Gateway Block; Michel OS implementation is application-specific.",
+      "futureExtraction": "Candidate for extension into a provider-neutral application Block after trusted evidence."
+    },
+    {
+      "capability": "vps-docker-postgres-deployment",
+      "factoryShelfDisposition": "CREATE",
+      "applicationAction": "PRESERVE",
+      "extractionAction": "CANDIDATE_AFTER_LIFECYCLE_PROOF",
+      "reason": "Factory inventory lists deployment operations as reusable-after-extraction, not admitted; Michel OS has concrete shared-VPS scripts.",
+      "futureExtraction": "Primary pilot extraction candidate after real deployment/rollback/observation proof."
+    }
+  ],
+  "applicationSpecificCapabilities": [
+    "Michel household membership and role semantics",
+    "Shia Baby employee scheduling, inventory, sales, expense and tax-reserve workflows",
+    "Michel OS product language, navigation and visual identity",
+    "Current business and household database schema"
+  ],
+  "factoryAdapterGaps": [
+    "No callable trusted Hostinger/VPS inventory and read-only observation adapter in the current Work session.",
+    "No production hostname or SSH target resolver tied to Factory governance.",
+    "No environment-specific CI/BORIS/browser/GStack evidence adapters proven through an application lifecycle.",
+    "No deployed-SHA attestation adapter that reconciles Git, image, process, readiness and Factory receipt.",
+    "No backup inventory/off-box-copy/restore-verification evidence adapter."
+  ],
+  "correctedRouting": {
+    "selfHostedPostgreSQL": ["github", "vps"],
+    "supabaseSelected": false,
+    "rule": "Supabase requires explicit provider-specific APP_PROFILE, integration or task evidence."
+  },
+  "normalReuseOutcome": "CREATE",
+  "nonAdmittedUsePermitted": false
+}

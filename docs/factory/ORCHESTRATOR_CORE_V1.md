@@ -46,6 +46,23 @@ The Phase 6 decision is `REUSE`, `EXTEND` or `CREATE`. `CREATE` includes determi
 evidence; non-admitted assets may be extended only when an explicit task policy names them, and their
 unverified state stays visible in the task contract and decision receipt.
 
+## Phase 7 production and migration extensions
+
+The Michel OS pilot adds two compatible contract sections without changing the Phase 6 Shelf model:
+
+- `deployment` separates production eligibility from general task execution. A T3 existing app may
+  be inspected, built and tested in isolation while deploy is `precondition-blocked`. Eligibility
+  requires trusted deployed revision, runtime identity, health, rollback, backup/recovery,
+  exact-candidate Quality Gate and Cristian approval records. Evaluation never performs a mutation.
+- `migration` separates `factoryShelfDisposition` from `applicationAction`. A Shelf `CREATE` no-match
+  result does not authorize rebuilding an existing working capability. Working capabilities default
+  to `PRESERVE`; a missing bounded capability uses `IMPLEMENT`; explicitly changed existing behavior
+  uses `MODIFY`. Shelf extraction remains a later evidence-gated decision.
+
+Tool routing is provider-specific. Self-hosted PostgreSQL is provider-neutral and cannot select the
+Supabase tool merely because a task mentions a database or PostgreSQL. Supabase remains selectable
+when APP_PROFILE, an integration or the task explicitly identifies Supabase.
+
 ## Intentionally not implemented
 
 - Phase 3 itself creates no role implementation or agent identity;

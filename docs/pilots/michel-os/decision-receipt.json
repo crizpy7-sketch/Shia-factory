@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "1.0.0",
+  "taskId": "phase7-michel-release-provenance",
+  "projectId": "michel-os",
+  "repository": {
+    "commit": "50403bcd52425d3f49788905ebd81962647e2d39",
+    "branch": "main"
+  },
+  "profileDigest": "a506529a9db63940e4745e049e8f45712bb9a298bf1c63254c1d3ae204c041f3",
+  "contractDigest": "13797731e1ae13053a1f13931f8c3a9671714f7c94126de634e1d9d8dbcedbc9",
+  "decisions": [
+    {
+      "stage": "profile",
+      "decision": "validated",
+      "reason": "APP_PROFILE 1.0 normalized for michel-os.",
+      "evidence": [
+        "APP_PROFILE.yaml"
+      ]
+    },
+    {
+      "stage": "reuse",
+      "decision": "CREATE",
+      "reason": "20 matching existing assets classified before creation.",
+      "evidence": [
+        "agents/BORIS-001",
+        "boris/src",
+        "boris/src/identity/permanent-workforce.ts",
+        "boris/src/identity/roster.ts",
+        "boris/tests",
+        "boris/tests/unit/permanent-workforce.test.ts",
+        ".github/workflows/boris-ci.yml",
+        "boris/src/quality/evidence-admission.ts",
+        "boris/src/quality/quality-gate.ts",
+        "boris/tests/security/evidence-admission.test.ts",
+        "boris/tests/security/quality-gate-authority.test.ts",
+        "docs/factory/QUALITY_GATE_V1.md",
+        "docs/STATUS.md#phase-5--quality--safety",
+        "factory/quality/evidence-admission.schema.json",
+        "factory/quality/quality-gate-receipt.schema.json",
+        "factory/quality/risk-gate-policy.json",
+        "gstack/SHIA_FACTORY_EXTENSION.md",
+        "boris/tests/unit/orchestrator-core.test.ts",
+        "skills/engineering/PACK.json",
+        "gstack/SHIA_FACTORY_EXTENSION.md",
+        "skills/quality/PACK.json",
+        "gstack/SHIA_FACTORY_EXTENSION.md"
+      ]
+    },
+    {
+      "stage": "shelf-reuse",
+      "decision": "CREATE",
+      "reason": "No compatible admitted asset or explicitly permitted non-admitted extension matched; CREATE is allowed only with this no-match evidence.",
+      "evidence": [
+        "block:forms-001: No canonical capability, explicit alias or fuzzy discovery tokens matched. Unsupported platforms: docker, node, vps. Asset is not admitted; existence or a manifest alone is not certification.",
+        "block:records-002: No canonical capability, explicit alias or fuzzy discovery tokens matched. Unsupported platforms: docker, node, vps. Asset is not admitted; existence or a manifest alone is not certification."
+      ]
+    },
+    {
+      "stage": "risk",
+      "decision": "T3",
+      "reason": "APP_PROFILE baseline T3: Existing production application used by a household.; Stores private household, schedule, business, employee, inventory, sales and expense data.; Uses authentication, authorization, PostgreSQL persistence and an approval-gated VPS deployment path. T3 consequence: authentication, payment, secrets, private data, or important migration/deployment Consequence overrides superficial diff size",
+      "evidence": [
+        "docs/CORE_V2_ARCHITECTURE.md",
+        "docs/factory/OPERATING_SYSTEM.md"
+      ]
+    },
+    {
+      "stage": "routing",
+      "decision": "shia-core:available,boris:available,quality-gate:available",
+      "reason": "Minimum roles, packs and owned tools selected from permanent registries.",
+      "evidence": [
+        "factory/registry/core-v2.json",
+        "factory/registry/invocation-contracts.json",
+        "factory/registry/authority-matrix.json",
+        "skills/registry.json"
+      ]
+    },
+    {
+      "stage": "authority",
+      "decision": "execution-routable",
+      "reason": "Requested actions have available owners and are allowed or gated.",
+      "evidence": [
+        "factory/registry/authority-matrix.json"
+      ]
+    },
+    {
+      "stage": "production-deployment",
+      "decision": "precondition-blocked",
+      "reason": "deployed-production-revision: Independently observed deployed production revision/SHA is missing.; runtime-identity: Live runtime/container/process identity is missing.; health-baseline: Production health baseline is missing.; rollback-revision: Identified rollback revision is missing.; backup-recovery: Required backup/recovery evidence is missing.; exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.; cristian-deploy-approval: Cristian deployment approval is missing.",
+      "evidence": []
+    },
+    {
+      "stage": "application-migration",
+      "decision": "identity-auth-household-permissions:PRESERVE,postgresql-persistence:PRESERVE,scheduling-coordination:PRESERVE,notifications-search:PRESERVE,ai-provider-proposal-gateway:PRESERVE,business-workflows:PRESERVE,release-provenance-readiness:IMPLEMENT",
+      "reason": "Application migration actions are separate from Factory Shelf dispositions.",
+      "evidence": [
+        "server/auth",
+        "server/api/routes.ts",
+        "tests/http/auth.test.ts",
+        "server/db/client.ts",
+        "server/db/migrations",
+        "tests/db",
+        "domains/scheduling",
+        "server/api/routes.ts",
+        "tests/unit/recurrence.test.ts",
+        "domains/platform",
+        "tests/unit/platform.test.ts",
+        "server/api/assistant-provider.ts",
+        "domains/ai",
+        "tests/http/assistant.test.ts",
+        "domains/shia-baby",
+        "server/api/business-availability.ts",
+        "tests/unit/staffing.test.ts",
+        "server/main.ts:/api/ready",
+        "docs/deploy/auto-deploy.sh:.swarm/deployed-sha"
+      ]
+    },
+    {
+      "stage": "certification-release",
+      "decision": "blocked",
+      "reason": "production deploy precondition: deployed-production-revision: Independently observed deployed production revision/SHA is missing.; production deploy precondition: runtime-identity: Live runtime/container/process identity is missing.; production deploy precondition: health-baseline: Production health baseline is missing.; production deploy precondition: rollback-revision: Identified rollback revision is missing.; production deploy precondition: backup-recovery: Required backup/recovery evidence is missing.; production deploy precondition: exact-candidate-quality-receipt: Exact-candidate Quality Gate receipt reference is missing.; production deploy precondition: cristian-deploy-approval: Cristian deployment approval is missing.",
+      "evidence": [
+        "factory/registry/core-v2.json",
+        "factory/registry/authority-matrix.json"
+      ]
+    }
+  ],
+  "createdAt": "2026-08-30T22:07:47Z",
+  "receiptId": "12d96b525369b29daca6b677912e2595d4fbcdf18ef79871f3d8180ce72ef4bd"
+}

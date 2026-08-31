@@ -137,7 +137,7 @@ export function createStorageGovernanceApprovalResolver(
 ): GovernanceApprovalResolver {
   return { id: 'factory-governance-approval-resolver', provenance, resolve: (approvalId) => storage.getApproval(approvalId) };
 }
-function admitApproval(approvalId: string, resolver: GovernanceApprovalResolver | undefined): VerifiedGovernanceApproval | ApprovalAdmissionFailure {
+export function admitGovernanceApprovalReference(approvalId: string, resolver: GovernanceApprovalResolver | undefined): VerifiedGovernanceApproval | ApprovalAdmissionFailure {
   if (!resolver) return { approvalId, state: 'unverified', reason: 'No trusted Factory governance approval resolver is configured.' };
   const record = resolver.resolve(approvalId);
   if (!record || record.id !== approvalId) return { approvalId, state: 'unverified', reason: 'Approval was not found in trusted Factory governance storage.' };
@@ -167,7 +167,7 @@ export function admitQualityGateInput(input: QualityGateInput, dependencies: Evi
   const governanceApprovals: VerifiedGovernanceApproval[] = [];
   const unverifiedApprovals: ApprovalAdmissionFailure[] = [];
   for (const approvalId of [...new Set(input.approvalReferences ?? [])]) {
-    const result = admitApproval(approvalId, dependencies.governanceApprovalResolver);
+    const result = admitGovernanceApprovalReference(approvalId, dependencies.governanceApprovalResolver);
     if (result.state === 'approved') governanceApprovals.push(result); else unverifiedApprovals.push(result);
   }
   const admitted = { ...canonicalCopy(input), actualEvidence, rawEvidence: canonicalCopy(input.actualEvidence), unverifiedEvidence,

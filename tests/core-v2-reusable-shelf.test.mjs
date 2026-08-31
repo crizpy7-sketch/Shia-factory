@@ -88,11 +88,12 @@ test('Phase 6 preserves exactly five permanent roles and creates no standalone s
   assert.deepEqual((await readdir(new URL('skills/factory-learning-loop/', root))).sort(), ['SKILL.md']);
 });
 
-test('Phase 7 Michel OS remains untouched and unstarted', async () => {
+test('Phase 7 inspection preserves Michel OS and does not claim tracker completion', async () => {
   const status = await readFile(new URL('docs/STATUS.md', root), 'utf8');
   const phase7 = status.split('## Phase 7')[1]?.split('## Phase 8')[0] ?? '';
   assert.doesNotMatch(phase7, /\[x\]/);
   assert.match(phase7, /Inspect and profile Michel OS/);
+  assert.match(phase7, /No production mutation has/);
   const changedScope = await readFile(new URL('docs/factory/REUSABLE_SHELF_V1.md', root), 'utf8');
   assert.match(changedScope, /Michel OS was not inspected or modified/);
 });
@@ -103,7 +104,6 @@ test('docs/STATUS.md is authoritative and keeps Phase 6 trust work inside the fi
   assert.match(status, /41 official tasks/);
   assert.match(status, /Phase 6 has five official technical tracker items/);
   assert.match(status, /5\/5 official technical tracker items/);
-  assert.match(status, /25\/41 = 60\.98%/);
   assert.match(status, /30\/41 = 73\.17%/);
   assert.doesNotMatch(status, /Phase 6 candidate: 6\/6/);
 });

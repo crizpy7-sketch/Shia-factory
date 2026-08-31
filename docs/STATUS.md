@@ -74,7 +74,7 @@ Production CI, BORIS, browser and GStack evidence adapters still require real en
 - [x] Blueprint contract defined — no Blueprint was created because no evidence-backed reusable application architecture exists yet
 - [x] Shelf-first `REUSE / EXTEND / CREATE` workflow integrated with the single Phase 3 orchestrator and decision receipt — exact `REUSE` requires canonical capability IDs/explicit aliases; fuzzy similarity is `EXTEND`/discovery only
 - [x] Phase 6 completion reviewed and approved by Cristian for exact candidate `3d142d37c37886a8df9e7fd37e5a340cc9f31f70` — merged PR #15, `ae40e2274004af88d980aa748023c390dc145a81`
-- **Phase 6: 100% complete** — all five official technical tracker items have merged repository evidence and Cristian approved the exact candidate
+- **Phase 6: 100% complete** — 5/5 official technical tracker items have merged repository evidence and Cristian approved the exact candidate
 
 Approved Core v2 progress is **30/41 = 73.17%** through merged Phase 6.
 
@@ -91,6 +91,14 @@ require lifecycle proof.
 - [ ] Run lifecycle through deploy/observe
 - [ ] Record Quality Gate evidence
 - [ ] Extract reusable improvements
+
+Phase 7 inspection evidence is staged in `docs/pilots/michel-os/` for review. The repository at
+`50403bcd52425d3f49788905ebd81962647e2d39` is profiled and its local gauntlet passes, but the first
+tracker item remains incomplete because the live VPS, deployed SHA, health, backup inventory and
+environment-specific integrations could not be independently observed. No production mutation has
+occurred. The draft contract keeps isolated build/test routable while production deploy is
+precondition-blocked, and migration actions preserve working Michel OS capabilities independently
+of Shelf no-match results. Approved progress remains **30/41 = 73.17%**.
 
 ## Phase 8 — Factory Proven
 
