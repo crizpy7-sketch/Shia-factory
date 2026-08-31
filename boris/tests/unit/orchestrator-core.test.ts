@@ -166,8 +166,11 @@ function trustedBaseline(candidateSha = request().repository.commit, healthSha =
     referenceId: 'baseline-1', repository: 'repo', deployedSha: candidateSha,
     runtimeIdentity: { id: 'compose:michel-os/app:container-1', source: 'trusted-vps-observer' },
     healthBaseline: { state: 'healthy', observedSha: healthSha, source: 'trusted-vps-observer:/api/ready' },
-    rollbackRevision: { sha: candidateSha, source: 'trusted-vps-observer:.swarm/deployed-sha' },
-    backupRecovery: { state: 'verified', productionSha: candidateSha, backupId: 'backup-1', recoveryPlanId: 'rollback-1', source: 'trusted-backup-observer' },
+    rollbackRevision: { sha: candidateSha, source: 'trusted-vps-observer:.swarm/deployed-sha', procedureId: 'rollback-1' },
+    backupRecovery: { state: 'restore-verified', productionSha: candidateSha, backupId: 'backup-1', recoveryPlanId: 'recovery-1',
+      source: 'trusted-backup-observer', restoreTested: true },
+    releaseProvenance: { state: 'verified', source: 'trusted-runtime-observer', repositoryRevision: candidateSha,
+      deploymentStampRevision: candidateSha, imageRevision: healthSha },
     observedAt: '2026-08-30T22:30:00Z', collector: 'phase-7-test-observer',
   };
   return { ...base, integrityDigest: productionBaselineDigest(base) };
@@ -210,7 +213,7 @@ test('T3 existing production deployment is precondition-blocked without blocking
   assert.equal(contract.allowedActions.find((item) => item.action === 'test')?.executable, true);
   assert.equal(contract.allowedActions.find((item) => item.action === 'deploy')?.executionState, 'precondition-blocked');
   assert.equal(contract.deployment?.state, 'precondition-blocked');
-  assert.equal(contract.deployment?.preconditions.length, 7);
+  assert.equal(contract.deployment?.preconditions.length, 8);
   assert.equal(contract.deployment?.productionMutationPerformed, false);
 });
 
@@ -243,7 +246,7 @@ test('stale production observation cannot clear deploy while complete matching t
   const staleBaseline = trustedBaseline(initial.repository.commit, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
   const stale = buildTaskContract(profile(), registries, candidate, [], undefined, completeDeploymentDependencies(candidate, staleBaseline));
   assert.equal(stale.deployment?.state, 'precondition-blocked');
-  assert.ok(stale.deployment?.blockers.some((item) => /health-baseline/.test(item)));
+  assert.ok(stale.deployment?.blockers.some((item) => /exact-release-provenance/.test(item)));
 
   const complete = buildTaskContract(profile(), registries, candidate, [], undefined, completeDeploymentDependencies(candidate));
   assert.equal(complete.deployment?.state, 'eligible');
@@ -251,6 +254,30 @@ test('stale production observation cannot clear deploy while complete matching t
   assert.ok(complete.deployment?.preconditions.every((item) => item.state === 'satisfied'));
   assert.equal(complete.allowedActions.find((item) => item.action === 'deploy')?.executable, true);
   assert.equal(complete.deployment?.productionMutationPerformed, false);
+});
+
+test('backup-file integrity and matching deployment markers do not prove restore or running-image provenance', () => {
+  const initial = deploymentRequest();
+  const receipt = trustedQualityReceipt(initial.taskId, initial.repository.commit);
+  const approval = approvedDeployment(initial.taskId, initial.repository.commit);
+  const candidate = deploymentRequest({ baselineReferenceId: 'baseline-1', qualityReceiptReferenceId: receipt.receiptId, approvalId: approval.id });
+  const complete = trustedBaseline();
+  const { integrityDigest: _integrityDigest, ...completeBase } = complete;
+  const integrityOnlyBase: Omit<TrustedProductionBaselineRecord, 'integrityDigest'> = {
+    ...completeBase,
+    rollbackRevision: { ...complete.rollbackRevision, procedureId: null },
+    backupRecovery: { state: 'integrity-verified', productionSha: complete.deployedSha, backupId: 'backup.sql.gz',
+      recoveryPlanId: null, source: 'trusted-vps-observer:gzip', integrityDigest: 'a'.repeat(64), integrityCheck: 'pass', restoreTested: false },
+    releaseProvenance: { state: 'marker-only', source: 'trusted-vps-observer', repositoryRevision: complete.deployedSha,
+      deploymentStampRevision: complete.deployedSha, imageRevision: null },
+  };
+  const integrityOnly = { ...integrityOnlyBase, integrityDigest: productionBaselineDigest(integrityOnlyBase) };
+  const contract = buildTaskContract(profile(), registries, candidate, [], undefined, completeDeploymentDependencies(candidate, integrityOnly));
+  assert.equal(contract.deployment?.state, 'precondition-blocked');
+  assert.deepEqual(contract.deployment?.preconditions.filter((item) => item.state !== 'satisfied').map((item) => item.id), [
+    'rollback-revision', 'backup-recovery', 'exact-release-provenance',
+  ]);
+  assert.equal(contract.deployment?.productionMutationPerformed, false);
 });
 
 test('migration analysis preserves working application capabilities despite Shelf CREATE', () => {

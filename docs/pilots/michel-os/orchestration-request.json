@@ -44,7 +44,8 @@
     "environment": "production",
     "existingApplication": true,
     "repository": "crizpy7-sketch/Michel-OS",
-    "candidateSha": "50403bcd52425d3f49788905ebd81962647e2d39"
+    "candidateSha": "50403bcd52425d3f49788905ebd81962647e2d39",
+    "baselineReferenceId": "michel-os-live-baseline-2026-08-31"
   },
   "migrationCapabilities": [
     {
@@ -91,5 +92,5 @@
       "extractionCandidateAfterLifecycleProof": true
     }
   ],
-  "now": "2026-08-30T22:07:47Z"
+  "now": "2026-08-31T08:12:21Z"
 }

@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "1.0.0",
+  "purpose": "Read-only Phase 7 production baseline evidence; not deployment authorization.",
+  "collection": {
+    "collector": "Cristian",
+    "method": "independently observed live VPS inspection",
+    "observedAt": "2026-08-31",
+    "observedAtPrecision": "date",
+    "recordedSecrets": false,
+    "productionMutationPerformed": false
+  },
+  "baseline": {
+    "referenceId": "michel-os-live-baseline-2026-08-31",
+    "repository": "crizpy7-sketch/Michel-OS",
+    "deployedSha": "50403bcd52425d3f49788905ebd81962647e2d39",
+    "runtimeIdentity": {
+      "id": "docker-compose:michel-os/app:michel-os-app-1/db:michel-os-db-1",
+      "source": "Cristian read-only VPS observation"
+    },
+    "healthBaseline": {
+      "state": "healthy",
+      "observedSha": null,
+      "source": "http://127.0.0.1:3100/api/ready returned {\"ready\":true}"
+    },
+    "rollbackRevision": {
+      "sha": "50403bcd52425d3f49788905ebd81962647e2d39",
+      "source": "VPS repository HEAD and locally available Git commit",
+      "procedureId": null
+    },
+    "backupRecovery": {
+      "state": "integrity-verified",
+      "productionSha": null,
+      "backupId": "/opt/michel-os/docs/deploy/backups/michel-20260828T045731Z.sql.gz",
+      "recoveryPlanId": null,
+      "source": "Cristian read-only VPS observation; gzip -t PASS",
+      "integrityDigest": "d354b4efe2e9732708971c35b15688dbfd501f25f6cf46eae50f608c0eedcb29",
+      "integrityCheck": "pass",
+      "restoreTested": false
+    },
+    "releaseProvenance": {
+      "state": "marker-only",
+      "source": "repository HEAD and .swarm/deployed-sha match; running image OCI provenance labels absent",
+      "repositoryRevision": "50403bcd52425d3f49788905ebd81962647e2d39",
+      "deploymentStampRevision": "50403bcd52425d3f49788905ebd81962647e2d39",
+      "imageRevision": null
+    },
+    "observedAt": "2026-08-31",
+    "observedAtPrecision": "date",
+    "collector": "Cristian",
+    "integrityDigest": "40d2410897c0f33349795bae2237c0b3acd0096be790fdc8fa25a7e7aa74629b"
+  },
+  "observations": {
+    "repository": {
+      "path": "/opt/michel-os",
+      "head": "50403bcd52425d3f49788905ebd81962647e2d39",
+      "workingTreeClean": true,
+      "deploymentStamp": "50403bcd52425d3f49788905ebd81962647e2d39",
+      "githubMain": "50403bcd52425d3f49788905ebd81962647e2d39"
+    },
+    "runtime": {
+      "composeProject": "michel-os",
+      "applicationContainer": { "id": "michel-os-app-1", "state": "running", "health": "healthy" },
+      "databaseContainer": { "id": "michel-os-db-1", "image": "postgres:16-alpine", "state": "running", "health": "healthy" },
+      "persistentPostgreSQLVolumePresent": true,
+      "backupsHostPath": "/opt/michel-os/docs/deploy/backups",
+      "backupsContainerPath": "/backups"
+    },
+    "network": {
+      "applicationListen": "127.0.0.1:3100",
+      "publicProxy": "Nginx",
+      "publicPorts": [80, 443],
+      "hostname": "michel-2-24-81-191.sslip.io",
+      "proxyPass": "http://127.0.0.1:3100"
+    },
+    "health": { "endpoint": "http://127.0.0.1:3100/api/ready", "response": { "ready": true } },
+    "deploymentAutomation": {
+      "timer": "michel-auto-deploy.timer",
+      "enabled": true,
+      "active": true,
+      "servicePath": "/etc/systemd/system/michel-auto-deploy.service"
+    },
+    "imageProvenance": {
+      "org.opencontainers.image.revision": null,
+      "org.opencontainers.image.source": null,
+      "org.opencontainers.image.version": null,
+      "independentlyBindsRunningImageToGitSha": false
+    }
+  },
+  "remainingEvidenceGaps": [
+    "The running application image does not independently prove its Git revision.",
+    "Backup-file gzip and SHA-256 integrity do not prove restore/recovery success.",
+    "An executable rollback procedure has not yet been captured as evidence.",
+    "Production log contents and environment-specific integrations were not inspected.",
+    "No exact-candidate Quality Gate PASS or Cristian deployment approval exists for an isolated pilot candidate."
+  ]
+}

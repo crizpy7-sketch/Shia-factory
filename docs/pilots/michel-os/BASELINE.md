@@ -1,18 +1,22 @@
 # Michel OS Phase 7 pilot baseline
 
-Status: inspection candidate for Cristian review. No production mutation was performed.
+Status: live production baseline recorded for Cristian review. No production mutation was performed.
 
 ## Evidence boundary
 
-- Factory baseline: Shia Factory `main` at `cdd1a9299178e67432df2b2c0e64c71c0ff14623`.
+- Factory baseline: merged Phase 7 checkpoint on Shia Factory `main` at `9b32390c24840a523392854808cf170bc77c0698`.
 - Application repository: `crizpy7-sketch/Michel-OS` (`https://github.com/crizpy7-sketch/Michel-OS`).
 - Repository identity evidence: GitHub repository ID `1345450945`, public visibility, default branch `main`.
 - Inspected application commit: `50403bcd52425d3f49788905ebd81962647e2d39`.
 - Inspected application tree: `f5da6b89a0588a38ff7704a767aa7a9fc9bb532a`.
-- Inspection method: exact-SHA detached local checkout plus GitHub repository metadata and history.
-- Production observation: unavailable. No trusted Hostinger/VPS connector, SSH host, production hostname or read-only runtime credential was exposed to this session.
+- Repository inspection method: exact-SHA detached local checkout plus GitHub repository metadata and history.
+- Live-production evidence method: Cristian independently performed a read-only VPS inspection and
+  supplied the facts recorded in `live-production-baseline.json`. The evidence records no secrets and
+  authorizes no production mutation.
 
-Repository state and production state are deliberately separate. The current GitHub `main` commit is **not** claimed as the deployed commit.
+The VPS repository HEAD, `.swarm/deployed-sha` and GitHub `main` all reconcile to the inspected
+commit. The running image has no OCI revision/source/version labels, so those matching markers do
+**not** independently prove the image's Git revision.
 
 ## Stage 7A — repository inventory
 
@@ -51,18 +55,19 @@ No values were read or recorded.
 
 | Required fact | State | Evidence/gap |
 | --- | --- | --- |
-| Deployed Git SHA | needs-evidence | Must be read from the live `.swarm/deployed-sha` and reconciled with the running image/process; GitHub `main` is insufficient |
-| VPS identity/IP/provider resource | needs-evidence | Hostinger is user-reported, but no trusted VPS inventory adapter was callable |
-| Runtime/container/process identity | needs-evidence | Repository defines Docker Compose/systemd topology; live `docker compose ps` and systemd state were not observable |
-| Service port/domain | needs-evidence | Repository contains loopback defaults and example domains only; no production hostname was inferred |
-| Current health | needs-evidence | Repository tests passed, but the live `/api/ready` endpoint could not be located or queried |
-| Deployment mechanism | repository-verified, runtime-unverified | Pull-based systemd timer and Compose scripts exist; live installation/configuration is unproven |
-| Logs | interface-known, contents-unverified | Docker and journal commands are documented; no production logs were accessed |
-| Database/persistence | repository-verified, runtime-unverified | PostgreSQL volume/dependency is declared; live database identity, size and state were not inspected |
-| Backup/recovery | procedure-known, recoverability-unverified | Backup/restore scripts and 28-day local retention exist; no backup inventory, off-box copy or restore proof was available |
+| Deployed revision markers | marker-reconciled, image-unverified | `/opt/michel-os` HEAD, clean checkout, `.swarm/deployed-sha` and GitHub `main` are `50403bcd52425d3f49788905ebd81962647e2d39`; OCI revision/source/version labels are absent |
+| VPS provider resource identity | partial | VPS filesystem/runtime was observed, but a provider inventory resource ID was not captured |
+| Runtime/container/process identity | observed healthy | Compose project `michel-os`; `michel-os-app-1` and `michel-os-db-1` running and healthy; database image `postgres:16-alpine` |
+| Service port/domain | observed | app on `127.0.0.1:3100`; Nginx owns 80/443 and routes `michel-2-24-81-191.sslip.io` to the loopback app |
+| Current health | observed, release-unbound | `http://127.0.0.1:3100/api/ready` returned `{"ready":true}`; the response does not identify the running release |
+| Deployment mechanism | observed | `michel-auto-deploy.timer` is enabled/active; service path `/etc/systemd/system/michel-auto-deploy.service` |
+| Logs | interface-known, contents-unverified | Docker and journal interfaces are known; production log contents were not supplied or inferred |
+| Database/persistence | observed healthy | `michel-os-db-1` is healthy with a persistent PostgreSQL Docker volume; backups path is mounted at `/backups` |
+| Backup/recovery | integrity-verified, recoverability-unverified | multiple dumps observed; latest `michel-20260828T045731Z.sql.gz` passed `gzip -t` with recorded SHA-256, but no restore test was evidenced |
 | Environment integrations | needs-evidence | OpenAI is optional; enabled production integrations were not inspected |
 
-The absence of live evidence blocks deployment approval. It does not invalidate the repository architecture inventory.
+This evidence completes the bounded “Inspect and profile Michel OS” tracker item. It does not make
+the selected pilot deployable and is not a Phase 5 Quality Gate receipt.
 
 ### Action-specific production gate
 
@@ -74,10 +79,11 @@ The deterministic task contract now keeps safe engineering work separate from pr
 - `certificationReleaseBlocked` remains true while production prerequisites are missing;
 - evaluation records `productionMutationPerformed: false`.
 
-The deployment action has seven explicit missing preconditions: independently observed deployed SHA,
-live runtime identity, live health baseline, identified rollback revision, backup/recovery evidence,
-an exact-candidate trusted Quality Gate receipt and Cristian deploy approval. Approval or Quality
-evidence alone cannot replace the live baseline, and stale SHA-bound evidence cannot clear the gate.
+Repository revision, runtime identity and health baseline are now independently observed. Production
+deploy remains `precondition-blocked` because an executable rollback procedure, restore/recovery proof,
+independent exact running-image provenance, an exact-candidate trusted Quality Gate PASS and Cristian
+deploy approval are not present. Backup-file integrity is not restore proof; approval or Quality
+evidence alone cannot replace the other prerequisites, and stale SHA-bound evidence cannot clear them.
 
 ### Corrected provider routing
 
@@ -109,5 +115,6 @@ Three non-blocking legacy ownership warnings remain for `tests/unit/ai-shopping-
 - Michel OS repository mutations performed: none.
 - Secrets read or persisted: none.
 - DNS/proxy/container/process/database changes: none.
-- Phase 7 tracker completion: unchanged. The top-level “Inspect and profile Michel OS” item remains incomplete until the live production baseline is independently observed or Cristian explicitly accepts the documented evidence gaps.
+- Phase 7 tracker completion: 1/4. “Inspect and profile Michel OS” is complete from repository evidence plus Cristian's independently observed read-only VPS baseline; lifecycle deploy/observe, Quality Gate evidence and reusable extraction remain incomplete.
+- Approved Core v2 progress: 31/41 = 75.61%.
 - Phase 8: not started.
