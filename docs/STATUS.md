@@ -98,6 +98,11 @@ exact candidate `9361f1e3bff47f15780070a93ce8b0d31a33bec4`; PR #16 was merged at
 `6fa7a19e76c8227a5e0e3ae66e24cf914956e8ba`. This approval records the read-only baseline
 checkpoint only: at merge time it did not complete Phase 7 or satisfy any of the four tracker items.
 
+Cristian then reviewed and approved the independently observed live-production baseline for exact
+candidate `397073c81ead5fb0dea2583ae357e606d02ad5ec`; PR #17 was merged at
+`d9e52d989d7448ee32532499eb43b205facdf6ca`. This records only the Phase 7 inspection/profile
+milestone and does not authorize pilot implementation or production deployment.
+
 The Michel OS repository and live VPS baseline are now profiled at
 `50403bcd52425d3f49788905ebd81962647e2d39`. Cristian independently observed the clean VPS
 checkout/deployment stamp, healthy Compose app and PostgreSQL containers, loopback/Nginx topology,
