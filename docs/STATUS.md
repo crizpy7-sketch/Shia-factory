@@ -92,11 +92,16 @@ require lifecycle proof.
 - [ ] Record Quality Gate evidence
 - [ ] Extract reusable improvements
 
-Phase 7 inspection evidence is staged in `docs/pilots/michel-os/` for review. The repository at
+Phase 7 baseline-checkpoint evidence is merged in `docs/pilots/michel-os/`. Cristian approved the
+exact candidate `9361f1e3bff47f15780070a93ce8b0d31a33bec4`; PR #16 was merged at
+`6fa7a19e76c8227a5e0e3ae66e24cf914956e8ba`. This approval records the read-only baseline
+checkpoint only: it does not complete Phase 7 or satisfy any of the four tracker items above.
+
+The Michel OS repository at
 `50403bcd52425d3f49788905ebd81962647e2d39` is profiled and its local gauntlet passes, but the first
 tracker item remains incomplete because the live VPS, deployed SHA, health, backup inventory and
 environment-specific integrations could not be independently observed. No production mutation has
-occurred. The draft contract keeps isolated build/test routable while production deploy is
+occurred. The merged baseline contract keeps isolated build/test routable while production deploy is
 precondition-blocked, and migration actions preserve working Michel OS capabilities independently
 of Shelf no-match results. Approved progress remains **30/41 = 73.17%**.
 
