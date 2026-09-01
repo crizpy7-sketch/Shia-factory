@@ -157,3 +157,11 @@ that does less.
   application. This runtime loads his package and bounds him honestly; it is not certified as him.
 - **Postgres is not implemented, and MCP servers are not wired.** `Storage` is the port and the tool
   registry is the extension point; SQLite is the only adapter shipped.
+- **The permission engine is not containment.** It is a process-level boundary, and a process-level
+  boundary cannot hold a program that is allowed to start another program. `fs_write` may create a
+  file in the workspace and `shell_run` may execute `node`, so a script written and then run escapes
+  the path sandbox, the credential denials, the fetch allowlist and the approval gates — verified by
+  execution, not assumed. What the engine does is constrain an agent acting in good faith and close
+  the obvious paths; what it does not do is contain a hostile one, and prompt injection is the case
+  that matters. The real boundary is the operating system. Run this in a container, and read
+  "Known limitation" in `CLAUDE.md` before pointing a workspace root at anything you value.
