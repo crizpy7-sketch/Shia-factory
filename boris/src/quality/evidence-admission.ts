@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ApprovalRequest } from '../domain/types.js';
 import type { Storage } from '../storage/types.js';
-import type { QualityEvidence, QualityEvidenceKind, QualityGateInput } from './quality-gate.js';
+import type { CanonicalQualityGateInput, QualityEvidence, QualityEvidenceKind, QualityGateInput } from './quality-gate.js';
 
 export type EvidenceSourceType = 'github-actions' | 'boris-test-run' | 'browser-runner'
   | 'accessibility-runner' | 'security-runner' | 'performance-runner' | 'gstack'
-  | 'independent-reviewer' | 'retained-artifact' | 'factory-governance';
+  | 'independent-reviewer' | 'production-observer' | 'retained-artifact' | 'factory-governance';
 
 export interface EvidenceProvenanceClaim { sourceType: EvidenceSourceType; sourceId: string; runId?: string; artifactId?: string }
 export interface VerifiedEvidenceProvenance extends EvidenceProvenanceClaim {
@@ -35,7 +35,7 @@ export interface VerifiedGovernanceApproval {
 }
 export interface ApprovalAdmissionFailure { approvalId: string; state: 'unverified'; reason: string }
 export interface EvidenceAdmissionDependencies { evidenceAdapters: EvidenceAdmissionAdapter[]; governanceApprovalResolver?: GovernanceApprovalResolver }
-export interface AdmittedQualityGateInput extends Omit<QualityGateInput, 'actualEvidence'> {
+export interface AdmittedQualityGateInput extends Omit<CanonicalQualityGateInput, 'actualEvidence'> {
   actualEvidence: AdmittedQualityEvidence[]; rawEvidence: QualityEvidence[]; unverifiedEvidence: EvidenceAdmissionFailure[];
   governanceApprovals: VerifiedGovernanceApproval[]; unverifiedApprovals: ApprovalAdmissionFailure[];
 }
@@ -74,6 +74,7 @@ function sourceMayAdmit(kind: QualityEvidenceKind, sourceType: EvidenceSourceTyp
     integration: ['github-actions', 'boris-test-run'], e2e: ['github-actions', 'boris-test-run'], browser: ['browser-runner', 'gstack'],
     visual: ['retained-artifact'], accessibility: ['accessibility-runner', 'gstack'], security: ['security-runner', 'gstack'],
     adversarial: ['security-runner', 'gstack'], performance: ['performance-runner'], permission: ['factory-governance'],
+    'production-observation': ['production-observer'],
     'independent-review': ['independent-reviewer', 'gstack'], 'human-approval': ['factory-governance'], artifact: ['retained-artifact'],
   };
   return allowed[kind].includes(sourceType);
@@ -153,10 +154,14 @@ export function admitGovernanceApprovalReference(approvalId: string, resolver: G
 }
 
 export function admitQualityGateInput(input: QualityGateInput, dependencies: EvidenceAdmissionDependencies): AdmittedQualityGateInput {
-  const context = { taskId: input.taskId, repository: input.repository, candidateSha: input.candidateSha };
+  const evaluationScope = input.evaluationScope ?? 'full-lifecycle';
+  const productionObservationRequirement = input.productionObservationRequirement
+    ?? (input.evaluationScope === undefined ? 'not-applicable' : 'required');
+  const normalized: CanonicalQualityGateInput = { ...canonicalCopy(input), evaluationScope, productionObservationRequirement };
+  const context = { taskId: normalized.taskId, repository: normalized.repository, candidateSha: normalized.candidateSha };
   const actualEvidence: AdmittedQualityEvidence[] = [];
   const unverifiedEvidence: EvidenceAdmissionFailure[] = [];
-  for (const raw of input.actualEvidence) {
+  for (const raw of normalized.actualEvidence) {
     const claim = raw.provenance ?? null;
     const adapter = claim ? dependencies.evidenceAdapters.find((candidate) => candidate.sourceTypes.includes(claim.sourceType)) : undefined;
     const admitted = adapter?.verify(raw, context) ?? null;
@@ -166,11 +171,11 @@ export function admitQualityGateInput(input: QualityGateInput, dependencies: Evi
   }
   const governanceApprovals: VerifiedGovernanceApproval[] = [];
   const unverifiedApprovals: ApprovalAdmissionFailure[] = [];
-  for (const approvalId of [...new Set(input.approvalReferences ?? [])]) {
+  for (const approvalId of [...new Set(normalized.approvalReferences ?? [])]) {
     const result = admitGovernanceApprovalReference(approvalId, dependencies.governanceApprovalResolver);
     if (result.state === 'approved') governanceApprovals.push(result); else unverifiedApprovals.push(result);
   }
-  const admitted = { ...canonicalCopy(input), actualEvidence, rawEvidence: canonicalCopy(input.actualEvidence), unverifiedEvidence,
+  const admitted = { ...normalized, actualEvidence, rawEvidence: canonicalCopy(normalized.actualEvidence), unverifiedEvidence,
     governanceApprovals, unverifiedApprovals } as AdmittedQualityGateInput;
   deepFreeze(admitted);
   admittedInputs.add(admitted);

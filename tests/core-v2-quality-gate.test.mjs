@@ -18,10 +18,18 @@ test('Phase 5 keeps exactly five canonical permanent role IDs and records approv
 
 test('canonical receipt schema requires exact task, project, repository, candidate and gate evidence', async () => {
   const schema = await json('factory/quality/quality-gate-receipt.schema.json');
+  const legacy = await json('factory/quality/quality-gate-receipt-v1.1.schema.json');
+  assert.equal(schema.properties.schemaVersion.const, '1.2.0');
+  assert.equal(legacy.properties.schemaVersion.const, '1.1.0');
   for (const field of ['taskId', 'projectId', 'repository', 'candidateSha', 'branch', 'riskTier', 'taskContract', 'acceptanceCriteria',
-    'requiredEvidence', 'actualEvidence', 'rawEvidence', 'unverifiedEvidence', 'governanceApprovals', 'unverifiedApprovals', 'gateResults', 'knownLimitations', 'reworkRequests', 'approvalGates', 'independentReviewer']) {
+    'requiredEvidence', 'actualEvidence', 'rawEvidence', 'unverifiedEvidence', 'governanceApprovals', 'unverifiedApprovals', 'gateResults', 'knownLimitations', 'reworkRequests', 'approvalGates', 'independentReviewer',
+    'evaluationScope', 'receiptStatus', 'scopeBindingId', 'scopeStatus']) {
     assert.ok(schema.required.includes(field), field);
   }
+  assert.deepEqual(schema.properties.evaluationScope.$ref, '#/$defs/evaluationScope');
+  assert.deepEqual(schema.$defs.evaluationScope.enum, ['pre-deployment-release-readiness', 'full-lifecycle']);
+  assert.equal(schema.$defs.scopeStatus.properties.cristianApproval.const, 'required-separately');
+  assert.equal(schema.$defs.scopeStatus.properties.deploymentAuthority.const, 'not-granted');
   assert.equal(schema.properties.controlPlane.properties.authority.const, 'shia-core');
   assert.equal(schema.properties.controlPlane.properties.qualityGateMayAcceptTask.const, false);
   assert.equal(schema.properties.controlPlane.properties.gstackMayAcceptTask.const, false);
@@ -39,6 +47,8 @@ test('risk policy activates consequence-aware security and relevant-only perform
   assert.equal(policy.rules.stale_evidence_may_pass, false);
   assert.equal(policy.rules.quality_evidence_grants_authority, false);
   assert.equal(policy.evidence_admission.raw_evidence_counts, false);
+  assert.equal(policy.evaluation_scopes['pre-deployment-release-readiness'].production_deployment_observation, 'not-evaluated-pre-deployment');
+  assert.equal(policy.evaluation_scopes['full-lifecycle'].production_deployment_observation, 'required-when-applicable');
 });
 
 test('permanent invocation contract delegates complete Quality Gate packets to one canonical engine', async () => {
@@ -48,6 +58,8 @@ test('permanent invocation contract delegates complete Quality Gate packets to o
     'acceptance-criteria', 'required-evidence', 'actual-evidence', 'changed-paths', 'change-signals', 'repair-budget', 'evaluated-at']) {
     assert.ok(quality.requires.includes(required), required);
   }
+  assert.ok(quality.optional_inputs.includes('evaluation-scope'));
+  assert.ok(quality.optional_inputs.includes('production-observation-requirement'));
   assert.ok(quality.implementation.compatibility_paths.includes('boris/src/quality/quality-gate.ts'));
   assert.ok(quality.implementation.compatibility_paths.includes('boris/src/quality/evidence-admission.ts'));
   const source = await readFile(new URL('boris/src/identity/permanent-workforce.ts', root), 'utf8');

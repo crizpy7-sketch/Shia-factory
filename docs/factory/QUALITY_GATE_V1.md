@@ -14,7 +14,10 @@ The receipt always records:
 
 ## Canonical evidence packet
 
-The JSON Schema is `factory/quality/quality-gate-receipt.schema.json`. A receipt binds:
+The canonical JSON Schema is `factory/quality/quality-gate-receipt.schema.json` at version `1.2.0`.
+The unchanged historical `1.1.0` contract is retained at
+`factory/quality/quality-gate-receipt-v1.1.schema.json`; old receipts keep their original meaning and
+are not silently reinterpreted as scoped receipts. A canonical `1.2.0` receipt binds:
 
 - task ID, project/application and repository;
 - exact candidate SHA and branch;
@@ -24,7 +27,8 @@ The JSON Schema is `factory/quality/quality-gate-receipt.schema.json`. A receipt
 - each criterion result and each individual gate result;
 - known limitations, rework requests and remaining repair budget;
 - approval gates and independent reviewer identity/source when required;
-- an immutable receipt digest and evaluation time.
+- evaluation scope, scope status and a scope binding;
+- an immutable scope-aware receipt digest and evaluation time.
 
 Final states are deterministic:
 
@@ -37,9 +41,35 @@ Final states are deterministic:
 
 Evidence from another SHA is retained under `staleEvidence` but never counted. Raw claims remain in `rawEvidence`/`unverifiedEvidence` and produce `needs-evidence`.
 
+## Evaluation scopes
+
+The same permanent evaluator mints both scopes. An application may not hand-author fields and call the
+result a Factory receipt.
+
+| Scope | Evidence evaluated | Production observation | Authorization |
+| --- | --- | --- | --- |
+| `pre-deployment-release-readiness` | Every applicable requirement that can logically exist before deployment, including code/CI, runtime/image provenance, security/adversarial review, relevant performance, backup/restore, rollback/bootstrap and independent review | Exactly `not-evaluated-pre-deployment`; never `pass` | Cristian deployment approval remains pending and independently required; Quality grants no authority |
+| `full-lifecycle` | The normal Quality gates plus trusted production observation when declared required | `pass`, `fail`, `needs-evidence` or `not-applicable` according to admitted evidence and policy | Existing Factory governance remains authoritative |
+
+Pre-deployment criteria requiring `production-observation` or `human_approval` are recorded as
+`not-evaluated`, not passed. They do not block the narrower readiness verdict, and the receipt makes
+their later requirement explicit. Full lifecycle cannot pass a required production-observation gate
+without exact-candidate evidence admitted through a trusted `production-observer` adapter.
+
+Legacy inputs that omit scope are normalized to `full-lifecycle` with production observation
+`not-applicable`, preserving the pre-1.2 evaluator behavior for non-deployment callers. Deployment
+work must select the scope and production-observation requirement explicitly. An explicitly scoped
+full-lifecycle evaluation defaults observation to `required`, and a deploy lifecycle cannot opt out
+by declaring observation `not-applicable`.
+
+`scopeBindingId` hashes schema version, task, project, repository, candidate, branch and scope. The
+scope binding is included in the immutable receipt body, and `receiptId` hashes that complete body.
+Consequently, receipts for different scopes cannot substitute for one another even when every other
+identity field is the same. Persisted receipt filenames also include scope.
+
 ## Evidence admission
 
-Workers, CI, BORIS, browser runners and GStack submit raw claims. Authorized adapters resolve independent run/artifact records and attach source type, source/run/artifact ID, exact candidate, collector, observation time, verified state and integrity digest. Admission canonical-copies and deep-freezes the verified record and packet before branding them for the evaluator, preventing mutation after verification. The evaluator rejects objects not produced by this boundary. Generic `human-approval` evidence is never admitted.
+Workers, CI, BORIS, browser runners, production observers and GStack submit raw claims. Authorized adapters resolve independent run/artifact records and attach source type, source/run/artifact ID, exact candidate, collector, observation time, verified state and integrity digest. Admission canonical-copies, scope-normalizes and deep-freezes the verified record and packet before branding them for the evaluator, preventing mutation after verification. The evaluator rejects objects not produced by this boundary. Generic `human-approval` evidence is never admitted; Cristian authorization resolves independently through Factory governance.
 
 ## Risk-to-gate matrix
 
@@ -85,7 +115,7 @@ candidate SHA A
 → Quality Gate reruns for SHA B
 ```
 
-The default repair budget remains at most two. Exhaustion blocks and escalates. Quality Gate does not repair the candidate it judges, and it cannot self-certify a candidate that implements or changes Quality Gate. Cristian approved the exact Phase 5 implementation in merged PR #14 (`d2b1baa2005c10ac1b2c25a26a8c705acc6c444e`); future self-changing candidates still require independent review and Cristian approval.
+The default repair budget remains at most two. Exhaustion blocks and escalates. Quality Gate does not repair the candidate it judges, and it cannot self-certify a candidate that implements or changes Quality Gate. A scoped pre-deployment Quality pass for a self-changing candidate still leaves the Cristian approval gate pending and cannot accept or merge the task. Cristian approved the exact Phase 5 implementation in merged PR #14 (`d2b1baa2005c10ac1b2c25a26a8c705acc6c444e`); future self-changing candidates still require independent review and Cristian approval.
 
 ## Production adapter limitation
 
