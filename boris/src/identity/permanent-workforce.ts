@@ -126,6 +126,8 @@ function qualityInput(request: RoleInvocationRequest): QualityGateInput {
     dangerousActions: (inputs['dangerous-actions'] ?? []) as DangerousActionRequest[], reviewer: reviewer ?? null,
     approvalReferences: (inputs['approval-references'] ?? []) as string[],
     repair: inputs['repair-budget'] as QualityGateInput['repair'], evaluatedAt: String(inputs['evaluated-at']),
+    evaluationScope: inputs['evaluation-scope'] as QualityGateInput['evaluationScope'],
+    productionObservationRequirement: inputs['production-observation-requirement'] as QualityGateInput['productionObservationRequirement'],
   };
 }
 
@@ -251,7 +253,10 @@ export async function invokePermanentRole(repoRoot: string, request: RoleInvocat
       producedOutputs: ['quality-receipt', 'pass-or-reject', 'evidence-index', 'known-limitations', 'rework-request'],
       dispatch: { mode: 'executed', executed: true, runtimePaths: ['boris/src/quality/quality-gate.ts'] },
       limitations: [...qualityReceipt.knownLimitations, ...(roleApprovalPending ? ['Quality Gate Phase 5 implementation approval is pending Cristian repository governance.'] : [])],
-      approvalRequired, certified: qualityReceipt.finalState === 'pass' && !roleApprovalPending, qualityReceipt,
+      approvalRequired,
+      certified: qualityReceipt.finalState === 'pass' && !roleApprovalPending
+        && qualityReceipt.approvalGates.every((gate) => gate.state === 'satisfied'),
+      qualityReceipt,
     };
   }
 

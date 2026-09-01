@@ -9,11 +9,14 @@ import { isAdmittedQualityEvidence, isAdmittedQualityGateInput, isVerifiedGovern
 
 export type QualityFinalState = 'pass' | 'reject' | 'blocked' | 'needs-evidence';
 export type GateState = 'pass' | 'fail' | 'blocked' | 'needs-evidence' | 'not-applicable';
+export type QualityEvaluationScope = 'pre-deployment-release-readiness' | 'full-lifecycle';
+export type ProductionObservationRequirement = 'required' | 'not-applicable';
+export type ProductionObservationState = 'not-evaluated-pre-deployment' | 'pass' | 'fail' | 'needs-evidence' | 'not-applicable';
 export type QualityGateId = 'automated-checks' | 'browser-visual' | 'accessibility'
-  | 'security-adversarial' | 'performance' | 'dangerous-action-permission';
+  | 'security-adversarial' | 'performance' | 'production-observation' | 'dangerous-action-permission';
 export type QualityEvidenceKind = 'typecheck' | 'lint' | 'unit' | 'integration' | 'e2e'
   | 'browser' | 'visual' | 'accessibility' | 'security' | 'adversarial' | 'performance'
-  | 'permission' | 'independent-review' | 'human-approval' | 'artifact';
+  | 'production-observation' | 'permission' | 'independent-review' | 'human-approval' | 'artifact';
 export type DangerousAction = 'merge' | 'deploy' | 'secret-access' | 'destructive-database'
   | 'external-publish-send' | 'spending-payment' | 'irreversible-infrastructure';
 
@@ -80,12 +83,21 @@ export interface QualityGateInput {
   reviewer: { id: string; source: string; independent: boolean } | null;
   repair: { attempt: number; maxAttempts: number };
   evaluatedAt: string;
+  /** Omitted legacy inputs retain the historical full-lifecycle behavior. */
+  evaluationScope?: QualityEvaluationScope;
+  /** Explicit scoped inputs default to required; only legacy unscoped inputs default to not-applicable. */
+  productionObservationRequirement?: ProductionObservationRequirement;
+}
+
+export interface CanonicalQualityGateInput extends Omit<QualityGateInput, 'evaluationScope' | 'productionObservationRequirement'> {
+  evaluationScope: QualityEvaluationScope;
+  productionObservationRequirement: ProductionObservationRequirement;
 }
 
 export interface CriterionResult {
   id: string;
   statement: string;
-  state: 'pass' | 'fail' | 'needs-evidence';
+  state: 'pass' | 'fail' | 'needs-evidence' | 'not-evaluated';
   requiredEvidence: string[];
   evidenceIds: string[];
   failures: QualityFinding[];
@@ -115,8 +127,17 @@ export interface ReworkRequest {
 }
 
 export interface QualityGateReceipt {
-  schemaVersion: '1.1.0';
+  schemaVersion: '1.2.0';
   receiptId: string;
+  evaluationScope: QualityEvaluationScope;
+  receiptStatus: 'current';
+  scopeBindingId: string;
+  scopeStatus: {
+    productionDeploymentObservation: ProductionObservationState;
+    fullLifecycleEvaluation: 'required-after-production-observation' | 'current-evaluation';
+    cristianApproval: 'required-separately';
+    deploymentAuthority: 'not-granted';
+  };
   finalState: QualityFinalState;
   taskId: string;
   projectId: string;
@@ -187,11 +208,12 @@ function evidenceAliases(kind: string): QualityEvidenceKind[] {
     accessibility: ['accessibility'], security: ['security'], review: ['independent-review', 'adversarial'],
     human_approval: ['human-approval'], performance: ['performance'], typecheck: ['typecheck'], lint: ['lint'],
     unit: ['unit'], integration: ['integration'], e2e: ['e2e'], adversarial: ['adversarial'], permission: ['permission'],
+    'production-observation': ['production-observation'],
   };
   return aliases[kind] ?? [];
 }
 
-function validateInput(input: QualityGateInput): string[] {
+function validateInput(input: CanonicalQualityGateInput): string[] {
   const errors: string[] = [];
   if (!input.taskId.trim()) errors.push('taskId is required');
   if (!input.projectId.trim()) errors.push('projectId is required');
@@ -210,6 +232,17 @@ function validateInput(input: QualityGateInput): string[] {
   if (input.repair.attempt < 0 || input.repair.maxAttempts < 0 || input.repair.attempt > input.repair.maxAttempts) errors.push('repair budget is invalid');
   if (input.repair.maxAttempts > 2) errors.push('repair budget exceeds the Factory default maximum of 2');
   if (Number.isNaN(Date.parse(input.evaluatedAt))) errors.push('evaluatedAt must be ISO-8601');
+  if (!['pre-deployment-release-readiness', 'full-lifecycle'].includes(input.evaluationScope)) errors.push('evaluationScope is unsupported');
+  if (!['required', 'not-applicable'].includes(input.productionObservationRequirement)) errors.push('productionObservationRequirement is unsupported');
+  if (input.evaluationScope === 'pre-deployment-release-readiness' && input.productionObservationRequirement !== 'required') {
+    errors.push('pre-deployment release-readiness requires a later production-observation evaluation');
+  }
+  const deploymentLifecycle = input.dangerousActions.some((request) => request.action === 'deploy')
+    || input.taskContract?.allowedActions.some((decision) => decision.action === 'deploy');
+  if (input.evaluationScope === 'full-lifecycle' && deploymentLifecycle
+    && input.productionObservationRequirement !== 'required') {
+    errors.push('full-lifecycle deployment evaluation requires production-observation evidence');
+  }
   const ids = input.actualEvidence.map((item) => item.id);
   if (ids.some((id) => !id.trim()) || new Set(ids).size !== ids.length) errors.push('actualEvidence IDs must be non-empty and unique');
   for (const evidence of input.actualEvidence) {
@@ -276,7 +309,7 @@ function accessibilityGate(applicable: boolean, evidence: QualityEvidence[]): In
   return result;
 }
 
-function securityGate(input: QualityGateInput, evidence: QualityEvidence[]): IndividualGateResult {
+function securityGate(input: CanonicalQualityGateInput, evidence: QualityEvidence[]): IndividualGateResult {
   const policy = QUALITY_GATE_RISK_MATRIX[input.riskTier];
   const pathSensitive = input.changedPaths.some((item) => SECURITY_PATH.test(item));
   const securitySensitive = pathSensitive || input.changeSignals.securitySurfaces.length > 0;
@@ -286,7 +319,7 @@ function securityGate(input: QualityGateInput, evidence: QualityEvidence[]): Ind
     applicable ? [] : ['T2 change has no declared or path-derived meaningful security surface.']);
 }
 
-function performanceGate(input: QualityGateInput, evidence: QualityEvidence[]): IndividualGateResult {
+function performanceGate(input: CanonicalQualityGateInput, evidence: QualityEvidence[]): IndividualGateResult {
   const materialHighRisk = (input.riskTier === 'T3' || input.riskTier === 'T4') && input.changeSignals.performanceFailureMaterial;
   const pathSensitive = input.changedPaths.some((item) => PERFORMANCE_PATH.test(item));
   const applicable = input.changeSignals.performanceSurfaces.length > 0 || pathSensitive || materialHighRisk;
@@ -308,6 +341,18 @@ function performanceGate(input: QualityGateInput, evidence: QualityEvidence[]): 
     if (!passed) failures.push(finding(`performance:${threshold.metric}`, 'P2', `${threshold.metric} ${measurement.value}${measurement.unit} failed ${threshold.comparator} ${threshold.value}${threshold.unit}.`, [item.id]));
   }
   return failures.length > 0 ? { ...result, state: 'fail', findings: failures } : result;
+}
+
+function productionObservationGate(input: CanonicalQualityGateInput, evidence: QualityEvidence[]): IndividualGateResult {
+  if (input.evaluationScope === 'pre-deployment-release-readiness') {
+    return gate('production-observation', false, 'deferred-to-full-lifecycle', [], evidence,
+      ['Production deployment and observation are not evaluated before deployment and are never inferred as passing.']);
+  }
+  if (input.productionObservationRequirement === 'not-applicable') {
+    return gate('production-observation', false, 'not-applicable', [], evidence,
+      ['The caller declared production deployment observation not applicable to this lifecycle evaluation.']);
+  }
+  return gate('production-observation', true, 'trusted-production-observation', ['production-observation'], evidence);
 }
 
 function permissionGate(input: AdmittedQualityGateInput, evidence: AdmittedQualityEvidence[]): { result: IndividualGateResult; approvals: QualityGateReceipt['approvalGates'] } {
@@ -341,33 +386,47 @@ function permissionGate(input: AdmittedQualityGateInput, evidence: AdmittedQuali
     const exact = verifiedApprovals.find((approval) => approval.approvalId === request.approvalId
       && approval.taskId === input.taskId && approval.action === request.action
       && approval.candidateSha === input.candidateSha && approval.decidedBy === 'Cristian');
-    if (!exact) findings.push(finding(`permission:${request.action}`, 'P0', `${request.action} lacks Cristian approval bound to the exact candidate.`));
+    if (!exact && (input.evaluationScope === 'full-lifecycle' || request.authorization === 'approved')) {
+      findings.push(finding(`permission:${request.action}`, 'P0', `${request.action} lacks Cristian approval bound to the exact candidate.`));
+    }
   }
   const pending = approvals.filter((item) => item.state !== 'satisfied');
-  const state: GateState = findings.length > 0 ? 'blocked' : pending.length > 0 ? 'blocked' : 'pass';
+  const state: GateState = findings.length > 0 ? 'blocked'
+    : input.evaluationScope === 'pre-deployment-release-readiness' ? 'pass'
+      : pending.length > 0 ? 'blocked' : 'pass';
   return {
     result: {
-      id: 'dangerous-action-permission', applicable: true, state, mode: 'authority-preserving',
+      id: 'dangerous-action-permission', applicable: true, state,
+      mode: input.evaluationScope === 'pre-deployment-release-readiness' ? 'authorization-deferred-authority-preserving' : 'authority-preserving',
       requiredEvidenceKinds: approvals.length > 0 ? ['human-approval'] : [], evidenceIds: verifiedApprovals.map((item) => item.approvalId),
-      findings, untestedSurfaces: [], limitations: ['Quality evidence records authorization; it never grants or executes a dangerous action.'],
+      findings, untestedSurfaces: [], limitations: [
+        'Quality evidence records authorization; it never grants or executes a dangerous action.',
+        ...(input.evaluationScope === 'pre-deployment-release-readiness' && pending.length > 0
+          ? ['Cristian authorization remains pending and independently required outside this Quality scope.'] : []),
+      ],
     },
     approvals,
   };
 }
 
-function criterionResults(input: QualityGateInput, evidence: QualityEvidence[]): CriterionResult[] {
+const PRE_DEPLOYMENT_DEFERRED_REQUIREMENTS = new Set(['production-observation', 'human_approval']);
+
+function criterionResults(input: CanonicalQualityGateInput, evidence: QualityEvidence[]): CriterionResult[] {
   return input.acceptanceCriteria.map((criterion) => {
     const relevant = evidence.filter((item) => item.criterionIds.includes(criterion.id));
     const failures = relevant.filter((item) => item.status === 'fail').flatMap((item) => item.findings?.length
       ? item.findings
       : [finding(`criterion:${criterion.id}:${item.id}`, 'P2', item.summary, [item.id], [criterion.id])]);
+    const deferred = input.evaluationScope === 'pre-deployment-release-readiness'
+      ? criterion.evidence.filter((required) => PRE_DEPLOYMENT_DEFERRED_REQUIREMENTS.has(required)) : [];
     const missing = criterion.evidence.filter((required) => {
+      if (deferred.includes(required)) return false;
       const aliases = evidenceAliases(required);
       return aliases.length === 0 || !relevant.some((item) => aliases.includes(item.kind) && item.status === 'pass');
     });
     return {
       id: criterion.id, statement: criterion.statement,
-      state: failures.length > 0 ? 'fail' : missing.length > 0 ? 'needs-evidence' : 'pass',
+      state: failures.length > 0 ? 'fail' : missing.length > 0 ? 'needs-evidence' : deferred.length > 0 ? 'not-evaluated' : 'pass',
       requiredEvidence: criterion.evidence, evidenceIds: relevant.map((item) => item.id), failures,
     };
   });
@@ -388,11 +447,13 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
     accessibilityGate(uiApplicable, currentEvidence),
     securityGate(input, currentEvidence),
     performanceGate(input, currentEvidence),
+    productionObservationGate(input, currentEvidence),
   ];
   const permissions = permissionGate(input, currentEvidence);
   gates.push(permissions.result);
   const criteria = criterionResults(input, currentEvidence);
   const requiredEvidenceGaps = input.requiredEvidence.filter((required) => {
+    if (input.evaluationScope === 'pre-deployment-release-readiness' && PRE_DEPLOYMENT_DEFERRED_REQUIREMENTS.has(required)) return false;
     const aliases = evidenceAliases(required);
     return aliases.length === 0 || !currentEvidence.some((item) => aliases.includes(item.kind) && item.status === 'pass');
   });
@@ -401,6 +462,8 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
     ...gates.flatMap((item) => item.limitations),
     ...(staleEvidence.length > 0 ? [`${staleEvidence.length} evidence item(s) belong to a different candidate and were excluded.`] : []),
     ...(requiredEvidenceGaps.length > 0 ? [`Task-contract evidence missing on the exact candidate: ${requiredEvidenceGaps.join(', ')}.`] : []),
+    ...(input.evaluationScope === 'pre-deployment-release-readiness'
+      ? ['Production deployment/observation and Cristian deployment authorization are outside this pre-deployment Quality evaluation.'] : []),
   ]);
 
   const reviewerRequired = input.riskTier === 'T3' || input.riskTier === 'T4';
@@ -437,8 +500,27 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
     repairAttempt: input.repair.attempt + 1, remainingAttempts: Math.max(0, input.repair.maxAttempts - input.repair.attempt), newCandidateRequired: true,
   })) : [];
 
+  const observationGate = gates.find((item) => item.id === 'production-observation');
+  const productionDeploymentObservation: ProductionObservationState = input.evaluationScope === 'pre-deployment-release-readiness'
+    ? 'not-evaluated-pre-deployment'
+    : !observationGate?.applicable ? 'not-applicable'
+      : observationGate.state === 'pass' ? 'pass'
+        : observationGate.state === 'fail' ? 'fail' : 'needs-evidence';
+  const scopeBindingId = qualityGateScopeBindingId({
+    schemaVersion: '1.2.0', taskId: input.taskId, projectId: input.projectId, repository: input.repository,
+    candidateSha: input.candidateSha, branch: input.branch, evaluationScope: input.evaluationScope,
+  });
   const base = {
-    schemaVersion: '1.1.0' as const, finalState, taskId: input.taskId, projectId: input.projectId,
+    schemaVersion: '1.2.0' as const, evaluationScope: input.evaluationScope, receiptStatus: 'current' as const,
+    scopeBindingId,
+    scopeStatus: {
+      productionDeploymentObservation,
+      fullLifecycleEvaluation: input.evaluationScope === 'pre-deployment-release-readiness'
+        ? 'required-after-production-observation' as const : 'current-evaluation' as const,
+      cristianApproval: 'required-separately' as const,
+      deploymentAuthority: 'not-granted' as const,
+    },
+    finalState, taskId: input.taskId, projectId: input.projectId,
     repository: input.repository, candidateSha: input.candidateSha, branch: input.branch, riskTier: input.riskTier,
     taskContract: input.taskContract, acceptanceCriteria: input.acceptanceCriteria, requiredEvidence: input.requiredEvidence,
     actualEvidence: currentEvidence, staleEvidence, rawEvidence: input.rawEvidence, unverifiedEvidence: input.unverifiedEvidence,
@@ -452,9 +534,27 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
   return { ...base, receiptId: digest(base) };
 }
 
+export function qualityGateScopeBindingId(identity: Pick<QualityGateReceipt,
+  'schemaVersion' | 'taskId' | 'projectId' | 'repository' | 'candidateSha' | 'branch' | 'evaluationScope'>): string {
+  return digest({
+    schemaVersion: identity.schemaVersion,
+    taskId: identity.taskId,
+    projectId: identity.projectId,
+    repository: identity.repository,
+    candidateSha: identity.candidateSha,
+    branch: identity.branch,
+    evaluationScope: identity.evaluationScope,
+  });
+}
+
+export function qualityGateReceiptDigest(receipt: QualityGateReceipt): string {
+  const { receiptId: _receiptId, ...base } = receipt;
+  return digest(base);
+}
+
 export async function persistQualityGateReceipt(receipt: QualityGateReceipt, directory: string): Promise<string> {
   await mkdir(directory, { recursive: true });
-  const target = path.join(directory, `${receipt.taskId}-${receipt.candidateSha}.json`);
+  const target = path.join(directory, `${receipt.taskId}-${receipt.candidateSha}-${receipt.evaluationScope}.json`);
   const content = `${JSON.stringify(receipt, null, 2)}\n`;
   try {
     const existing = await readFile(target, 'utf8');

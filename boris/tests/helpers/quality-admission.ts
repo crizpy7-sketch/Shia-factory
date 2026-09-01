@@ -6,7 +6,7 @@ function sourceTypeFor(kind: QualityEvidenceKind): TrustedExecutionRecord['sourc
   const sources: Partial<Record<QualityEvidenceKind, TrustedExecutionRecord['sourceType']>> = {
     typecheck: 'boris-test-run', lint: 'boris-test-run', unit: 'boris-test-run', integration: 'boris-test-run', e2e: 'boris-test-run',
     browser: 'browser-runner', accessibility: 'accessibility-runner', security: 'security-runner', adversarial: 'security-runner',
-    performance: 'performance-runner', 'independent-review': 'independent-reviewer',
+    performance: 'performance-runner', 'production-observation': 'production-observer', 'independent-review': 'independent-reviewer',
   };
   return sources[kind] ?? null;
 }
