@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0.0",
+  "blueprint_id": "commerce-agentic",
+  "status": "candidate-policy",
+  "authority_model": {
+    "customer_reads": "allowed-through-configured-adapters",
+    "customer_cart_mutation": "allowed-with-session-provenance-and-backend-validation",
+    "checkout": "host-handoff-only",
+    "payment": "forbidden-to-model",
+    "merchant_reads": "allowed-through-configured-adapters",
+    "merchant_writes": "stage-only",
+    "merchant_apply": "host-approval-required",
+    "production_deploy": "outside-blueprint-authority"
+  },
+  "grounding": {
+    "catalog_facts": "server-source-required",
+    "price_facts": "server-source-required",
+    "inventory_facts": "server-source-required",
+    "order_facts": "server-source-required",
+    "policy_facts": "server-source-required",
+    "analytics_facts": "server-source-required"
+  },
+  "provenance": {
+    "cart_targets": "must-have-session-read-provenance-or-existing-cart-line",
+    "merchant_write_targets": "must-have-session-read-provenance",
+    "merchant_apply_targets": "must-have-staged-change-provenance"
+  },
+  "tooling": {
+    "registry": "config-derived-allowlist",
+    "unknown_tool_behavior": "deny",
+    "disabled_capability_behavior": "remove-tool-and-flow",
+    "exceptions": "return-bounded-error-without-escalating-authority"
+  },
+  "memory": {
+    "enabled_by_default": false,
+    "write_validation_required": true,
+    "retention_policy_required_before_production": true,
+    "user_delete_path_required_before_production": true,
+    "account_delete_integration_required_before_production": true,
+    "tool_results_may_be_saved_as_memory": false
+  },
+  "merchant_change_lifecycle": [
+    "read-current-state",
+    "prepare-proposal",
+    "validate-business-guardrails",
+    "stage-change",
+    "render-reviewable-diff",
+    "host-approval",
+    "revalidate-at-apply-time",
+    "apply-through-host-backend",
+    "record-receipt"
+  ],
+  "checkout_lifecycle": [
+    "ground-products",
+    "construct-cart",
+    "validate-cart",
+    "request-host-checkout-handoff",
+    "host-renders-or-redirects-to-checkout"
+  ],
+  "required_deployment_controls": [
+    "route-authentication",
+    "authorization",
+    "rate-limits",
+    "server-side-credential-resolution",
+    "business-rule-enforcement-in-backend",
+    "approval-surface-authorization",
+    "privacy-and-memory-retention-policy",
+    "production-log-hygiene"
+  ]
+}
