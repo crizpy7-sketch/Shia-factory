@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { CompletionRequest, ModelProvider } from '../providers/types.js';
+import {
+  evaluateBoundaryPolicy,
+  sourcePacketFromFoundryRequest,
+  type FoundryError as FoundryErrorShape,
+  type FoundryErrorCode,
+  type FoundryRunStatus,
+} from './foundry/index.js';
 
 export interface BehaviorExample {
   input: string;
@@ -69,34 +76,64 @@ export interface AgentFoundryResult {
   judgeModel: string;
 }
 
-const FORBIDDEN_EXTRACTION_PATTERNS = [
-  /hidden\s+(system\s+)?prompt/i,
-  /reveal\s+(the\s+)?system\s+prompt/i,
-  /chain[-\s]?of[-\s]?thought/i,
-  /model\s+weights/i,
-  /extract\s+weights/i,
-  /scrape\s+outputs?/i,
-  /distill\s+(their|its|grok|model)\s+outputs?/i,
-  /steal\s+(the\s+)?prompt/i,
-];
+/** Structured Foundry error thrown from assertBehavioralSynthesisOnly / run path. */
+export class FoundryError extends Error {
+  readonly code: FoundryErrorCode;
+  readonly runStatus?: FoundryRunStatus;
+  readonly gaps?: string[];
+  readonly issues?: string[];
+  readonly details?: Record<string, unknown>;
 
-export function assertBehavioralSynthesisOnly(request: AgentFoundryRequest): void {
-  if (!request.name.trim()) throw new Error('Agent Foundry requires a name.');
-  if (!request.objective.trim()) throw new Error('Agent Foundry requires an objective.');
-  if (!request.desiredCapabilities.length) throw new Error('Agent Foundry requires at least one desired capability.');
+  constructor(shape: FoundryErrorShape) {
+    super(shape.message);
+    this.name = 'FoundryError';
+    this.code = shape.code;
+    this.runStatus = shape.runStatus;
+    this.gaps = shape.gaps;
+    this.issues = shape.issues;
+    this.details = shape.details;
+  }
+}
 
-  const material = [
+function combinedMaterial(request: AgentFoundryRequest): string {
+  return [
     request.name,
     request.objective,
     ...request.desiredCapabilities,
     ...(request.constraints ?? []),
     ...(request.examples ?? []).flatMap((example) => [example.input, example.desiredBehavior]),
   ].join('\n');
+}
 
-  if (FORBIDDEN_EXTRACTION_PATTERNS.some((pattern) => pattern.test(material))) {
-    throw new Error(
-      'Agent Foundry supports independent behavioral synthesis only. Hidden-prompt, chain-of-thought, model-weight, scraping, and output-distillation requests are rejected.',
-    );
+/**
+ * Phase 1 gate: validate Source Packet completeness, then enforce boundary policy.
+ * Incomplete packets → FoundryError INCOMPLETE_PACKET / needs_input.
+ * Extraction BLOCK → FoundryError BOUNDARY_REFUSED / refused_boundary.
+ */
+export function assertBehavioralSynthesisOnly(request: AgentFoundryRequest): void {
+  const packetResult = sourcePacketFromFoundryRequest(request);
+  if (!packetResult.ok) {
+    throw new FoundryError({
+      code: 'INCOMPLETE_PACKET',
+      message: `INCOMPLETE_PACKET: Agent Foundry Source Packet needs input — gaps: ${packetResult.gaps.join(', ')}. ${packetResult.issues.join('; ')}`,
+      runStatus: 'needs_input',
+      gaps: packetResult.gaps,
+      issues: packetResult.issues,
+    });
+  }
+
+  const boundary = evaluateBoundaryPolicy({ text: combinedMaterial(request) });
+  if (boundary.decision === 'BLOCK') {
+    throw new FoundryError({
+      code: 'BOUNDARY_REFUSED',
+      message:
+        'BOUNDARY_REFUSED: Agent Foundry supports independent behavioral synthesis only. Hidden-prompt, chain-of-thought, model-weight, scraping, and output-distillation requests are rejected.',
+      runStatus: 'refused_boundary',
+      details: {
+        reasons: boundary.reasons,
+        alternativeFraming: boundary.alternativeFraming,
+      },
+    });
   }
 }
 
@@ -284,3 +321,20 @@ export async function runAgentFoundry(
     judgeModel: judgeProvider.model,
   };
 }
+
+// Convenience re-exports of Phase 1 Foundry symbols (existing imports of agent-foundry remain stable).
+export {
+  FOUNDRY_RUN_STATUSES,
+  AGENT_LIFECYCLES,
+  CANONICAL_WORKFORCE_ROLE_IDS,
+  validateSourcePacket,
+  sourcePacketFromFoundryRequest,
+  evaluateBoundaryPolicy,
+  collectDeterministicPatternSignals,
+  matchProviderRequirements,
+  type FoundryRunStatus,
+  type AgentLifecycle,
+  type SourcePacket,
+  type ProviderRequirements,
+  type ProviderCompatibilityResult,
+} from './foundry/index.js';
