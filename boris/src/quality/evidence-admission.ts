@@ -11,15 +11,18 @@ export type EvidenceSourceType = 'github-actions' | 'boris-test-run' | 'browser-
 
 export interface EvidenceProvenanceClaim { sourceType: EvidenceSourceType; sourceId: string; runId?: string; artifactId?: string }
 export interface VerifiedEvidenceProvenance extends EvidenceProvenanceClaim {
-  candidateSha: string; collector: string; observedAt: string; verificationState: 'verified'; integrityDigest: string;
+  taskId: string; repository: string; candidateSha: string; collector: string; observedAt: string;
+  verificationState: 'verified'; integrityDigest: string;
 }
 export interface AdmittedQualityEvidence extends QualityEvidence { provenance: VerifiedEvidenceProvenance }
 export interface EvidenceAdmissionFailure { evidenceId: string; candidateSha: string; claim: EvidenceProvenanceClaim | null; state: 'unverified'; reason: string }
 export interface TrustedExecutionRecord extends Omit<QualityEvidence, 'id' | 'provenance'> {
-  sourceType: Exclude<EvidenceSourceType, 'retained-artifact' | 'factory-governance'>; sourceId: string; runId?: string; collector: string; integrityDigest: string;
+  taskId: string; repository: string; sourceType: Exclude<EvidenceSourceType, 'retained-artifact' | 'factory-governance'>;
+  sourceId: string; runId?: string; collector: string; integrityDigest: string;
 }
 export interface RetainedArtifactRecord {
-  artifactId: string; path: string; candidateSha: string; observedAt: string; collector: string; sha256: string; mediaType?: string;
+  artifactId: string; taskId: string; repository: string; path: string; candidateSha: string;
+  observedAt: string; collector: string; sha256: string; mediaType?: string;
   status: QualityEvidence['status']; source: string; summary: string; criterionIds: string[]; method?: QualityEvidence['method'];
   testedSurfaces?: string[]; untestedSurfaces?: string[]; findings?: QualityEvidence['findings'];
 }
@@ -86,12 +89,13 @@ export const isAdmittedQualityGateInput = (value: object): boolean => admittedIn
 export function createTrustedExecutionEvidenceAdapter(
   id: string, sourceTypes: TrustedExecutionRecord['sourceType'][], resolve: (sourceId: string) => TrustedExecutionRecord | null,
 ): EvidenceAdmissionAdapter {
-  return { id, sourceTypes, verify(raw, _context) {
+  return { id, sourceTypes, verify(raw, context) {
     const claim = raw.provenance;
     if (!claim || !sourceTypes.includes(claim.sourceType as TrustedExecutionRecord['sourceType'])) return null;
     if (!sourceMayAdmit(raw.kind, claim.sourceType) || ['human-approval', 'visual', 'artifact'].includes(raw.kind)) return null;
     const record = resolve(claim.sourceId);
-    if (!record || record.sourceId !== claim.sourceId || record.sourceType !== claim.sourceType || record.kind !== raw.kind) return null;
+    if (!record || record.sourceId !== claim.sourceId || record.sourceType !== claim.sourceType || record.kind !== raw.kind
+      || record.taskId !== context.taskId || record.repository !== context.repository) return null;
     if (!/^[0-9a-f]{64}$/i.test(record.integrityDigest)) return null;
     const { integrityDigest, ...integrityInput } = record;
     if (trustedRecordDigest(integrityInput) !== integrityDigest.toLowerCase()) return null;
@@ -101,7 +105,8 @@ export function createTrustedExecutionEvidenceAdapter(
       testedSurfaces: record.testedSurfaces ? [...record.testedSurfaces] : undefined,
       untestedSurfaces: record.untestedSurfaces ? [...record.untestedSurfaces] : undefined, browser: record.browser,
       artifact: record.artifact, findings: record.findings, thresholds: record.thresholds, measurements: record.measurements,
-      provenance: { sourceType: record.sourceType, sourceId: record.sourceId, runId: record.runId, candidateSha: record.candidateSha,
+      provenance: { sourceType: record.sourceType, sourceId: record.sourceId, runId: record.runId,
+        taskId: record.taskId, repository: record.repository, candidateSha: record.candidateSha,
         collector: record.collector, observedAt: record.observedAt, verificationState: 'verified', integrityDigest: record.integrityDigest },
     });
   } };
@@ -111,12 +116,13 @@ export function createRetainedArtifactEvidenceAdapter(
   id: string, retainedRoots: string[], resolve: (artifactId: string) => RetainedArtifactRecord | null,
 ): EvidenceAdmissionAdapter {
   const roots = retainedRoots.map((root) => path.resolve(root));
-  return { id, sourceTypes: ['retained-artifact'], verify(raw, _context) {
+  return { id, sourceTypes: ['retained-artifact'], verify(raw, context) {
     const claim = raw.provenance;
     if (!claim || claim.sourceType !== 'retained-artifact' || raw.kind !== 'visual' || !raw.artifact) return null;
     const artifactId = claim.artifactId ?? claim.sourceId;
     const record = resolve(artifactId);
-    if (!record || record.artifactId !== artifactId || record.candidateSha !== raw.candidateSha) return null;
+    if (!record || record.artifactId !== artifactId || record.candidateSha !== raw.candidateSha
+      || record.taskId !== context.taskId || record.repository !== context.repository) return null;
     const artifactPath = path.resolve(record.path);
     if (!roots.some((root) => inside(root, artifactPath))) return null;
     let bytes: Buffer;
@@ -128,7 +134,8 @@ export function createRetainedArtifactEvidenceAdapter(
       method: record.method, testedSurfaces: record.testedSurfaces ? [...record.testedSurfaces] : undefined,
       untestedSurfaces: record.untestedSurfaces ? [...record.untestedSurfaces] : undefined, findings: record.findings,
       artifact: { path: artifactPath, sha256: computed, mediaType: record.mediaType ?? raw.artifact.mediaType },
-      provenance: { ...claim, artifactId, candidateSha: record.candidateSha, collector: record.collector || id,
+      provenance: { ...claim, artifactId, taskId: record.taskId, repository: record.repository,
+        candidateSha: record.candidateSha, collector: record.collector || id,
         observedAt: record.observedAt, verificationState: 'verified', integrityDigest: computed } });
   } };
 }

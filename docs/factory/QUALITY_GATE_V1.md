@@ -62,14 +62,32 @@ work must select the scope and production-observation requirement explicitly. An
 full-lifecycle evaluation defaults observation to `required`, and a deploy lifecycle cannot opt out
 by declaring observation `not-applicable`.
 
-`scopeBindingId` hashes schema version, task, project, repository, candidate, branch and scope. The
+`scopeBindingId` hashes schema version, task, project, repository, candidate, branch, scope and the
+production-observation requirement. The
 scope binding is included in the immutable receipt body, and `receiptId` hashes that complete body.
 Consequently, receipts for different scopes cannot substitute for one another even when every other
 identity field is the same. Persisted receipt filenames also include scope.
 
 ## Evidence admission
 
-Workers, CI, BORIS, browser runners, production observers and GStack submit raw claims. Authorized adapters resolve independent run/artifact records and attach source type, source/run/artifact ID, exact candidate, collector, observation time, verified state and integrity digest. Admission canonical-copies, scope-normalizes and deep-freezes the verified record and packet before branding them for the evaluator, preventing mutation after verification. The evaluator rejects objects not produced by this boundary. Generic `human-approval` evidence is never admitted; Cristian authorization resolves independently through Factory governance.
+Workers, CI, BORIS, browser runners, production observers and GStack submit raw claims. Authorized adapters resolve independent run/artifact records and attach source type, source/run/artifact ID, task ID, repository, exact candidate, collector, observation time, verified state and integrity digest. Execution and retained-artifact adapters reject another task or repository even when the candidate SHA matches. Admission canonical-copies, scope-normalizes and deep-freezes the verified record and packet before branding them for the evaluator, preventing mutation after verification. The evaluator rejects objects not produced by this boundary. Generic `human-approval` evidence is never admitted; Cristian authorization resolves independently through Factory governance.
+
+### Trusted receipt resolution
+
+`evaluateQualityGate` freezes and brands each minted receipt. `createQualityGateReceiptRecord` accepts
+only those evaluator-minted objects. `createTrustedQualityGateReceiptResolver` verifies the retained
+record, canonical receipt identity, complete gates/criteria, scope and provenance before returning a
+branded resolution. The production deployment gate requires that verified resolution and the exact
+task, repository, branch, candidate and acceptance-criteria snapshot. A caller-created JSON receipt,
+plausible SHA-256, copied record or arbitrary resolver cannot authorize that gate.
+
+The in-process brands are not signatures and do not survive serialization. After restart,
+`revalidateStoredQualityGateReceipt` requires evidence to be re-admitted through the trusted adapters
+and reruns the permanent evaluator with the original exact-scope inputs/evaluation time; the complete
+regenerated receipt digest must match the stored receipt. A JSON file alone remains untrusted. A
+future environment-specific authenticated receipt store must preserve these guarantees, not bypass
+them. Independent Cristian governance approval is still separately required, and eligibility never
+executes a deployment.
 
 ## Risk-to-gate matrix
 
@@ -116,6 +134,11 @@ candidate SHA A
 ```
 
 The default repair budget remains at most two. Exhaustion blocks and escalates. Quality Gate does not repair the candidate it judges, and it cannot self-certify a candidate that implements or changes Quality Gate. A scoped pre-deployment Quality pass for a self-changing candidate still leaves the Cristian approval gate pending and cannot accept or merge the task. Cristian approved the exact Phase 5 implementation in merged PR #14 (`d2b1baa2005c10ac1b2c25a26a8c705acc6c444e`); future self-changing candidates still require independent review and Cristian approval.
+
+Self-change detection uses both declared subject roles and changed Quality source/schema/role,
+permanent-workforce and invocation-contract paths. Omitting `subjectRoles: ["quality-gate"]` cannot
+disable these safeguards. Pre-deployment evaluation defers only Cristian authorization and production
+observation, never denied actions or other required independent-review approval gates.
 
 ## Production adapter limitation
 

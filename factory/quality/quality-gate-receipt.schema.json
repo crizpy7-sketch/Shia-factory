@@ -5,87 +5,347 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schemaVersion", "receiptId", "evaluationScope", "receiptStatus", "scopeBindingId", "scopeStatus", "finalState",
-    "taskId", "projectId", "repository", "candidateSha", "branch", "riskTier", "taskContract",
-    "acceptanceCriteria", "requiredEvidence", "actualEvidence", "staleEvidence", "rawEvidence",
-    "unverifiedEvidence", "governanceApprovals", "unverifiedApprovals", "criterionResults", "gateResults",
-    "knownLimitations", "reworkRequests", "approvalGates", "independentReviewer", "controlPlane", "repair", "evaluatedAt"
+    "schemaVersion",
+    "receiptId",
+    "evaluationScope",
+    "receiptStatus",
+    "scopeBindingId",
+    "productionObservationRequirement",
+    "scopeStatus",
+    "finalState",
+    "taskId",
+    "projectId",
+    "repository",
+    "candidateSha",
+    "branch",
+    "riskTier",
+    "changedPaths",
+    "changeSignals",
+    "taskContract",
+    "acceptanceCriteria",
+    "requiredEvidence",
+    "actualEvidence",
+    "staleEvidence",
+    "rawEvidence",
+    "unverifiedEvidence",
+    "governanceApprovals",
+    "unverifiedApprovals",
+    "criterionResults",
+    "gateResults",
+    "knownLimitations",
+    "reworkRequests",
+    "approvalGates",
+    "independentReviewer",
+    "controlPlane",
+    "repair",
+    "evaluatedAt"
   ],
   "properties": {
-    "schemaVersion": { "const": "1.2.0" },
-    "receiptId": { "$ref": "#/$defs/sha256" },
-    "evaluationScope": { "$ref": "#/$defs/evaluationScope" },
-    "receiptStatus": { "const": "current" },
-    "scopeBindingId": { "$ref": "#/$defs/sha256" },
-    "scopeStatus": { "$ref": "#/$defs/scopeStatus" },
-    "finalState": { "enum": ["pass", "reject", "blocked", "needs-evidence"] },
-    "taskId": { "type": "string", "minLength": 1 },
-    "projectId": { "type": "string", "minLength": 1 },
-    "repository": { "type": "string", "minLength": 1 },
-    "candidateSha": { "$ref": "#/$defs/candidateSha" },
-    "branch": { "type": "string", "minLength": 1 },
-    "riskTier": { "$ref": "#/$defs/riskTier" },
-    "taskContract": { "type": "object" },
-    "acceptanceCriteria": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/acceptanceCriterion" } },
-    "requiredEvidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
-    "actualEvidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
-    "staleEvidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
-    "rawEvidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
-    "unverifiedEvidence": { "type": "array", "items": { "type": "object" } },
-    "governanceApprovals": { "type": "array", "items": { "$ref": "#/$defs/governanceApproval" } },
-    "unverifiedApprovals": { "type": "array", "items": { "type": "object" } },
-    "criterionResults": { "type": "array", "items": { "$ref": "#/$defs/criterionResult" } },
-    "gateResults": { "type": "array", "minItems": 7, "maxItems": 7, "items": { "$ref": "#/$defs/gateResult" } },
-    "knownLimitations": { "type": "array", "items": { "type": "string" } },
-    "reworkRequests": { "type": "array", "items": { "$ref": "#/$defs/reworkRequest" } },
-    "approvalGates": { "type": "array", "items": { "$ref": "#/$defs/approvalGate" } },
+    "schemaVersion": {
+      "const": "1.2.0"
+    },
+    "receiptId": {
+      "$ref": "#/$defs/sha256"
+    },
+    "evaluationScope": {
+      "$ref": "#/$defs/evaluationScope"
+    },
+    "receiptStatus": {
+      "const": "current"
+    },
+    "scopeBindingId": {
+      "$ref": "#/$defs/sha256"
+    },
+    "productionObservationRequirement": {
+      "enum": [
+        "required",
+        "not-applicable"
+      ]
+    },
+    "scopeStatus": {
+      "$ref": "#/$defs/scopeStatus"
+    },
+    "finalState": {
+      "enum": [
+        "pass",
+        "reject",
+        "blocked",
+        "needs-evidence"
+      ]
+    },
+    "taskId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "projectId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repository": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidateSha": {
+      "$ref": "#/$defs/candidateSha"
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "riskTier": {
+      "$ref": "#/$defs/riskTier"
+    },
+    "changedPaths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "changeSignals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "userFacing",
+        "securitySurfaces",
+        "performanceSurfaces",
+        "performanceFailureMaterial",
+        "subjectRoles"
+      ],
+      "properties": {
+        "userFacing": {
+          "type": "boolean"
+        },
+        "securitySurfaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "performanceSurfaces": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "frontend",
+              "api-backend",
+              "large-data-database",
+              "ai-media"
+            ]
+          }
+        },
+        "performanceFailureMaterial": {
+          "type": "boolean"
+        },
+        "subjectRoles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "taskContract": {
+      "type": "object"
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/acceptanceCriterion"
+      }
+    },
+    "requiredEvidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "actualEvidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/admittedEvidence"
+      }
+    },
+    "staleEvidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/admittedEvidence"
+      }
+    },
+    "rawEvidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "unverifiedEvidence": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "governanceApprovals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/governanceApproval"
+      }
+    },
+    "unverifiedApprovals": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "criterionResults": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/criterionResult"
+      }
+    },
+    "gateResults": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "$ref": "#/$defs/gateResult"
+      }
+    },
+    "knownLimitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reworkRequests": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reworkRequest"
+      }
+    },
+    "approvalGates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/approvalGate"
+      }
+    },
     "independentReviewer": {
       "oneOf": [
-        { "type": "null" },
         {
-          "type": "object", "additionalProperties": false, "required": ["id", "source", "independent"],
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "source",
+            "independent"
+          ],
           "properties": {
-            "id": { "type": "string", "minLength": 1 },
-            "source": { "type": "string", "minLength": 1 },
-            "independent": { "type": "boolean" }
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "independent": {
+              "type": "boolean"
+            }
           }
         }
       ]
     },
     "controlPlane": {
-      "type": "object", "additionalProperties": false,
-      "required": ["authority", "qualityGateMayAcceptTask", "gstackMayAcceptTask", "qualityEvidenceGrantsActionAuthority"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority",
+        "qualityGateMayAcceptTask",
+        "gstackMayAcceptTask",
+        "qualityEvidenceGrantsActionAuthority"
+      ],
       "properties": {
-        "authority": { "const": "shia-core" },
-        "qualityGateMayAcceptTask": { "const": false },
-        "gstackMayAcceptTask": { "const": false },
-        "qualityEvidenceGrantsActionAuthority": { "const": false }
+        "authority": {
+          "const": "shia-core"
+        },
+        "qualityGateMayAcceptTask": {
+          "const": false
+        },
+        "gstackMayAcceptTask": {
+          "const": false
+        },
+        "qualityEvidenceGrantsActionAuthority": {
+          "const": false
+        }
       }
     },
     "repair": {
-      "type": "object", "additionalProperties": false,
-      "required": ["attempt", "maxAttempts", "remainingAttempts"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt",
+        "maxAttempts",
+        "remainingAttempts"
+      ],
       "properties": {
-        "attempt": { "type": "integer", "minimum": 0 },
-        "maxAttempts": { "type": "integer", "minimum": 0, "maximum": 2 },
-        "remainingAttempts": { "type": "integer", "minimum": 0, "maximum": 2 }
+        "attempt": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxAttempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "remainingAttempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        }
       }
     },
-    "evaluatedAt": { "type": "string", "format": "date-time" }
+    "evaluatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
   },
   "allOf": [
     {
-      "if": { "type": "object", "properties": { "evaluationScope": { "const": "pre-deployment-release-readiness" } } },
+      "if": {
+        "type": "object",
+        "properties": {
+          "evaluationScope": {
+            "const": "pre-deployment-release-readiness"
+          }
+        }
+      },
       "then": {
         "properties": {
           "scopeStatus": {
             "type": "object",
             "properties": {
-              "productionDeploymentObservation": { "const": "not-evaluated-pre-deployment" },
-              "fullLifecycleEvaluation": { "const": "required-after-production-observation" },
-              "cristianApproval": { "const": "required-separately" },
-              "deploymentAuthority": { "const": "not-granted" }
+              "productionDeploymentObservation": {
+                "const": "not-evaluated-pre-deployment"
+              },
+              "fullLifecycleEvaluation": {
+                "const": "required-after-production-observation"
+              },
+              "cristianApproval": {
+                "const": "required-separately"
+              },
+              "deploymentAuthority": {
+                "const": "not-granted"
+              }
             }
+          },
+          "productionObservationRequirement": {
+            "const": "required"
           }
         }
       },
@@ -94,10 +354,23 @@
           "scopeStatus": {
             "type": "object",
             "properties": {
-              "productionDeploymentObservation": { "enum": ["pass", "fail", "needs-evidence", "not-applicable"] },
-              "fullLifecycleEvaluation": { "const": "current-evaluation" },
-              "cristianApproval": { "const": "required-separately" },
-              "deploymentAuthority": { "const": "not-granted" }
+              "productionDeploymentObservation": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "needs-evidence",
+                  "not-applicable"
+                ]
+              },
+              "fullLifecycleEvaluation": {
+                "const": "current-evaluation"
+              },
+              "cristianApproval": {
+                "const": "required-separately"
+              },
+              "deploymentAuthority": {
+                "const": "not-granted"
+              }
             }
           }
         }
@@ -105,120 +378,555 @@
     }
   ],
   "$defs": {
-    "candidateSha": { "type": "string", "pattern": "^[0-9a-fA-F]{40,64}$" },
-    "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
-    "riskTier": { "enum": ["T0", "T1", "T2", "T3", "T4"] },
-    "evaluationScope": { "enum": ["pre-deployment-release-readiness", "full-lifecycle"] },
+    "candidateSha": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{40,64}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$"
+    },
+    "riskTier": {
+      "enum": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4"
+      ]
+    },
+    "evaluationScope": {
+      "enum": [
+        "pre-deployment-release-readiness",
+        "full-lifecycle"
+      ]
+    },
     "scopeStatus": {
-      "type": "object", "additionalProperties": false,
-      "required": ["productionDeploymentObservation", "fullLifecycleEvaluation", "cristianApproval", "deploymentAuthority"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "productionDeploymentObservation",
+        "fullLifecycleEvaluation",
+        "cristianApproval",
+        "deploymentAuthority"
+      ],
       "properties": {
         "productionDeploymentObservation": {
-          "enum": ["not-evaluated-pre-deployment", "pass", "fail", "needs-evidence", "not-applicable"]
+          "enum": [
+            "not-evaluated-pre-deployment",
+            "pass",
+            "fail",
+            "needs-evidence",
+            "not-applicable"
+          ]
         },
-        "fullLifecycleEvaluation": { "enum": ["required-after-production-observation", "current-evaluation"] },
-        "cristianApproval": { "const": "required-separately" },
-        "deploymentAuthority": { "const": "not-granted" }
+        "fullLifecycleEvaluation": {
+          "enum": [
+            "required-after-production-observation",
+            "current-evaluation"
+          ]
+        },
+        "cristianApproval": {
+          "const": "required-separately"
+        },
+        "deploymentAuthority": {
+          "const": "not-granted"
+        }
       }
     },
     "acceptanceCriterion": {
-      "type": "object", "additionalProperties": false, "required": ["id", "statement", "evidence"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "statement",
+        "evidence"
+      ],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "statement": { "type": "string", "minLength": 1 },
-        "evidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "finding": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "severity", "summary", "criterionIds", "evidenceIds"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "severity",
+        "summary",
+        "criterionIds",
+        "evidenceIds"
+      ],
       "properties": {
-        "id": { "type": "string" },
-        "severity": { "enum": ["P0", "P1", "P2", "P3"] },
-        "summary": { "type": "string" },
-        "criterionIds": { "type": "array", "items": { "type": "string" } },
-        "evidenceIds": { "type": "array", "items": { "type": "string" } }
+        "id": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "P0",
+            "P1",
+            "P2",
+            "P3"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        },
+        "criterionIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "evidence": {
       "type": "object",
-      "required": ["id", "kind", "candidateSha", "status", "source", "summary", "criterionIds", "observedAt"],
+      "required": [
+        "id",
+        "kind",
+        "candidateSha",
+        "status",
+        "source",
+        "summary",
+        "criterionIds",
+        "observedAt"
+      ],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "kind": {
-          "enum": ["typecheck", "lint", "unit", "integration", "e2e", "browser", "visual", "accessibility", "security", "adversarial", "performance", "production-observation", "permission", "independent-review", "human-approval", "artifact"]
+        "id": {
+          "type": "string",
+          "minLength": 1
         },
-        "candidateSha": { "$ref": "#/$defs/candidateSha" },
-        "status": { "enum": ["pass", "fail", "unavailable"] },
-        "source": { "type": "string", "minLength": 1 },
-        "summary": { "type": "string", "minLength": 1 },
-        "criterionIds": { "type": "array", "items": { "type": "string" } },
-        "observedAt": { "type": "string", "format": "date-time" },
-        "method": { "enum": ["automated-tool", "real-browser", "source-inspection", "manual-observation", "gstack-workflow"] },
-        "testedSurfaces": { "type": "array", "items": { "type": "string" } },
-        "untestedSurfaces": { "type": "array", "items": { "type": "string" } },
-        "browser": { "type": "object" },
-        "artifact": { "type": "object" },
-        "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
-        "thresholds": { "type": "array", "items": { "type": "object" } },
-        "measurements": { "type": "array", "items": { "type": "object" } },
-        "provenance": { "type": "object" }
+        "kind": {
+          "enum": [
+            "typecheck",
+            "lint",
+            "unit",
+            "integration",
+            "e2e",
+            "browser",
+            "visual",
+            "accessibility",
+            "security",
+            "adversarial",
+            "performance",
+            "production-observation",
+            "permission",
+            "independent-review",
+            "human-approval",
+            "artifact"
+          ]
+        },
+        "candidateSha": {
+          "$ref": "#/$defs/candidateSha"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "unavailable"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "criterionIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "method": {
+          "enum": [
+            "automated-tool",
+            "real-browser",
+            "source-inspection",
+            "manual-observation",
+            "gstack-workflow"
+          ]
+        },
+        "testedSurfaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "untestedSurfaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "browser": {
+          "type": "object"
+        },
+        "artifact": {
+          "type": "object"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "thresholds": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "measurements": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "provenance": {
+          "type": "object"
+        }
       }
     },
     "governanceApproval": {
-      "type": "object", "additionalProperties": false,
-      "required": ["approvalId", "taskId", "action", "state", "decidedBy", "candidateSha", "decidedAt", "provenance", "source"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approvalId",
+        "taskId",
+        "action",
+        "state",
+        "decidedBy",
+        "candidateSha",
+        "decidedAt",
+        "provenance",
+        "source"
+      ],
       "properties": {
-        "approvalId": { "type": "string" }, "taskId": { "type": "string" }, "action": { "type": "string" },
-        "state": { "const": "approved" }, "decidedBy": { "const": "Cristian" },
-        "candidateSha": { "$ref": "#/$defs/candidateSha" }, "decidedAt": { "type": "string", "format": "date-time" },
-        "provenance": { "type": "string" }, "source": { "type": "string" }
+        "approvalId": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "state": {
+          "const": "approved"
+        },
+        "decidedBy": {
+          "const": "Cristian"
+        },
+        "candidateSha": {
+          "$ref": "#/$defs/candidateSha"
+        },
+        "decidedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
       }
     },
     "criterionResult": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "statement", "state", "requiredEvidence", "evidenceIds", "failures"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "statement",
+        "state",
+        "requiredEvidence",
+        "evidenceIds",
+        "failures"
+      ],
       "properties": {
-        "id": { "type": "string" }, "statement": { "type": "string" },
-        "state": { "enum": ["pass", "fail", "needs-evidence", "not-evaluated"] },
-        "requiredEvidence": { "type": "array", "items": { "type": "string" } },
-        "evidenceIds": { "type": "array", "items": { "type": "string" } },
-        "failures": { "type": "array", "items": { "$ref": "#/$defs/finding" } }
+        "id": {
+          "type": "string"
+        },
+        "statement": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "pass",
+            "fail",
+            "needs-evidence",
+            "not-evaluated"
+          ]
+        },
+        "requiredEvidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        }
       }
     },
     "gateResult": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "applicable", "state", "mode", "requiredEvidenceKinds", "evidenceIds", "findings", "untestedSurfaces", "limitations"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "applicable",
+        "state",
+        "mode",
+        "requiredEvidenceKinds",
+        "evidenceIds",
+        "findings",
+        "untestedSurfaces",
+        "limitations"
+      ],
       "properties": {
-        "id": { "enum": ["automated-checks", "browser-visual", "accessibility", "security-adversarial", "performance", "production-observation", "dangerous-action-permission"] },
-        "applicable": { "type": "boolean" },
-        "state": { "enum": ["pass", "fail", "blocked", "needs-evidence", "not-applicable"] },
-        "mode": { "type": "string" },
-        "requiredEvidenceKinds": { "type": "array", "items": { "type": "string" } },
-        "evidenceIds": { "type": "array", "items": { "type": "string" } },
-        "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
-        "untestedSurfaces": { "type": "array", "items": { "type": "string" } },
-        "limitations": { "type": "array", "items": { "type": "string" } }
+        "id": {
+          "enum": [
+            "automated-checks",
+            "browser-visual",
+            "accessibility",
+            "security-adversarial",
+            "performance",
+            "production-observation",
+            "dangerous-action-permission"
+          ]
+        },
+        "applicable": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "pass",
+            "fail",
+            "blocked",
+            "needs-evidence",
+            "not-applicable"
+          ]
+        },
+        "mode": {
+          "type": "string"
+        },
+        "requiredEvidenceKinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "untestedSurfaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "reworkRequest": {
-      "type": "object", "additionalProperties": false,
-      "required": ["owner", "candidateSha", "failedCriterionId", "reason", "evidenceIds", "repairAttempt", "remainingAttempts", "newCandidateRequired"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner",
+        "candidateSha",
+        "failedCriterionId",
+        "reason",
+        "evidenceIds",
+        "repairAttempt",
+        "remainingAttempts",
+        "newCandidateRequired"
+      ],
       "properties": {
-        "owner": { "const": "boris" }, "candidateSha": { "$ref": "#/$defs/candidateSha" },
-        "failedCriterionId": { "type": "string" }, "reason": { "type": "string" },
-        "evidenceIds": { "type": "array", "items": { "type": "string" } },
-        "repairAttempt": { "type": "integer", "minimum": 1 },
-        "remainingAttempts": { "type": "integer", "minimum": 0, "maximum": 2 },
-        "newCandidateRequired": { "const": true }
+        "owner": {
+          "const": "boris"
+        },
+        "candidateSha": {
+          "$ref": "#/$defs/candidateSha"
+        },
+        "failedCriterionId": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repairAttempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "remainingAttempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "newCandidateRequired": {
+          "const": true
+        }
       }
     },
     "approvalGate": {
-      "type": "object", "additionalProperties": false, "required": ["name", "state", "evidenceId"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "state",
+        "evidenceId"
+      ],
       "properties": {
-        "name": { "type": "string" }, "state": { "enum": ["satisfied", "pending", "denied"] },
-        "evidenceId": { "type": ["string", "null"] }
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "satisfied",
+            "pending",
+            "denied"
+          ]
+        },
+        "evidenceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
+    },
+    "verifiedProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceType",
+        "sourceId",
+        "taskId",
+        "repository",
+        "candidateSha",
+        "collector",
+        "observedAt",
+        "verificationState",
+        "integrityDigest"
+      ],
+      "properties": {
+        "sourceType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifactId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "taskId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidateSha": {
+          "$ref": "#/$defs/candidateSha"
+        },
+        "collector": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "verificationState": {
+          "const": "verified"
+        },
+        "integrityDigest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "admittedEvidence": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/evidence"
+        },
+        {
+          "type": "object",
+          "required": [
+            "provenance"
+          ],
+          "properties": {
+            "provenance": {
+              "$ref": "#/$defs/verifiedProvenance"
+            }
+          }
+        }
+      ]
     }
   }
 }

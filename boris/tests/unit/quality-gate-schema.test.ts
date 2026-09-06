@@ -51,7 +51,7 @@ function input(scope: QualityGateInput['evaluationScope'], includeProduction: bo
     taskContract, acceptanceCriteria: taskContract.acceptanceCriteria, requiredEvidence: taskContract.requiredEvidence,
     actualEvidence: [...(['typecheck', 'lint', 'unit', 'integration'] as const).map(evidence),
       ...(includeProduction ? [evidence('production-observation')] : [])],
-    changedPaths: ['boris/src/quality/quality-gate.ts'],
+    changedPaths: ['src/value.ts'],
     changeSignals: { userFacing: false, securitySurfaces: [], performanceSurfaces: [], performanceFailureMaterial: false, subjectRoles: [] },
     dangerousActions: [], reviewer: null, repair: { attempt: 0, maxAttempts: 2 }, evaluatedAt: NOW,
     evaluationScope: scope, productionObservationRequirement: 'required',

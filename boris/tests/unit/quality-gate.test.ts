@@ -11,6 +11,11 @@ import {
   persistQualityGateReceipt,
   qualityGateReceiptDigest,
   qualityGateScopeBindingId,
+  createQualityGateReceiptRecord,
+  createTrustedQualityGateReceiptResolver,
+  isVerifiedQualityGateReceiptResolution,
+  revalidateStoredQualityGateReceipt,
+  validateCanonicalQualityGateReceipt,
   type QualityEvidence,
   type QualityGateInput,
 } from '../../src/quality/quality-gate.js';
@@ -22,7 +27,7 @@ const NOW = '2026-08-28T20:00:00Z';
 function contract(overrides: Partial<OrchestratorTaskContract> = {}): OrchestratorTaskContract {
   return {
     schemaVersion: '1.0.0', id: 'TASK-5', projectId: 'shia-factory', objective: 'Verify Phase 5.', outcome: 'Evidence-based quality.',
-    repository: { commit: 'c'.repeat(40), branch: 'migration/core-v2-phase5-quality-safety' }, profileDigest: 'd'.repeat(64),
+    repository: { commit: CANDIDATE, branch: 'migration/core-v2-phase5-quality-safety' }, profileDigest: 'd'.repeat(64),
     risk: { tier: 'T2', reasons: ['normal behavior'] }, reuse: { searched: true, findings: [], creationDisposition: 'reuse-search-recorded' },
     selectedRoles: [], selectedSkillPacks: [], selectedTools: [],
     acceptanceCriteria: [{ id: 'AC-1', statement: 'The exact candidate passes deterministic checks.', evidence: ['test'] }],
@@ -49,7 +54,7 @@ function input(overrides: Partial<QualityGateInput> = {}): QualityGateInput {
     taskId: taskContract.id, projectId: taskContract.projectId, repository: 'crizpy7-sketch/Shia-factory', candidateSha: CANDIDATE,
     branch: taskContract.repository.branch, riskTier: taskContract.risk.tier, taskContract,
     acceptanceCriteria: taskContract.acceptanceCriteria, requiredEvidence: taskContract.requiredEvidence,
-    actualEvidence: automated(), changedPaths: ['boris/src/quality/quality-gate.ts'],
+    actualEvidence: automated(), changedPaths: ['src/value.ts'],
     changeSignals: { userFacing: false, securitySurfaces: [], performanceSurfaces: [], performanceFailureMaterial: false, subjectRoles: [] },
     dangerousActions: [], reviewer: null, repair: { attempt: 0, maxAttempts: 2 }, evaluatedAt: NOW,
     ...overrides,
@@ -344,4 +349,77 @@ test('receipt persistence is exact-candidate keyed and idempotent', async (t) =>
   assert.equal(first, second);
   assert.match(path.basename(first), new RegExp(`${CANDIDATE}-full-lifecycle\\.json$`));
   assert.deepEqual(JSON.parse(await readFile(first, 'utf8')), JSON.parse(JSON.stringify(receipt)));
+});
+
+test('Quality self-change paths require independent evidence and Cristian even if subjectRoles is omitted', () => {
+  for (const changedPath of ['boris/src/quality/quality-gate.ts', 'factory/quality/quality-gate-receipt.schema.json',
+    'boris/src/identity/permanent-workforce.ts', 'agents/quality-gate/README.md']) {
+    const i = input({ changedPaths: [changedPath], evaluationScope: 'pre-deployment-release-readiness' });
+    const blocked = evaluate(i);
+    assert.equal(blocked.finalState, 'blocked', changedPath);
+    assert.equal(blocked.approvalGates.find((gate) => gate.name === 'Cristian')?.state, 'pending');
+    const independent = evaluate({ ...i, actualEvidence: [...automated(), evidence('independent-review', { source: 'external:review' })],
+      reviewer: { id: 'external-reviewer', source: 'external:review', independent: true } });
+    assert.equal(independent.finalState, 'pass');
+    assert.equal(independent.approvalGates.find((gate) => gate.name === 'Cristian')?.state, 'pending');
+  }
+});
+
+test('pre-deployment scope cannot override denied actions or defer independent-review gates', () => {
+  const denied = evaluate(input({ evaluationScope: 'pre-deployment-release-readiness',
+    dangerousActions: [{ action: 'deploy', authorization: 'denied' }] }));
+  assert.equal(denied.finalState, 'blocked');
+  const requiredReview = contract({ approvalGates: ['independent-review', 'Cristian'] });
+  assert.equal(evaluate(input({ taskContract: requiredReview, evaluationScope: 'pre-deployment-release-readiness' })).finalState, 'blocked');
+});
+
+test('receipt records require permanent minting; caller hashes and serialized records cannot substitute', () => {
+  const i = input({ evaluationScope: 'pre-deployment-release-readiness' });
+  const receipt = evaluate(i);
+  assert.deepEqual(validateCanonicalQualityGateReceipt(receipt), []);
+  assert.equal(Object.isFrozen(receipt), true);
+  const copied = JSON.parse(JSON.stringify(receipt)) as typeof receipt;
+  assert.throws(() => createQualityGateReceiptRecord(copied, copied.receiptId, 'caller', NOW), /Only the permanent/);
+  const record = createQualityGateReceiptRecord(receipt, receipt.receiptId, 'test-evaluator-store', NOW);
+  const resolver = createTrustedQualityGateReceiptResolver('factory-resolver', 'test-store', () => record);
+  const resolution = resolver.resolve(receipt.receiptId);
+  assert.ok(resolution);
+  assert.equal(isVerifiedQualityGateReceiptResolution(resolution), true);
+  assert.equal(resolver.resolve('f'.repeat(64)), null);
+  const forgedRecord = JSON.parse(JSON.stringify(record)) as typeof record;
+  assert.equal(createTrustedQualityGateReceiptResolver('caller', 'caller', () => forgedRecord).resolve(receipt.receiptId), null);
+  const empty = { ...copied, criterionResults: [], gateResults: [] };
+  empty.receiptId = qualityGateReceiptDigest(empty);
+  assert.ok(validateCanonicalQualityGateReceipt(empty).includes('gate results are incomplete'));
+});
+
+test('stored receipt must be regenerated from re-admitted exact-scope evidence after restart', () => {
+  const i = input({ evaluationScope: 'pre-deployment-release-readiness' });
+  const receipt = evaluate(i);
+  const serialized = JSON.parse(JSON.stringify(receipt)) as typeof receipt;
+  const record = revalidateStoredQualityGateReceipt(serialized, admitTrustedFixture(i), 'revalidation-adapter');
+  assert.ok(createTrustedQualityGateReceiptResolver('factory-resolver', 'test-store', () => record).resolve(receipt.receiptId));
+  for (const amendedInput of [
+    { ...i, evaluationScope: 'full-lifecycle' as const },
+    { ...i, candidateSha: OLD_CANDIDATE },
+    { ...i, actualEvidence: automated().map((e) => ({ ...e, candidateSha: OLD_CANDIDATE })) },
+  ]) {
+    assert.throws(() => revalidateStoredQualityGateReceipt(serialized, admitTrustedFixture(amendedInput), 'revalidation-adapter'), /differs/);
+  }
+  serialized.scopeBindingId = 'a'.repeat(64);
+  assert.throws(() => revalidateStoredQualityGateReceipt(serialized, admitTrustedFixture(i), 'revalidation-adapter'), /differs/);
+});
+
+test('canonical receipt validation rejects malformed data, changed scopes, digests and missing authority flags', () => {
+  for (const malformed of [null, undefined, [], {}, { schemaVersion: '1.2.0' }]) {
+    assert.ok(validateCanonicalQualityGateReceipt(malformed).length > 0);
+  }
+  const receipt = evaluate(input({ evaluationScope: 'pre-deployment-release-readiness' }));
+  for (const tampered of [
+    { ...receipt, evaluationScope: 'unknown' },
+    { ...receipt, scopeBindingId: '0'.repeat(64) },
+    { ...receipt, receiptId: '0'.repeat(64) },
+    { ...receipt, candidateSha: 'not-a-sha' },
+    { ...receipt, controlPlane: { ...receipt.controlPlane, qualityEvidenceGrantsActionAuthority: undefined } },
+  ]) assert.ok(validateCanonicalQualityGateReceipt(tampered).length > 0);
 });

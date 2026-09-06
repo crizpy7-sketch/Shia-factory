@@ -132,6 +132,7 @@ export interface QualityGateReceipt {
   evaluationScope: QualityEvaluationScope;
   receiptStatus: 'current';
   scopeBindingId: string;
+  productionObservationRequirement: ProductionObservationRequirement;
   scopeStatus: {
     productionDeploymentObservation: ProductionObservationState;
     fullLifecycleEvaluation: 'required-after-production-observation' | 'current-evaluation';
@@ -145,6 +146,8 @@ export interface QualityGateReceipt {
   candidateSha: string;
   branch: string;
   riskTier: RiskTier;
+  changedPaths: string[];
+  changeSignals: QualityChangeSignals;
   taskContract: OrchestratorTaskContract;
   acceptanceCriteria: Array<{ id: string; statement: string; evidence: string[] }>;
   requiredEvidence: string[];
@@ -170,11 +173,47 @@ export interface QualityGateReceipt {
   evaluatedAt: string;
 }
 
+export interface TrustedQualityGateReceiptRecord {
+  sourceId: string;
+  evaluator: 'shia-factory-permanent-quality-gate/1.2.0';
+  receipt: QualityGateReceipt;
+  collector: string;
+  observedAt: string;
+  integrityDigest: string;
+}
+
+export interface VerifiedQualityGateReceiptResolution {
+  receipt: QualityGateReceipt;
+  provenance: {
+    sourceId: string;
+    evaluator: 'shia-factory-permanent-quality-gate/1.2.0';
+    resolverId: string;
+    resolverProvenance: string;
+    collector: string;
+    observedAt: string;
+    verificationState: 'verified';
+    integrityDigest: string;
+  };
+}
+
+export interface QualityGateReceiptResolver {
+  id: string;
+  provenance: string;
+  resolve(referenceId: string): VerifiedQualityGateReceiptResolution | null;
+}
+
 const SHA = /^[0-9a-f]{40,64}$/i;
 const TIERS: RiskTier[] = ['T0', 'T1', 'T2', 'T3', 'T4'];
 const UI_PATH = /(^|\/)(app|pages|components|ui|public|styles)(\/|$)|\.(tsx|jsx|css|scss|html)$/i;
 const SECURITY_PATH = /auth|permission|policy|secret|payment|stripe|database|migration|infra|deploy|session|tenant/i;
 const PERFORMANCE_PATH = /(^|\/)(api|server|backend|database|db|queries|media|images|video|audio|ai|models|workers|streams)(\/|$)/i;
+const QUALITY_SELF_CHANGE_PATH = /^(boris\/src\/quality\/|factory\/quality\/|agents\/quality-gate\/)|^boris\/src\/identity\/permanent-workforce\.ts$|^factory\/registry\/invocation-contracts\.json$/i;
+const EXPECTED_GATE_IDS: QualityGateId[] = ['automated-checks', 'browser-visual', 'accessibility',
+  'security-adversarial', 'performance', 'production-observation', 'dangerous-action-permission'];
+const PRE_DEPLOYMENT_DEFERRED_REQUIREMENTS = new Set(['production-observation', 'human_approval']);
+const mintedReceipts = new WeakSet<object>();
+const mintedReceiptRecords = new WeakSet<object>();
+const verifiedReceiptResolutions = new WeakSet<object>();
 
 export const QUALITY_GATE_RISK_MATRIX = {
   T0: { security: 'baseline', adversarial: false, cristianApproval: false },
@@ -198,6 +237,18 @@ function digest(value: unknown): string {
   return createHash('sha256').update(stable(value)).digest('hex');
 }
 
+function canonicalCopy<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const nested of Object.values(value as Record<string, unknown>)) deepFreeze(nested);
+    Object.freeze(value);
+  }
+  return value;
+}
+
 function unique<T>(items: readonly T[]): T[] {
   return [...new Set(items)];
 }
@@ -211,6 +262,11 @@ function evidenceAliases(kind: string): QualityEvidenceKind[] {
     'production-observation': ['production-observation'],
   };
   return aliases[kind] ?? [];
+}
+
+function changesQualityGate(input: Pick<CanonicalQualityGateInput, 'changedPaths' | 'changeSignals'>): boolean {
+  return input.changeSignals.subjectRoles.includes('quality-gate')
+    || input.changedPaths.some((changedPath) => QUALITY_SELF_CHANGE_PATH.test(changedPath));
 }
 
 function validateInput(input: CanonicalQualityGateInput): string[] {
@@ -363,7 +419,7 @@ function permissionGate(input: AdmittedQualityGateInput, evidence: AdmittedQuali
   const ensureCristian = (): void => {
     if (!approvals.some((item) => item.name === 'Cristian')) approvals.push({ name: 'Cristian', state: 'pending', evidenceId: null });
   };
-  if (input.riskTier === 'T4' || input.changeSignals.subjectRoles.includes('quality-gate')) ensureCristian();
+  if (input.riskTier === 'T4' || changesQualityGate(input)) ensureCristian();
   if (input.dangerousActions.some((request) => request.action !== 'secret-access')) ensureCristian();
 
   for (const approval of approvals) {
@@ -383,6 +439,10 @@ function permissionGate(input: AdmittedQualityGateInput, evidence: AdmittedQuali
       findings.push(finding(`permission:${request.action}`, 'P0', 'Quality Gate cannot grant direct secret access; the permanent authority matrix denies it.'));
       continue;
     }
+    if (request.authorization === 'denied') {
+      findings.push(finding(`permission:${request.action}`, 'P0', `${request.action} is explicitly denied; Quality cannot override denial.`));
+      continue;
+    }
     const exact = verifiedApprovals.find((approval) => approval.approvalId === request.approvalId
       && approval.taskId === input.taskId && approval.action === request.action
       && approval.candidateSha === input.candidateSha && approval.decidedBy === 'Cristian');
@@ -392,7 +452,7 @@ function permissionGate(input: AdmittedQualityGateInput, evidence: AdmittedQuali
   }
   const pending = approvals.filter((item) => item.state !== 'satisfied');
   const state: GateState = findings.length > 0 ? 'blocked'
-    : input.evaluationScope === 'pre-deployment-release-readiness' ? 'pass'
+    : input.evaluationScope === 'pre-deployment-release-readiness' ? pending.some((item) => item.name !== 'Cristian') ? 'blocked' : 'pass'
       : pending.length > 0 ? 'blocked' : 'pass';
   return {
     result: {
@@ -408,8 +468,6 @@ function permissionGate(input: AdmittedQualityGateInput, evidence: AdmittedQuali
     approvals,
   };
 }
-
-const PRE_DEPLOYMENT_DEFERRED_REQUIREMENTS = new Set(['production-observation', 'human_approval']);
 
 function criterionResults(input: CanonicalQualityGateInput, evidence: QualityEvidence[]): CriterionResult[] {
   return input.acceptanceCriteria.map((criterion) => {
@@ -466,10 +524,10 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
       ? ['Production deployment/observation and Cristian deployment authorization are outside this pre-deployment Quality evaluation.'] : []),
   ]);
 
-  const reviewerRequired = input.riskTier === 'T3' || input.riskTier === 'T4';
+  const reviewerRequired = input.riskTier === 'T3' || input.riskTier === 'T4' || changesQualityGate(input);
   const verifiedIndependentReview = currentEvidence.some((item) => item.kind === 'independent-review' && item.status === 'pass'
     && item.source === input.reviewer?.source);
-  const selfReview = input.changeSignals.subjectRoles.includes('quality-gate')
+  const selfReview = changesQualityGate(input)
     && (!input.reviewer || input.reviewer.id === 'quality-gate' || /quality-gate/i.test(input.reviewer.source));
   if (reviewerRequired && (!input.reviewer || !input.reviewer.independent || !verifiedIndependentReview)) limitations.push('Verified independent-review execution evidence and matching reviewer identity/source are required for T3/T4.');
   if (input.unverifiedEvidence.length > 0) limitations.push(`${input.unverifiedEvidence.length} raw evidence item(s) were preserved but excluded because provenance was not verified.`);
@@ -509,10 +567,11 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
   const scopeBindingId = qualityGateScopeBindingId({
     schemaVersion: '1.2.0', taskId: input.taskId, projectId: input.projectId, repository: input.repository,
     candidateSha: input.candidateSha, branch: input.branch, evaluationScope: input.evaluationScope,
+    productionObservationRequirement: input.productionObservationRequirement,
   });
   const base = {
     schemaVersion: '1.2.0' as const, evaluationScope: input.evaluationScope, receiptStatus: 'current' as const,
-    scopeBindingId,
+    scopeBindingId, productionObservationRequirement: input.productionObservationRequirement,
     scopeStatus: {
       productionDeploymentObservation,
       fullLifecycleEvaluation: input.evaluationScope === 'pre-deployment-release-readiness'
@@ -522,6 +581,7 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
     },
     finalState, taskId: input.taskId, projectId: input.projectId,
     repository: input.repository, candidateSha: input.candidateSha, branch: input.branch, riskTier: input.riskTier,
+    changedPaths: [...input.changedPaths], changeSignals: canonicalCopy(input.changeSignals),
     taskContract: input.taskContract, acceptanceCriteria: input.acceptanceCriteria, requiredEvidence: input.requiredEvidence,
     actualEvidence: currentEvidence, staleEvidence, rawEvidence: input.rawEvidence, unverifiedEvidence: input.unverifiedEvidence,
     governanceApprovals: input.governanceApprovals, unverifiedApprovals: input.unverifiedApprovals, criterionResults: criteria, gateResults: gates,
@@ -531,11 +591,13 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
     repair: { attempt: input.repair.attempt, maxAttempts: input.repair.maxAttempts, remainingAttempts: Math.max(0, input.repair.maxAttempts - input.repair.attempt) },
     evaluatedAt: input.evaluatedAt,
   };
-  return { ...base, receiptId: digest(base) };
+  const receipt = deepFreeze({ ...base, receiptId: digest(base) });
+  mintedReceipts.add(receipt);
+  return receipt;
 }
 
 export function qualityGateScopeBindingId(identity: Pick<QualityGateReceipt,
-  'schemaVersion' | 'taskId' | 'projectId' | 'repository' | 'candidateSha' | 'branch' | 'evaluationScope'>): string {
+  'schemaVersion' | 'taskId' | 'projectId' | 'repository' | 'candidateSha' | 'branch' | 'evaluationScope' | 'productionObservationRequirement'>): string {
   return digest({
     schemaVersion: identity.schemaVersion,
     taskId: identity.taskId,
@@ -544,12 +606,135 @@ export function qualityGateScopeBindingId(identity: Pick<QualityGateReceipt,
     candidateSha: identity.candidateSha,
     branch: identity.branch,
     evaluationScope: identity.evaluationScope,
+    productionObservationRequirement: identity.productionObservationRequirement,
   });
 }
 
 export function qualityGateReceiptDigest(receipt: QualityGateReceipt): string {
   const { receiptId: _receiptId, ...base } = receipt;
   return digest(base);
+}
+
+/** Structural rejection is fail-closed; validation alone never establishes trusted provenance. */
+export function validateCanonicalQualityGateReceipt(value: unknown): string[] {
+  try {
+    if (!isRecord(value)) return ['malformed Quality Gate receipt'];
+    return validateReceiptSemantics(value as unknown as QualityGateReceipt);
+  } catch {
+    return ['malformed Quality Gate receipt'];
+  }
+}
+
+function validateReceiptSemantics(receipt: QualityGateReceipt): string[] {
+  const errors: string[] = [];
+  if (receipt.schemaVersion !== '1.2.0' || receipt.receiptStatus !== 'current') errors.push('receipt is not canonical schema 1.2.0');
+  if (!['pre-deployment-release-readiness', 'full-lifecycle'].includes(receipt.evaluationScope)) errors.push('unsupported evaluation scope');
+  if (!SHA.test(receipt.candidateSha)) errors.push('candidate SHA is invalid');
+  if (qualityGateReceiptDigest(receipt) !== receipt.receiptId.toLowerCase()) errors.push('receipt digest mismatch');
+  if (qualityGateScopeBindingId(receipt) !== receipt.scopeBindingId.toLowerCase()) errors.push('scope binding mismatch');
+  if (receipt.controlPlane.authority !== 'shia-core' || receipt.controlPlane.qualityGateMayAcceptTask !== false
+    || receipt.controlPlane.gstackMayAcceptTask !== false || receipt.controlPlane.qualityEvidenceGrantsActionAuthority !== false
+    || receipt.scopeStatus.cristianApproval !== 'required-separately' || receipt.scopeStatus.deploymentAuthority !== 'not-granted') {
+    errors.push('receipt violates Quality authority boundaries');
+  }
+  if (receipt.taskContract.id !== receipt.taskId || receipt.taskContract.projectId !== receipt.projectId
+    || receipt.taskContract.repository.commit !== receipt.candidateSha || receipt.taskContract.repository.branch !== receipt.branch
+    || receipt.taskContract.risk.tier !== receipt.riskTier) errors.push('task contract identity mismatch');
+  if (stable(receipt.taskContract.acceptanceCriteria) !== stable(receipt.acceptanceCriteria)
+    || stable(receipt.taskContract.requiredEvidence) !== stable(receipt.requiredEvidence)) errors.push('task contract evidence snapshot mismatch');
+  if (receipt.criterionResults.length !== receipt.acceptanceCriteria.length
+    || new Set(receipt.criterionResults.map((item) => item.id)).size !== receipt.acceptanceCriteria.length
+    || receipt.acceptanceCriteria.some((criterion) => !receipt.criterionResults.some((result) => result.id === criterion.id))) {
+    errors.push('criterion results are incomplete');
+  }
+  const gateIds = receipt.gateResults.map((item) => item.id);
+  if (gateIds.length !== EXPECTED_GATE_IDS.length || new Set(gateIds).size !== EXPECTED_GATE_IDS.length
+    || EXPECTED_GATE_IDS.some((id) => !gateIds.includes(id))) errors.push('gate results are incomplete');
+  if (receipt.actualEvidence.some((item) => item.candidateSha !== receipt.candidateSha
+    || item.provenance.candidateSha !== receipt.candidateSha || item.provenance.taskId !== receipt.taskId
+    || item.provenance.repository !== receipt.repository || item.provenance.verificationState !== 'verified')) {
+    errors.push('admitted evidence identity mismatch');
+  }
+  if (receipt.evaluationScope === 'pre-deployment-release-readiness') {
+    const observation = receipt.gateResults.find((item) => item.id === 'production-observation');
+    if (receipt.productionObservationRequirement !== 'required'
+      || receipt.scopeStatus.productionDeploymentObservation !== 'not-evaluated-pre-deployment'
+      || receipt.scopeStatus.fullLifecycleEvaluation !== 'required-after-production-observation'
+      || observation?.applicable !== false || observation.state !== 'not-applicable') {
+      errors.push('pre-deployment scope falsely evaluates production observation');
+    }
+    if (receipt.criterionResults.some((item) => item.state === 'not-evaluated'
+      && !item.requiredEvidence.some((kind) => PRE_DEPLOYMENT_DEFERRED_REQUIREMENTS.has(kind)))) {
+      errors.push('pre-deployment receipt defers a non-deferred criterion');
+    }
+  } else {
+    if (receipt.scopeStatus.fullLifecycleEvaluation !== 'current-evaluation'
+      || receipt.scopeStatus.productionDeploymentObservation === 'not-evaluated-pre-deployment') {
+      errors.push('full-lifecycle scope has pre-deployment status');
+    }
+    if (receipt.productionObservationRequirement === 'required'
+      && receipt.scopeStatus.productionDeploymentObservation !== 'pass' && receipt.finalState === 'pass') {
+      errors.push('full-lifecycle pass lacks production observation');
+    }
+  }
+  if (receipt.finalState === 'pass' && (receipt.staleEvidence.length > 0 || receipt.unverifiedEvidence.length > 0
+    || receipt.unverifiedApprovals.length > 0 || receipt.gateResults.some((item) => item.applicable && item.state !== 'pass')
+    || receipt.criterionResults.some((item) => !['pass', 'not-evaluated'].includes(item.state)))) {
+    errors.push('pass receipt contains unresolved evidence or gate state');
+  }
+  return unique(errors);
+}
+
+function receiptRecordDigest(record: Omit<TrustedQualityGateReceiptRecord, 'integrityDigest'>): string {
+  return digest(record);
+}
+
+export function createQualityGateReceiptRecord(
+  receipt: QualityGateReceipt, sourceId: string, collector: string, observedAt: string,
+): TrustedQualityGateReceiptRecord {
+  if (!mintedReceipts.has(receipt)) throw new Error('Only the permanent Quality Gate evaluator can create a trusted receipt record');
+  if (!sourceId.trim() || !collector.trim() || Number.isNaN(Date.parse(observedAt))) throw new Error('Trusted receipt provenance is incomplete');
+  const base = { sourceId, evaluator: 'shia-factory-permanent-quality-gate/1.2.0' as const,
+    receipt: canonicalCopy(receipt), collector, observedAt };
+  const record = deepFreeze({ ...base, integrityDigest: receiptRecordDigest(base) });
+  mintedReceiptRecords.add(record);
+  return record;
+}
+
+/** Serialization is not proof of minting. Re-admit evidence and rerun the permanent evaluator after restart. */
+export function revalidateStoredQualityGateReceipt(
+  stored: QualityGateReceipt, admittedInput: AdmittedQualityGateInput, collector: string,
+): TrustedQualityGateReceiptRecord {
+  const regenerated = evaluateQualityGate(admittedInput);
+  if (stored.receiptId !== regenerated.receiptId || qualityGateReceiptDigest(stored) !== regenerated.receiptId) {
+    throw new Error('Stored receipt differs from the permanent evaluator result for re-admitted exact-scope evidence');
+  }
+  return createQualityGateReceiptRecord(regenerated, regenerated.receiptId, collector, regenerated.evaluatedAt);
+}
+
+export function createTrustedQualityGateReceiptResolver(
+  id: string, provenance: string, resolveRecord: (sourceId: string) => TrustedQualityGateReceiptRecord | null,
+): QualityGateReceiptResolver {
+  if (!id.trim() || !provenance.trim()) throw new Error('Trusted Quality Gate receipt resolver identity is required');
+  return { id, provenance, resolve(referenceId) {
+    const record = resolveRecord(referenceId);
+    if (!record || !mintedReceiptRecords.has(record) || record.sourceId !== referenceId || record.receipt.receiptId !== referenceId
+      || record.evaluator !== 'shia-factory-permanent-quality-gate/1.2.0') return null;
+    const { integrityDigest, ...base } = record;
+    if (receiptRecordDigest(base) !== integrityDigest.toLowerCase()
+      || validateCanonicalQualityGateReceipt(record.receipt).length > 0) return null;
+    const resolution = deepFreeze({ receipt: canonicalCopy(record.receipt), provenance: {
+      sourceId: record.sourceId, evaluator: record.evaluator, resolverId: id, resolverProvenance: provenance,
+      collector: record.collector, observedAt: record.observedAt, verificationState: 'verified' as const,
+      integrityDigest: record.integrityDigest,
+    } });
+    verifiedReceiptResolutions.add(resolution);
+    return resolution;
+  } };
+}
+
+export function isVerifiedQualityGateReceiptResolution(value: object): boolean {
+  return verifiedReceiptResolutions.has(value);
 }
 
 export async function persistQualityGateReceipt(receipt: QualityGateReceipt, directory: string): Promise<string> {

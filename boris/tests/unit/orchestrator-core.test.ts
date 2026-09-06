@@ -22,7 +22,10 @@ import {
   type TrustedProductionBaselineRecord,
 } from '../../src/factory/orchestrator-core.js';
 import type { ApprovalRequest } from '../../src/domain/types.js';
-import { qualityGateReceiptDigest, qualityGateScopeBindingId, type QualityGateReceipt } from '../../src/quality/quality-gate.js';
+import { createQualityGateReceiptRecord, createTrustedQualityGateReceiptResolver, evaluateQualityGate,
+  qualityGateReceiptDigest, qualityGateScopeBindingId, type QualityEvidence, type QualityEvaluationScope,
+  type QualityGateInput, type QualityGateReceipt } from '../../src/quality/quality-gate.js';
+import { admitTrustedFixture } from '../helpers/quality-admission.js';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../../..');
 const profileSource = await readFile(path.join(repoRoot, 'APP_PROFILE.yaml'), 'utf8');
@@ -155,6 +158,7 @@ function deploymentRequest(overrides: Partial<NonNullable<OrchestrationRequest['
     objective: 'Build, test and deploy a bounded production change.',
     requestedCapabilities: ['engineering', 'test-verification', 'vps-deployment'],
     requestedActions: ['inspect', 'plan', 'build', 'test', 'deploy'],
+    acceptanceCriteria: [{ id: 'AC-DEPLOY', statement: 'The exact candidate passes deterministic verification.', evidence: ['test'] }],
   });
   return { ...base, productionDeployment: { environment: 'production', existingApplication: true,
     repository: 'repo', candidateSha: base.repository.commit, ...overrides } };
@@ -175,20 +179,39 @@ function trustedBaseline(candidateSha = request().repository.commit, healthSha =
   return { ...base, integrityDigest: productionBaselineDigest(base) };
 }
 
-function trustedQualityReceipt(taskId: string, candidateSha: string): QualityGateReceipt {
-  const receipt = {
-    schemaVersion: '1.2.0', receiptId: '', evaluationScope: 'pre-deployment-release-readiness', receiptStatus: 'current', scopeBindingId: '',
-    scopeStatus: { productionDeploymentObservation: 'not-evaluated-pre-deployment',
-      fullLifecycleEvaluation: 'required-after-production-observation', cristianApproval: 'required-separately', deploymentAuthority: 'not-granted' },
-    finalState: 'pass', taskId, projectId: 'fixture-app', repository: 'repo',
-    candidateSha, branch: 'main', riskTier: 'T3', staleEvidence: [], unverifiedEvidence: [], unverifiedApprovals: [],
-    criterionResults: [], gateResults: [],
-    controlPlane: { authority: 'shia-core', qualityGateMayAcceptTask: false, gstackMayAcceptTask: false,
-      qualityEvidenceGrantsActionAuthority: false },
-  } as unknown as QualityGateReceipt;
-  receipt.scopeBindingId = qualityGateScopeBindingId(receipt);
-  receipt.receiptId = qualityGateReceiptDigest(receipt);
-  return receipt;
+function trustedQualityReceipt(taskId: string, candidateSha: string,
+  evaluationScope: QualityEvaluationScope = 'pre-deployment-release-readiness'): QualityGateReceipt {
+  const acceptanceCriteria = [{ id: 'AC-DEPLOY', statement: 'The exact candidate passes deterministic verification.', evidence: ['test'] }];
+  const taskContract = {
+    schemaVersion: '1.0.0' as const, id: taskId, projectId: 'fixture-app', objective: 'Verify the exact production candidate.',
+    outcome: 'Trusted release-readiness evidence.', repository: { commit: candidateSha, branch: 'main' }, profileDigest: 'd'.repeat(64),
+    risk: { tier: 'T3' as const, reasons: ['production release'] }, reuse: { searched: true as const, findings: [], creationDisposition: 'reuse-search-recorded' as const },
+    selectedRoles: [], selectedSkillPacks: [], selectedTools: [], acceptanceCriteria, requiredEvidence: ['test', 'review'],
+    allowedActions: [], approvalGates: ['Cristian'], executionBlocked: false, executionBlockers: [],
+    certificationReleaseBlocked: true, certificationReleaseBlockers: ['Cristian deployment approval remains separate.'], blocked: false, blockers: [],
+  };
+  const kinds: QualityEvidence['kind'][] = ['typecheck', 'lint', 'unit', 'integration', 'security', 'adversarial', 'independent-review'];
+  if (evaluationScope === 'full-lifecycle') kinds.push('production-observation');
+  const actualEvidence = kinds.map((kind): QualityEvidence => ({ id: `E-${kind}`, kind, candidateSha, status: 'pass',
+    source: kind === 'independent-review' ? 'independent:deployment-review' : `trusted:${kind}`, summary: `${kind} passed`,
+    criterionIds: kind === 'unit' ? ['AC-DEPLOY'] : [], observedAt: '2026-08-30T22:32:00Z', method: 'automated-tool',
+    testedSurfaces: kind === 'production-observation' ? ['production:/api/ready'] : ['candidate'],
+  }));
+  const input: QualityGateInput = { taskId, projectId: 'fixture-app', repository: 'repo', candidateSha, branch: 'main', riskTier: 'T3',
+    taskContract, acceptanceCriteria, requiredEvidence: taskContract.requiredEvidence, actualEvidence,
+    changedPaths: ['docs/deploy/auto-deploy.sh'], changeSignals: { userFacing: false, securitySurfaces: ['deployment'],
+      performanceSurfaces: [], performanceFailureMaterial: false, subjectRoles: [] },
+    dangerousActions: [{ action: 'deploy', authorization: 'pending' }],
+    reviewer: { id: 'external-reviewer', source: 'independent:deployment-review', independent: true },
+    repair: { attempt: 0, maxAttempts: 2 }, evaluatedAt: '2026-08-30T22:33:00Z', evaluationScope,
+    productionObservationRequirement: 'required' };
+  return evaluateQualityGate(admitTrustedFixture(input));
+}
+
+function trustedReceiptResolver(receipt: QualityGateReceipt) {
+  const record = createQualityGateReceiptRecord(receipt, receipt.receiptId, 'quality-receipt-store', receipt.evaluatedAt);
+  return createTrustedQualityGateReceiptResolver('quality-resolver', 'trusted-test-receipt-store',
+    (id) => id === record.sourceId ? record : null);
 }
 
 function approvedDeployment(taskId: string, candidateSha: string): ApprovalRequest {
@@ -203,7 +226,7 @@ function completeDeploymentDependencies(candidateRequest: OrchestrationRequest, 
   const approval = approvedDeployment(candidateRequest.taskId, candidateRequest.repository.commit);
   return {
     baselineResolver: { id: 'baseline-resolver', provenance: 'test', resolve: (id) => id === baseline.referenceId ? baseline : null },
-    qualityReceiptResolver: { id: 'quality-resolver', provenance: 'test', resolve: (id) => id === receipt.receiptId ? receipt : null },
+    qualityReceiptResolver: trustedReceiptResolver(receipt),
     governanceApprovalResolver: { id: 'approval-resolver', provenance: 'test', resolve: (id) => id === approval.id ? approval : null },
   };
 }
@@ -236,7 +259,7 @@ test('approval or Quality receipt alone cannot clear missing production baseline
   const receipt = trustedQualityReceipt(baseRequest.taskId, baseRequest.repository.commit);
   const qualityOnly = deploymentRequest({ qualityReceiptReferenceId: receipt.receiptId });
   const qualityContract = buildTaskContract(profile(), registries, qualityOnly, [], undefined, {
-    qualityReceiptResolver: { id: 'quality-resolver', provenance: 'test', resolve: () => receipt },
+    qualityReceiptResolver: trustedReceiptResolver(receipt),
   });
   assert.equal(qualityContract.deployment?.state, 'precondition-blocked');
   assert.ok(qualityContract.deployment?.blockers.some((item) => /health-baseline/.test(item)));
@@ -245,19 +268,50 @@ test('approval or Quality receipt alone cannot clear missing production baseline
 
 test('full-lifecycle receipt cannot substitute for canonical pre-deployment release readiness', () => {
   const initial = deploymentRequest();
-  const receipt = trustedQualityReceipt(initial.taskId, initial.repository.commit);
-  receipt.evaluationScope = 'full-lifecycle';
-  receipt.scopeStatus = { productionDeploymentObservation: 'pass', fullLifecycleEvaluation: 'current-evaluation',
-    cristianApproval: 'required-separately', deploymentAuthority: 'not-granted' };
-  receipt.scopeBindingId = qualityGateScopeBindingId(receipt);
-  receipt.receiptId = qualityGateReceiptDigest(receipt);
+  const receipt = trustedQualityReceipt(initial.taskId, initial.repository.commit, 'full-lifecycle');
   const approval = approvedDeployment(initial.taskId, initial.repository.commit);
   const candidate = deploymentRequest({ baselineReferenceId: 'baseline-1', qualityReceiptReferenceId: receipt.receiptId, approvalId: approval.id });
   const dependencies = completeDeploymentDependencies(candidate);
-  dependencies.qualityReceiptResolver = { id: 'quality-resolver', provenance: 'test', resolve: () => receipt };
+  dependencies.qualityReceiptResolver = trustedReceiptResolver(receipt);
   const result = buildTaskContract(profile(), registries, candidate, [], undefined, dependencies);
   assert.equal(result.deployment?.state, 'precondition-blocked');
   assert.ok(result.deployment?.blockers.some((blocker) => /canonical authority-preserving pre-deployment/.test(blocker)));
+});
+
+test('hand-authored digest-valid receipt cannot satisfy the trusted permanent-evaluator boundary', () => {
+  const initial = deploymentRequest();
+  const legitimate = trustedQualityReceipt(initial.taskId, initial.repository.commit);
+  const fake = JSON.parse(JSON.stringify(legitimate)) as QualityGateReceipt;
+  fake.criterionResults = [];
+  fake.gateResults = [];
+  fake.scopeBindingId = qualityGateScopeBindingId(fake);
+  fake.receiptId = qualityGateReceiptDigest(fake);
+  const approval = approvedDeployment(initial.taskId, initial.repository.commit);
+  const candidate = deploymentRequest({ baselineReferenceId: 'baseline-1', qualityReceiptReferenceId: fake.receiptId, approvalId: approval.id });
+  const dependencies = completeDeploymentDependencies(candidate);
+  dependencies.qualityReceiptResolver = { id: 'caller-resolver', provenance: 'caller', resolve: () => ({ receipt: fake,
+    provenance: { sourceId: fake.receiptId, evaluator: 'shia-factory-permanent-quality-gate/1.2.0', resolverId: 'caller-resolver',
+      resolverProvenance: 'caller', collector: 'caller', observedAt: fake.evaluatedAt, verificationState: 'verified',
+      integrityDigest: 'a'.repeat(64) } }) };
+  const result = buildTaskContract(profile(), registries, candidate, [], undefined, dependencies);
+  assert.equal(result.deployment?.state, 'precondition-blocked');
+  assert.ok(result.deployment?.blockers.some((blocker) => /Trusted resolver could not verify/.test(blocker)));
+});
+
+test('a trusted exact-SHA receipt cannot be replayed for another branch or acceptance contract', () => {
+  const initial = deploymentRequest();
+  const receipt = trustedQualityReceipt(initial.taskId, initial.repository.commit);
+  const approval = approvedDeployment(initial.taskId, initial.repository.commit);
+  const candidate = deploymentRequest({ baselineReferenceId: 'baseline-1', qualityReceiptReferenceId: receipt.receiptId, approvalId: approval.id });
+  const dependencies = completeDeploymentDependencies(candidate);
+  for (const changed of [
+    { ...candidate, repository: { ...candidate.repository, branch: 'another-branch' } },
+    { ...candidate, acceptanceCriteria: [{ id: 'AC-OTHER', statement: 'Different scope.', evidence: ['test'] }] },
+  ]) {
+    const result = buildTaskContract(profile(), registries, changed, [], undefined, dependencies);
+    assert.equal(result.deployment?.state, 'precondition-blocked');
+    assert.ok(result.deployment?.blockers.some((blocker) => /exact-candidate-quality-receipt/.test(blocker)));
+  }
 });
 
 test('stale production observation cannot clear deploy while complete matching trusted evidence may make it eligible', () => {

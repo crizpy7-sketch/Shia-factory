@@ -6,7 +6,8 @@ import { decideShelfReuse, loadShelfCatalog,
   type LoadedShelfAsset, type ShelfCatalogVerificationDependencies, type ShelfReuseDecision } from './reusable-shelf.js';
 import { admitGovernanceApprovalReference, isVerifiedGovernanceApproval,
   type GovernanceApprovalResolver } from '../quality/evidence-admission.js';
-import { qualityGateReceiptDigest, qualityGateScopeBindingId, type QualityGateReceipt } from '../quality/quality-gate.js';
+import { isVerifiedQualityGateReceiptResolution, validateCanonicalQualityGateReceipt,
+  type QualityGateReceiptResolver } from '../quality/quality-gate.js';
 
 type JsonObject = Record<string, unknown>;
 type ReuseState = 'verified' | 'unverified' | 'legacy' | 'candidate';
@@ -146,15 +147,9 @@ export interface ProductionBaselineResolver {
   resolve(referenceId: string): TrustedProductionBaselineRecord | null;
 }
 
-export interface ProductionQualityReceiptResolver {
-  id: string;
-  provenance: string;
-  resolve(referenceId: string): QualityGateReceipt | null;
-}
-
 export interface ProductionDeploymentDependencies {
   baselineResolver?: ProductionBaselineResolver;
-  qualityReceiptResolver?: ProductionQualityReceiptResolver;
+  qualityReceiptResolver?: QualityGateReceiptResolver;
   governanceApprovalResolver?: GovernanceApprovalResolver;
 }
 
@@ -640,7 +635,7 @@ function missingDeploymentPrecondition(id: DeploymentPreconditionId, reason: str
 
 function verifiedQualityReceipt(
   referenceId: string | undefined,
-  resolver: ProductionQualityReceiptResolver | undefined,
+  resolver: QualityGateReceiptResolver | undefined,
   request: OrchestrationRequest,
   deployment: ProductionDeploymentRequest,
   projectId: string,
@@ -648,12 +643,18 @@ function verifiedQualityReceipt(
   const id: DeploymentPreconditionId = 'exact-candidate-quality-receipt';
   if (!referenceId) return missingDeploymentPrecondition(id, 'Exact-candidate Quality Gate receipt reference is missing.');
   if (!resolver) return { id, state: 'unverified', evidenceReference: referenceId, reason: 'No trusted Quality Gate receipt resolver is configured.' };
-  const receipt = resolver.resolve(referenceId);
-  if (!receipt || receipt.receiptId !== referenceId || qualityGateReceiptDigest(receipt) !== receipt.receiptId.toLowerCase()) {
+  const resolution = resolver.resolve(referenceId);
+  if (!resolution || !isVerifiedQualityGateReceiptResolution(resolution)
+    || resolution.provenance.sourceId !== referenceId || !resolution.provenance.resolverId.trim()
+    || !resolution.provenance.resolverProvenance.trim()) {
     return { id, state: 'unverified', evidenceReference: referenceId, reason: 'Trusted resolver could not verify the Quality Gate receipt and its integrity.' };
   }
+  const receipt = resolution.receipt;
+  if (receipt.receiptId !== referenceId || validateCanonicalQualityGateReceipt(receipt).length > 0) {
+    return { id, state: 'unverified', evidenceReference: referenceId, reason: 'Trusted resolver returned a noncanonical or incomplete Quality Gate receipt.' };
+  }
   if (receipt.schemaVersion !== '1.2.0' || receipt.evaluationScope !== 'pre-deployment-release-readiness'
-    || receipt.receiptStatus !== 'current' || qualityGateScopeBindingId(receipt) !== receipt.scopeBindingId.toLowerCase()
+    || receipt.receiptStatus !== 'current' || receipt.productionObservationRequirement !== 'required'
     || receipt.scopeStatus.productionDeploymentObservation !== 'not-evaluated-pre-deployment'
     || receipt.scopeStatus.fullLifecycleEvaluation !== 'required-after-production-observation'
     || receipt.scopeStatus.cristianApproval !== 'required-separately'
@@ -664,7 +665,9 @@ function verifiedQualityReceipt(
       reason: 'Quality Gate receipt is not a canonical authority-preserving pre-deployment release-readiness receipt.' };
   }
   if (receipt.candidateSha !== deployment.candidateSha || receipt.taskId !== request.taskId
-    || receipt.projectId !== projectId || receipt.repository !== deployment.repository) {
+    || receipt.projectId !== projectId || receipt.repository !== deployment.repository || receipt.branch !== request.repository.branch
+    || receipt.taskContract.repository.commit !== deployment.candidateSha
+    || stable(receipt.acceptanceCriteria) !== stable(request.acceptanceCriteria)) {
     return { id, state: 'mismatch', evidenceReference: referenceId, reason: 'Quality Gate receipt is not bound to this task, repository and exact candidate SHA.' };
   }
   if (receipt.finalState !== 'pass' || receipt.staleEvidence.length > 0 || receipt.unverifiedEvidence.length > 0
