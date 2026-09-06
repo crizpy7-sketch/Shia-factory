@@ -6,13 +6,14 @@ function sourceTypeFor(kind: QualityEvidenceKind): TrustedExecutionRecord['sourc
   const sources: Partial<Record<QualityEvidenceKind, TrustedExecutionRecord['sourceType']>> = {
     typecheck: 'boris-test-run', lint: 'boris-test-run', unit: 'boris-test-run', integration: 'boris-test-run', e2e: 'boris-test-run',
     browser: 'browser-runner', accessibility: 'accessibility-runner', security: 'security-runner', adversarial: 'security-runner',
-    performance: 'performance-runner', 'independent-review': 'independent-reviewer',
+    performance: 'performance-runner', 'production-observation': 'production-observer', 'independent-review': 'independent-reviewer',
   };
   return sources[kind] ?? null;
 }
-function recordFor(raw: QualityEvidence, sourceType: TrustedExecutionRecord['sourceType']): TrustedExecutionRecord {
+function recordFor(input: QualityGateInput, raw: QualityEvidence, sourceType: TrustedExecutionRecord['sourceType']): TrustedExecutionRecord {
   const base: Omit<TrustedExecutionRecord, 'integrityDigest'> = {
-    kind: raw.kind, candidateSha: raw.candidateSha, status: raw.status, source: raw.source, summary: raw.summary,
+    taskId: input.taskId, repository: input.repository, kind: raw.kind, candidateSha: raw.candidateSha,
+    status: raw.status, source: raw.source, summary: raw.summary,
     criterionIds: [...raw.criterionIds], observedAt: raw.observedAt, method: raw.method, testedSurfaces: raw.testedSurfaces,
     untestedSurfaces: raw.untestedSurfaces, browser: raw.browser, artifact: raw.artifact, findings: raw.findings,
     thresholds: raw.thresholds, measurements: raw.measurements, sourceType, sourceId: `trusted:${raw.id}`,
@@ -26,7 +27,7 @@ export function trustedFixtureDependencies(input: QualityGateInput, additional: 
     const sourceType = excludedKinds.includes(item.kind) ? null : sourceTypeFor(item.kind);
     if (!sourceType) return { ...item };
     const claimed = { ...item, provenance: { sourceType, sourceId: `trusted:${item.id}`, runId: `run:${item.id}` } };
-    records.set(`trusted:${item.id}`, recordFor(claimed, sourceType));
+    records.set(`trusted:${item.id}`, recordFor(input, claimed, sourceType));
     return claimed;
   });
   const types = [...new Set([...records.values()].map((record) => record.sourceType))];

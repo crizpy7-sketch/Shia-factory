@@ -1,10 +1,22 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "control_plane": "shia-core",
   "quality_gate_role": "quality-gate",
   "gstack_role": "evidence-source-only",
   "evidence_admission": {"raw_evidence_counts":false,"verified_provenance_required":true,"caller_approval_claims_count":false,"governance_approval_source":"existing-factory-approval-infrastructure","visual_artifact_requires":["trusted-artifact-record","retained-bytes","computed-sha256-match","exact-candidate-binding"]},
   "automated_checks": ["typecheck", "lint", "unit", "integration"],
+  "evaluation_scopes": {
+    "pre-deployment-release-readiness": {
+      "production_deployment_observation": "not-evaluated-pre-deployment",
+      "cristian_deployment_approval": "required-separately",
+      "quality_evidence_grants_action_authority": false
+    },
+    "full-lifecycle": {
+      "production_deployment_observation": "required-when-applicable",
+      "cristian_deployment_approval": "independently-governed",
+      "quality_evidence_grants_action_authority": false
+    }
+  },
   "risk_matrix": {
     "T0": { "security": "baseline", "adversarial": false, "cristian_approval": false },
     "T1": { "security": "baseline", "adversarial": false, "cristian_approval": false },

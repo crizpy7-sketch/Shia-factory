@@ -53,6 +53,14 @@ jobs:
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Record exact candidate identity
+        working-directory: .
+        run: |
+          git rev-parse HEAD
+          git rev-parse 'HEAD^{tree}'
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
@@ -91,7 +99,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: quality-gate-evidence-${{ github.sha }}
+          name: quality-gate-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: factory/quality/evidence/
           if-no-files-found: ignore
           retention-days: 30

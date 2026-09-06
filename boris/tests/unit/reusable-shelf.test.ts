@@ -70,7 +70,7 @@ function evidence(kind: QualityEvidence['kind']): QualityEvidence {
   };
 }
 
-function passingReceipt(assetId = 'block:test-forms', version = '1.0.0'): QualityGateReceipt {
+function passingReceipt(assetId = 'block:test-forms', version = '1.0.0', evaluationScope?: QualityGateInput['evaluationScope']): QualityGateReceipt {
   const contract = buildTaskContract(profile(), registries, request(assetId, version), []);
   const input: QualityGateInput = {
     taskId: contract.id, projectId: contract.projectId, repository: 'repo', candidateSha: CANDIDATE, branch: contract.repository.branch,
@@ -78,11 +78,33 @@ function passingReceipt(assetId = 'block:test-forms', version = '1.0.0'): Qualit
     actualEvidence: ['typecheck', 'lint', 'unit', 'integration', 'security'].map((kind) => evidence(kind as QualityEvidence['kind'])),
     changedPaths: ['src/asset.ts'], changeSignals: { userFacing: false, securitySurfaces: [], performanceSurfaces: [], performanceFailureMaterial: false, subjectRoles: [] },
     dangerousActions: [], reviewer: null, repair: { attempt: 0, maxAttempts: 2 }, evaluatedAt: '2026-08-30T00:00:00Z',
+    evaluationScope,
   };
   const receipt = evaluateQualityGate(admitTrustedFixture(input));
   assert.equal(receipt.finalState, 'pass');
   return receipt;
 }
+
+test('Shelf admission and stored-admitted verification reject pre-deployment-only Quality passes', () => {
+  const readiness = passingReceipt('block:test-forms', '1.0.0', 'pre-deployment-release-readiness');
+  assert.equal(readiness.finalState, 'pass');
+  assert.equal(readiness.scopeStatus.productionDeploymentObservation, 'not-evaluated-pre-deployment');
+  const candidate = manifest(readiness);
+  assert.notEqual(admitShelfCandidate(candidate, context([readiness])).state, 'admitted');
+  assert.notEqual(verifyAdmittedShelfAsset({ ...candidate, lifecycle: 'admitted' }, context([readiness])).state, 'admitted');
+  assert.equal(admitShelfCandidate(manifest(passingReceipt()), context([passingReceipt()])).state, 'admitted');
+});
+
+test('historical unscoped 1.1 Shelf receipt meaning remains compatible', () => {
+  const historical = JSON.parse(JSON.stringify(passingReceipt())) as Record<string, unknown>;
+  historical.schemaVersion = '1.1.0';
+  for (const key of ['evaluationScope', 'receiptStatus', 'scopeBindingId', 'scopeStatus',
+    'productionObservationRequirement', 'changedPaths', 'changeSignals']) delete historical[key];
+  historical.gateResults = (historical.gateResults as QualityGateReceipt['gateResults']).filter((item) => item.id !== 'production-observation');
+  const receipt = historical as unknown as QualityGateReceipt;
+  receipt.receiptId = qualityReceiptDigest(receipt);
+  assert.equal(admitShelfCandidate(manifest(receipt), context([receipt])).state, 'admitted');
+});
 
 function blueprintContract(): ShelfAssetManifest['blueprint'] {
   return { appProfileDefaults: {}, requiredRoles: ['shia-core', 'boris'], skillPacks: ['product', 'engineering'],

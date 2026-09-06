@@ -9,6 +9,13 @@ import {
   QUALITY_GATE_RISK_MATRIX,
   evaluateQualityGate,
   persistQualityGateReceipt,
+  qualityGateReceiptDigest,
+  qualityGateScopeBindingId,
+  createQualityGateReceiptRecord,
+  createTrustedQualityGateReceiptResolver,
+  isVerifiedQualityGateReceiptResolution,
+  revalidateStoredQualityGateReceipt,
+  validateCanonicalQualityGateReceipt,
   type QualityEvidence,
   type QualityGateInput,
 } from '../../src/quality/quality-gate.js';
@@ -20,7 +27,7 @@ const NOW = '2026-08-28T20:00:00Z';
 function contract(overrides: Partial<OrchestratorTaskContract> = {}): OrchestratorTaskContract {
   return {
     schemaVersion: '1.0.0', id: 'TASK-5', projectId: 'shia-factory', objective: 'Verify Phase 5.', outcome: 'Evidence-based quality.',
-    repository: { commit: 'c'.repeat(40), branch: 'migration/core-v2-phase5-quality-safety' }, profileDigest: 'd'.repeat(64),
+    repository: { commit: CANDIDATE, branch: 'migration/core-v2-phase5-quality-safety' }, profileDigest: 'd'.repeat(64),
     risk: { tier: 'T2', reasons: ['normal behavior'] }, reuse: { searched: true, findings: [], creationDisposition: 'reuse-search-recorded' },
     selectedRoles: [], selectedSkillPacks: [], selectedTools: [],
     acceptanceCriteria: [{ id: 'AC-1', statement: 'The exact candidate passes deterministic checks.', evidence: ['test'] }],
@@ -47,7 +54,7 @@ function input(overrides: Partial<QualityGateInput> = {}): QualityGateInput {
     taskId: taskContract.id, projectId: taskContract.projectId, repository: 'crizpy7-sketch/Shia-factory', candidateSha: CANDIDATE,
     branch: taskContract.repository.branch, riskTier: taskContract.risk.tier, taskContract,
     acceptanceCriteria: taskContract.acceptanceCriteria, requiredEvidence: taskContract.requiredEvidence,
-    actualEvidence: automated(), changedPaths: ['boris/src/quality/quality-gate.ts'],
+    actualEvidence: automated(), changedPaths: ['src/value.ts'],
     changeSignals: { userFacing: false, securitySurfaces: [], performanceSurfaces: [], performanceFailureMaterial: false, subjectRoles: [] },
     dangerousActions: [], reviewer: null, repair: { attempt: 0, maxAttempts: 2 }, evaluatedAt: NOW,
     ...overrides,
@@ -220,6 +227,119 @@ test('Shia Core remains acceptance authority and GStack evidence cannot mark a t
   assert.equal(receipt.controlPlane.qualityGateMayAcceptTask, false);
 });
 
+test('legacy unscoped input is normalized to backward-compatible full-lifecycle semantics', () => {
+  const receipt = evaluate(input());
+  assert.equal(receipt.schemaVersion, '1.2.0');
+  assert.equal(receipt.evaluationScope, 'full-lifecycle');
+  assert.equal(receipt.scopeStatus.productionDeploymentObservation, 'not-applicable');
+  assert.equal(receipt.scopeStatus.fullLifecycleEvaluation, 'current-evaluation');
+  assert.equal(receipt.finalState, 'pass');
+});
+
+test('pre-deployment release readiness can pass while production observation and Cristian authority remain deferred', () => {
+  const preDeployment = contract({
+    risk: { tier: 'T3', reasons: ['production release'] },
+    requiredEvidence: ['test', 'review', 'production-observation', 'human_approval'],
+    approvalGates: ['Cristian'],
+    acceptanceCriteria: [
+      { id: 'AC-1', statement: 'The candidate passes deterministic checks.', evidence: ['test'] },
+      { id: 'AC-2', statement: 'Production is observed after deployment.', evidence: ['production-observation'] },
+    ],
+  });
+  const reviewerSource = 'independent-reviewer:phase7';
+  const receipt = evaluate(input({
+    taskContract: preDeployment, riskTier: 'T3', acceptanceCriteria: preDeployment.acceptanceCriteria,
+    requiredEvidence: preDeployment.requiredEvidence, evaluationScope: 'pre-deployment-release-readiness',
+    productionObservationRequirement: 'required', dangerousActions: [{ action: 'deploy', authorization: 'pending' }],
+    actualEvidence: [...automated(), evidence('security'), evidence('adversarial'),
+      evidence('independent-review', { source: reviewerSource })],
+    reviewer: { id: 'codex-independent-review', source: reviewerSource, independent: true },
+  }));
+  assert.equal(receipt.finalState, 'pass');
+  assert.equal(receipt.scopeStatus.productionDeploymentObservation, 'not-evaluated-pre-deployment');
+  assert.equal(receipt.scopeStatus.cristianApproval, 'required-separately');
+  assert.equal(receipt.scopeStatus.deploymentAuthority, 'not-granted');
+  assert.equal(receipt.criterionResults.find((criterion) => criterion.id === 'AC-2')?.state, 'not-evaluated');
+  assert.equal(receipt.gateResults.find((gate) => gate.id === 'production-observation')?.state, 'not-applicable');
+  assert.equal(receipt.approvalGates.find((gate) => gate.name === 'Cristian')?.state, 'pending');
+  assert.equal(receipt.controlPlane.qualityEvidenceGrantsActionAuthority, false);
+});
+
+test('full lifecycle cannot pass required production observation without admitted exact-candidate evidence', () => {
+  const missing = evaluate(input({ evaluationScope: 'full-lifecycle', productionObservationRequirement: 'required' }));
+  assert.equal(missing.finalState, 'needs-evidence');
+  assert.equal(missing.scopeStatus.productionDeploymentObservation, 'needs-evidence');
+  assert.equal(missing.gateResults.find((gate) => gate.id === 'production-observation')?.state, 'needs-evidence');
+
+  const complete = evaluate(input({
+    evaluationScope: 'full-lifecycle', productionObservationRequirement: 'required',
+    actualEvidence: [...automated(), evidence('production-observation', {
+      method: 'manual-observation', testedSurfaces: ['production:/api/ready'],
+      summary: 'Trusted production observer reconciled the running release.',
+    })],
+  }));
+  assert.equal(complete.finalState, 'pass');
+  assert.equal(complete.scopeStatus.productionDeploymentObservation, 'pass');
+});
+
+test('explicit full-lifecycle defaults to required observation and deploy scope cannot opt out', () => {
+  const explicit = evaluate(input({ evaluationScope: 'full-lifecycle' }));
+  assert.equal(explicit.finalState, 'needs-evidence');
+  assert.equal(explicit.scopeStatus.productionDeploymentObservation, 'needs-evidence');
+
+  const deployContract = contract({ allowedActions: [{ action: 'deploy', role: 'boris', authority: 'gated:Cristian',
+    allowed: true, executable: false, executionState: 'gated', blockers: ['Cristian approval is pending.'] }] });
+  const optedOut = evaluate(input({
+    taskContract: deployContract, acceptanceCriteria: deployContract.acceptanceCriteria,
+    requiredEvidence: deployContract.requiredEvidence, evaluationScope: 'full-lifecycle',
+    productionObservationRequirement: 'not-applicable',
+  }));
+  assert.equal(optedOut.finalState, 'blocked');
+  assert.ok(optedOut.knownLimitations.includes('full-lifecycle deployment evaluation requires production-observation evidence'));
+});
+
+test('scope is immutable receipt identity and cannot be substituted for the same candidate', () => {
+  const production = evidence('production-observation', {
+    method: 'manual-observation', testedSurfaces: ['production:/api/ready'],
+  });
+  const preDeployment = evaluate(input({
+    evaluationScope: 'pre-deployment-release-readiness', productionObservationRequirement: 'required',
+    actualEvidence: [...automated(), production],
+  }));
+  const fullLifecycle = evaluate(input({
+    evaluationScope: 'full-lifecycle', productionObservationRequirement: 'required',
+    actualEvidence: [...automated(), production],
+  }));
+  assert.equal(preDeployment.finalState, 'pass');
+  assert.equal(fullLifecycle.finalState, 'pass');
+  assert.notEqual(preDeployment.receiptId, fullLifecycle.receiptId);
+  assert.notEqual(preDeployment.scopeBindingId, fullLifecycle.scopeBindingId);
+  assert.equal(qualityGateReceiptDigest(preDeployment), preDeployment.receiptId);
+  assert.equal(qualityGateReceiptDigest(fullLifecycle), fullLifecycle.receiptId);
+  assert.equal(qualityGateScopeBindingId(preDeployment), preDeployment.scopeBindingId);
+  assert.equal(qualityGateScopeBindingId(fullLifecycle), fullLifecycle.scopeBindingId);
+});
+
+test('scoped Quality self-change requires independent review and leaves Cristian approval unsatisfied', () => {
+  const selfChange = contract({
+    risk: { tier: 'T3', reasons: ['Quality Gate governance change'] }, requiredEvidence: ['test', 'review'],
+  });
+  const reviewerSource = 'independent-reviewer:quality-scope-change';
+  const receipt = evaluate(input({
+    taskContract: selfChange, riskTier: 'T3', requiredEvidence: selfChange.requiredEvidence,
+    evaluationScope: 'pre-deployment-release-readiness', productionObservationRequirement: 'required',
+    actualEvidence: [...automated(), evidence('security'), evidence('adversarial'),
+      evidence('independent-review', { source: reviewerSource })],
+    changeSignals: { userFacing: false, securitySurfaces: ['factory-governance'], performanceSurfaces: [],
+      performanceFailureMaterial: false, subjectRoles: ['quality-gate'] },
+    reviewer: { id: 'external-independent-reviewer', source: reviewerSource, independent: true },
+  }));
+  assert.equal(receipt.finalState, 'pass');
+  assert.equal(receipt.approvalGates.find((gate) => gate.name === 'Cristian')?.state, 'pending');
+  assert.equal(receipt.controlPlane.qualityGateMayAcceptTask, false);
+  assert.equal(receipt.controlPlane.qualityEvidenceGrantsActionAuthority, false);
+});
+
 test('receipt persistence is exact-candidate keyed and idempotent', async (t) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'shia-quality-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -227,6 +347,102 @@ test('receipt persistence is exact-candidate keyed and idempotent', async (t) =>
   const first = await persistQualityGateReceipt(receipt, directory);
   const second = await persistQualityGateReceipt(receipt, directory);
   assert.equal(first, second);
-  assert.match(path.basename(first), new RegExp(`${CANDIDATE}\\.json$`));
+  assert.match(path.basename(first), new RegExp(`${CANDIDATE}-full-lifecycle\\.json$`));
   assert.deepEqual(JSON.parse(await readFile(first, 'utf8')), JSON.parse(JSON.stringify(receipt)));
+});
+
+test('Quality self-change paths require independent evidence and Cristian even if subjectRoles is omitted', () => {
+  for (const changedPath of ['boris/src/quality/quality-gate.ts', 'factory/quality/quality-gate-receipt.schema.json',
+    'boris/src/identity/permanent-workforce.ts', 'agents/quality-gate/README.md']) {
+    const i = input({ changedPaths: [changedPath], evaluationScope: 'pre-deployment-release-readiness' });
+    const blocked = evaluate(i);
+    assert.equal(blocked.finalState, 'blocked', changedPath);
+    assert.equal(blocked.approvalGates.find((gate) => gate.name === 'Cristian')?.state, 'pending');
+    const independent = evaluate({ ...i, actualEvidence: [...automated(), evidence('independent-review', { source: 'external:review' })],
+      reviewer: { id: 'external-reviewer', source: 'external:review', independent: true } });
+    assert.equal(independent.finalState, 'pass');
+    assert.equal(independent.approvalGates.find((gate) => gate.name === 'Cristian')?.state, 'pending');
+  }
+});
+
+test('pre-deployment scope cannot override denied actions or defer independent-review gates', () => {
+  const denied = evaluate(input({ evaluationScope: 'pre-deployment-release-readiness',
+    dangerousActions: [{ action: 'deploy', authorization: 'denied' }] }));
+  assert.equal(denied.finalState, 'blocked');
+  const requiredReview = contract({ approvalGates: ['independent-review', 'Cristian'] });
+  assert.equal(evaluate(input({ taskContract: requiredReview, evaluationScope: 'pre-deployment-release-readiness' })).finalState, 'blocked');
+});
+
+test('receipt records require permanent minting; caller hashes and serialized records cannot substitute', () => {
+  const i = input({ evaluationScope: 'pre-deployment-release-readiness' });
+  const receipt = evaluate(i);
+  assert.deepEqual(validateCanonicalQualityGateReceipt(receipt), []);
+  assert.equal(Object.isFrozen(receipt), true);
+  const copied = JSON.parse(JSON.stringify(receipt)) as typeof receipt;
+  assert.throws(() => createQualityGateReceiptRecord(copied, copied.receiptId, 'caller', NOW), /Only the permanent/);
+  const record = createQualityGateReceiptRecord(receipt, receipt.receiptId, 'test-evaluator-store', NOW);
+  const resolver = createTrustedQualityGateReceiptResolver('factory-resolver', 'test-store', () => record);
+  const resolution = resolver.resolve(receipt.receiptId);
+  assert.ok(resolution);
+  assert.equal(isVerifiedQualityGateReceiptResolution(resolution), true);
+  assert.equal(resolver.resolve('f'.repeat(64)), null);
+  const forgedRecord = JSON.parse(JSON.stringify(record)) as typeof record;
+  assert.equal(createTrustedQualityGateReceiptResolver('caller', 'caller', () => forgedRecord).resolve(receipt.receiptId), null);
+  const empty = { ...copied, criterionResults: [], gateResults: [] };
+  empty.receiptId = qualityGateReceiptDigest(empty);
+  assert.ok(validateCanonicalQualityGateReceipt(empty).includes('gate results are incomplete'));
+});
+
+test('stored receipt must be regenerated from re-admitted exact-scope evidence after restart', () => {
+  const i = input({ evaluationScope: 'pre-deployment-release-readiness' });
+  const receipt = evaluate(i);
+  const serialized = JSON.parse(JSON.stringify(receipt)) as typeof receipt;
+  const record = revalidateStoredQualityGateReceipt(serialized, admitTrustedFixture(i), 'revalidation-adapter');
+  assert.ok(createTrustedQualityGateReceiptResolver('factory-resolver', 'test-store', () => record).resolve(receipt.receiptId));
+  for (const amendedInput of [
+    { ...i, evaluationScope: 'full-lifecycle' as const },
+    { ...i, candidateSha: OLD_CANDIDATE },
+    { ...i, actualEvidence: automated().map((e) => ({ ...e, candidateSha: OLD_CANDIDATE })) },
+  ]) {
+    assert.throws(() => revalidateStoredQualityGateReceipt(serialized, admitTrustedFixture(amendedInput), 'revalidation-adapter'), /differs/);
+  }
+  serialized.scopeBindingId = 'a'.repeat(64);
+  assert.throws(() => revalidateStoredQualityGateReceipt(serialized, admitTrustedFixture(i), 'revalidation-adapter'), /differs/);
+});
+
+test('canonical receipt validation rejects malformed data, changed scopes, digests and missing authority flags', () => {
+  for (const malformed of [null, undefined, [], {}, { schemaVersion: '1.2.0' }]) {
+    assert.ok(validateCanonicalQualityGateReceipt(malformed).length > 0);
+  }
+  const receipt = evaluate(input({ evaluationScope: 'pre-deployment-release-readiness' }));
+  for (const tampered of [
+    { ...receipt, evaluationScope: 'unknown' },
+    { ...receipt, scopeBindingId: '0'.repeat(64) },
+    { ...receipt, receiptId: '0'.repeat(64) },
+    { ...receipt, candidateSha: 'not-a-sha' },
+    { ...receipt, controlPlane: { ...receipt.controlPlane, qualityEvidenceGrantsActionAuthority: undefined } },
+  ]) assert.ok(validateCanonicalQualityGateReceipt(tampered).length > 0);
+});
+
+test('excluded evidence or approval claims remain needs-evidence and round-trip canonically', () => {
+  const base = input({ evaluationScope: 'pre-deployment-release-readiness' });
+  for (const amended of [
+    { ...base, actualEvidence: [...automated(), evidence('production-observation')] },
+    { ...base, actualEvidence: [...automated(), evidence('unit', { id: 'STALE', candidateSha: OLD_CANDIDATE })] },
+    { ...base, approvalReferences: ['unverified-approval'] },
+  ]) {
+    const receipt = evaluateQualityGate(admitTrustedFixture(amended, {}, ['production-observation']));
+    assert.equal(receipt.finalState, 'needs-evidence');
+    assert.deepEqual(validateCanonicalQualityGateReceipt(receipt), []);
+    const record = createQualityGateReceiptRecord(receipt, receipt.receiptId, 'test-store', NOW);
+    assert.ok(createTrustedQualityGateReceiptResolver('test-resolver', 'test-store', () => record).resolve(receipt.receiptId));
+  }
+});
+
+test('non-deployment source contract may predate the candidate but evidence remains exact-candidate', () => {
+  const initial = contract({ repository: { commit: OLD_CANDIDATE, branch: contract().repository.branch } });
+  const receipt = evaluate(input({ taskContract: initial }));
+  assert.equal(receipt.finalState, 'pass');
+  assert.deepEqual(validateCanonicalQualityGateReceipt(receipt), []);
+  assert.ok(receipt.actualEvidence.every((item) => item.candidateSha === CANDIDATE));
 });
