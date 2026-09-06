@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commerce-agentic",
+  "name": "Agentic Commerce Blueprint",
+  "version": "0.1.0",
+  "layer": "blueprint",
+  "lifecycle": "candidate",
+  "admitted": false,
+  "normal_production_reuse": false,
+  "purpose": "Reusable architecture for customer shopping assistance and merchant operations without creating new permanent Factory agent identities.",
+  "source_study": {
+    "repository": "anthropics/commerce-agents",
+    "commit": "fd4d59224ab96b43c6dc6888207c67b3bd5a24cf",
+    "license": "Apache-2.0",
+    "mode": "architecture-pattern-study",
+    "code_imported": false
+  },
+  "required_permanent_roles": [
+    "shia-core",
+    "boris",
+    "design-director",
+    "gary",
+    "quality-gate"
+  ],
+  "required_skill_packs": [
+    "product",
+    "design",
+    "engineering",
+    "ai",
+    "quality",
+    "growth",
+    "operations"
+  ],
+  "surfaces": {
+    "customer": "shopping-assistant",
+    "merchant": "merchant-operations-assistant"
+  },
+  "capabilities": [
+    "catalog-search",
+    "product-comparison",
+    "multi-item-planning",
+    "customer-preference-memory",
+    "cart-construction",
+    "checkout-handoff",
+    "order-and-policy-support",
+    "sales-analytics",
+    "inventory-intelligence",
+    "catalog-maintenance",
+    "promotion-planning",
+    "campaign-drafting",
+    "staged-merchant-changes"
+  ],
+  "app_profile_defaults": {
+    "frontend": "nextjs-typescript",
+    "backend": "host-owned-commerce-adapters",
+    "model_runtime": "provider-neutral-through-factory",
+    "database": "application-selected-source-of-truth",
+    "deployment": "application-specific",
+    "checkout": "host-owned"
+  },
+  "integration_contract": {
+    "catalog": "server-side-adapter",
+    "cart": "server-side-adapter",
+    "orders": "server-side-adapter",
+    "policies": "server-side-adapter",
+    "analytics": "server-side-adapter",
+    "inventory": "server-side-adapter",
+    "pricing": "server-side-adapter",
+    "campaigns": "server-side-adapter",
+    "payments": "never-model-owned"
+  },
+  "security_invariants": [
+    "no-model-payment-credential-access",
+    "no-model-order-placement-authority",
+    "checkout-is-host-handoff",
+    "merchant-writes-are-staged-before-apply",
+    "host-approval-required-for-merchant-apply",
+    "tool-surface-is-config-allowlisted",
+    "unknown-tools-are-denied",
+    "catalog-and-order-claims-are-grounded-in-server-data",
+    "write-targets-require-session-provenance",
+    "third-party-text-is-treated-as-data-not-instructions",
+    "memory-writes-are-validated-and-deletable",
+    "credentials-remain-server-side"
+  ],
+  "quality_requirements": [
+    "functional-commerce-evals",
+    "adversarial-tool-and-provenance-tests",
+    "merchant-approval-gate-tests",
+    "checkout-boundary-tests",
+    "catalog-grounding-tests",
+    "memory-lifecycle-tests",
+    "visual-and-accessibility-review-for-customer-surface",
+    "visual-and-accessibility-review-for-merchant-surface",
+    "exact-candidate-quality-receipt-before-admission"
+  ],
+  "extension_points": [
+    "commerce-platform-adapter",
+    "payment-provider-handoff",
+    "shipping-and-fulfillment-adapter",
+    "crm-and-customer-profile-adapter",
+    "presentation-components",
+    "domain-specific-commerce-flows",
+    "model-provider-adapter"
+  ],
+  "known_limitations": [
+    "This is a candidate architecture, not an admitted Factory Shelf asset.",
+    "No Square, Shopify, Stripe, Supabase, PostgreSQL, shipping, or CRM adapter is implemented by this blueprint yet.",
+    "No production deployment or Shia Baby migration is authorized by this candidate.",
+    "No upstream Anthropic implementation code is imported by this candidate."
+  ]
+}
