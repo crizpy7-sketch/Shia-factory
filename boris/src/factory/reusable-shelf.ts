@@ -524,6 +524,8 @@ export function createTrustedQualityReceiptAdapter(
       const { integrityDigest, ...recordInput } = record;
       if (trustedShelfReceiptRecordDigest(recordInput) !== integrityDigest.toLowerCase()) return null;
       const receipt = record.receipt;
+      // Historical 1.1 receipts keep their meaning; scoped readiness is not lifecycle certification.
+      if (receipt.schemaVersion === '1.2.0' && receipt.evaluationScope !== 'full-lifecycle') return null;
       if (qualityReceiptDigest(receipt) !== receipt.receiptId.toLowerCase()) return null;
       if (!record.collector.trim() || Number.isNaN(Date.parse(record.observedAt))) return null;
       if (reference.taskId !== shelfAdmissionTaskId(manifest)) return null;

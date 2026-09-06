@@ -155,7 +155,7 @@ test('provider-aware routing retains explicit Supabase support', () => {
 
 function deploymentRequest(overrides: Partial<NonNullable<OrchestrationRequest['productionDeployment']>> = {}): OrchestrationRequest {
   const base = request({
-    objective: 'Build, test and deploy a bounded production change.',
+    objective: 'Build, test and verify a bounded production deploy.',
     requestedCapabilities: ['engineering', 'test-verification', 'vps-deployment'],
     requestedActions: ['inspect', 'plan', 'build', 'test', 'deploy'],
     acceptanceCriteria: [{ id: 'AC-DEPLOY', statement: 'The exact candidate passes deterministic verification.', evidence: ['test'] }],
@@ -180,32 +180,34 @@ function trustedBaseline(candidateSha = request().repository.commit, healthSha =
 }
 
 function trustedQualityReceipt(taskId: string, candidateSha: string,
-  evaluationScope: QualityEvaluationScope = 'pre-deployment-release-readiness'): QualityGateReceipt {
-  const acceptanceCriteria = [{ id: 'AC-DEPLOY', statement: 'The exact candidate passes deterministic verification.', evidence: ['test'] }];
-  const taskContract = {
-    schemaVersion: '1.0.0' as const, id: taskId, projectId: 'fixture-app', objective: 'Verify the exact production candidate.',
-    outcome: 'Trusted release-readiness evidence.', repository: { commit: candidateSha, branch: 'main' }, profileDigest: 'd'.repeat(64),
-    risk: { tier: 'T3' as const, reasons: ['production release'] }, reuse: { searched: true as const, findings: [], creationDisposition: 'reuse-search-recorded' as const },
-    selectedRoles: [], selectedSkillPacks: [], selectedTools: [], acceptanceCriteria, requiredEvidence: ['test', 'review'],
-    allowedActions: [], approvalGates: ['Cristian'], executionBlocked: false, executionBlockers: [],
-    certificationReleaseBlocked: true, certificationReleaseBlockers: ['Cristian deployment approval remains separate.'], blocked: false, blockers: [],
-  };
-  const kinds: QualityEvidence['kind'][] = ['typecheck', 'lint', 'unit', 'integration', 'security', 'adversarial', 'independent-review'];
+  evaluationScope: QualityEvaluationScope = 'pre-deployment-release-readiness',
+  amendInput: (input: QualityGateInput) => void = () => undefined): QualityGateReceipt {
+  const candidateRequest = deploymentRequest({ candidateSha });
+  candidateRequest.taskId = taskId;
+  candidateRequest.repository.commit = candidateSha;
+  const taskContract = buildTaskContract(profile(), registries, candidateRequest, []);
+  const acceptanceCriteria = taskContract.acceptanceCriteria;
+  const kinds: QualityEvidence['kind'][] = ['typecheck', 'lint', 'unit', 'integration', 'e2e', 'browser', 'security', 'adversarial', 'independent-review'];
   if (evaluationScope === 'full-lifecycle') kinds.push('production-observation');
   const actualEvidence = kinds.map((kind): QualityEvidence => ({ id: `E-${kind}`, kind, candidateSha, status: 'pass',
     source: kind === 'independent-review' ? 'independent:deployment-review' : `trusted:${kind}`, summary: `${kind} passed`,
-    criterionIds: kind === 'unit' ? ['AC-DEPLOY'] : [], observedAt: '2026-08-30T22:32:00Z', method: 'automated-tool',
+    criterionIds: kind === 'unit' ? ['AC-DEPLOY'] : [], observedAt: '2026-08-30T22:32:00Z', method: kind === 'browser' ? 'real-browser' : 'automated-tool',
+    browser: kind === 'browser' ? { name: 'Synthetic fixture', version: '1', viewport: { width: 1280, height: 720 } } : undefined,
     testedSurfaces: kind === 'production-observation' ? ['production:/api/ready'] : ['candidate'],
   }));
-  const input: QualityGateInput = { taskId, projectId: 'fixture-app', repository: 'repo', candidateSha, branch: 'main', riskTier: 'T3',
+  const input: QualityGateInput = { taskId, projectId: 'fixture-app', repository: 'repo', candidateSha, branch: 'main', riskTier: taskContract.risk.tier,
     taskContract, acceptanceCriteria, requiredEvidence: taskContract.requiredEvidence, actualEvidence,
-    changedPaths: ['docs/deploy/auto-deploy.sh'], changeSignals: { userFacing: false, securitySurfaces: ['deployment'],
+    changedPaths: candidateRequest.changedPaths ?? [], changeSignals: { userFacing: false, securitySurfaces: ['deployment'],
       performanceSurfaces: [], performanceFailureMaterial: false, subjectRoles: [] },
     dangerousActions: [{ action: 'deploy', authorization: 'pending' }],
     reviewer: { id: 'external-reviewer', source: 'independent:deployment-review', independent: true },
     repair: { attempt: 0, maxAttempts: 2 }, evaluatedAt: '2026-08-30T22:33:00Z', evaluationScope,
     productionObservationRequirement: 'required' };
-  return evaluateQualityGate(admitTrustedFixture(input));
+  amendInput(input);
+  const receipt = evaluateQualityGate(admitTrustedFixture(input));
+  if (evaluationScope === 'pre-deployment-release-readiness') assert.equal(receipt.finalState, 'pass', JSON.stringify({
+    limits: receipt.knownLimitations, approvals: receipt.approvalGates, gates: receipt.gateResults }));
+  return receipt;
 }
 
 function trustedReceiptResolver(receipt: QualityGateReceipt) {
@@ -314,6 +316,38 @@ test('a trusted exact-SHA receipt cannot be replayed for another branch or accep
   }
 });
 
+test('a real weaker-policy Quality pass cannot certify a stronger current deployment contract', () => {
+  const initial = deploymentRequest();
+  const weak = trustedQualityReceipt(initial.taskId, initial.repository.commit, 'pre-deployment-release-readiness', (i) => {
+    i.riskTier = 'T2'; i.taskContract.risk = { tier: 'T2', reasons: ['weaker policy'] };
+    i.requiredEvidence = ['test']; i.taskContract.requiredEvidence = ['test'];
+    i.reviewer = null; i.changeSignals.securitySurfaces = [];
+    i.actualEvidence = i.actualEvidence.filter((item) => ['typecheck', 'lint', 'unit', 'integration'].includes(item.kind));
+  });
+  assert.equal(weak.finalState, 'pass');
+  const candidate = deploymentRequest({ qualityReceiptReferenceId: weak.receiptId });
+  const result = buildTaskContract(profile({ risk: { baselineTier: 'T4', reasons: ['irreversible consequence'] } }),
+    registries, candidate, [], undefined, { qualityReceiptResolver: trustedReceiptResolver(weak) });
+  assert.equal(result.deployment?.state, 'precondition-blocked');
+  assert.ok(result.deployment?.blockers.some((blocker) => /different risk, profile, evidence policy or change scope/.test(blocker)));
+});
+
+test('receipt policy binding excludes changed profile, requirements, paths, actions and objective', () => {
+  const initial = deploymentRequest();
+  const receipt = trustedQualityReceipt(initial.taskId, initial.repository.commit);
+  const candidate = deploymentRequest({ qualityReceiptReferenceId: receipt.receiptId });
+  const dependencies = { qualityReceiptResolver: trustedReceiptResolver(receipt) };
+  for (const [currentProfile, currentRequest] of [
+    [profile({ quality: { unit: 'required', security: 'required' } }), candidate],
+    [profile(), { ...candidate, changedPaths: ['app/page.tsx'] }],
+    [profile(), { ...candidate, objective: 'Deploy a different bounded production improvement.' }],
+    [profile(), { ...candidate, requestedActions: [...candidate.requestedActions, 'merge'] }],
+  ] as Array<[NormalizedAppProfile, OrchestrationRequest]>) {
+    const result = buildTaskContract(currentProfile, registries, currentRequest, [], undefined, dependencies);
+    assert.ok(result.deployment?.blockers.some((blocker) => /different risk, profile, evidence policy or change scope/.test(blocker)));
+  }
+});
+
 test('stale production observation cannot clear deploy while complete matching trusted evidence may make it eligible', () => {
   const initial = deploymentRequest();
   const receipt = trustedQualityReceipt(initial.taskId, initial.repository.commit);
@@ -325,7 +359,7 @@ test('stale production observation cannot clear deploy while complete matching t
   assert.ok(stale.deployment?.blockers.some((item) => /exact-release-provenance/.test(item)));
 
   const complete = buildTaskContract(profile(), registries, candidate, [], undefined, completeDeploymentDependencies(candidate));
-  assert.equal(complete.deployment?.state, 'eligible');
+  assert.equal(complete.deployment?.state, 'eligible', JSON.stringify(complete.deployment?.preconditions));
   assert.deepEqual(complete.deployment?.blockers, []);
   assert.ok(complete.deployment?.preconditions.every((item) => item.state === 'satisfied'));
   assert.equal(complete.allowedActions.find((item) => item.action === 'deploy')?.executable, true);

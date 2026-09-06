@@ -421,6 +421,8 @@ function permissionGate(input: AdmittedQualityGateInput, evidence: AdmittedQuali
   };
   if (input.riskTier === 'T4' || changesQualityGate(input)) ensureCristian();
   if (input.dangerousActions.some((request) => request.action !== 'secret-access')) ensureCristian();
+  if (input.requiredEvidence.includes('human_approval')
+    || input.acceptanceCriteria.some((criterion) => criterion.evidence.includes('human_approval'))) ensureCristian();
 
   for (const approval of approvals) {
     const match = verifiedApprovals.find((item) => item.taskId === input.taskId && item.candidateSha === input.candidateSha
@@ -469,7 +471,7 @@ function permissionGate(input: AdmittedQualityGateInput, evidence: AdmittedQuali
   };
 }
 
-function criterionResults(input: CanonicalQualityGateInput, evidence: QualityEvidence[]): CriterionResult[] {
+function criterionResults(input: CanonicalQualityGateInput, evidence: QualityEvidence[], governanceApprovalId: string | null): CriterionResult[] {
   return input.acceptanceCriteria.map((criterion) => {
     const relevant = evidence.filter((item) => item.criterionIds.includes(criterion.id));
     const failures = relevant.filter((item) => item.status === 'fail').flatMap((item) => item.findings?.length
@@ -479,13 +481,16 @@ function criterionResults(input: CanonicalQualityGateInput, evidence: QualityEvi
       ? criterion.evidence.filter((required) => PRE_DEPLOYMENT_DEFERRED_REQUIREMENTS.has(required)) : [];
     const missing = criterion.evidence.filter((required) => {
       if (deferred.includes(required)) return false;
+      if (required === 'human_approval') return governanceApprovalId === null;
       const aliases = evidenceAliases(required);
       return aliases.length === 0 || !relevant.some((item) => aliases.includes(item.kind) && item.status === 'pass');
     });
     return {
       id: criterion.id, statement: criterion.statement,
       state: failures.length > 0 ? 'fail' : missing.length > 0 ? 'needs-evidence' : deferred.length > 0 ? 'not-evaluated' : 'pass',
-      requiredEvidence: criterion.evidence, evidenceIds: relevant.map((item) => item.id), failures,
+      requiredEvidence: criterion.evidence, evidenceIds: [...relevant.map((item) => item.id),
+        ...(input.evaluationScope === 'full-lifecycle' && criterion.evidence.includes('human_approval') && governanceApprovalId
+          ? [governanceApprovalId] : [])], failures,
     };
   });
 }
@@ -509,9 +514,12 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
   ];
   const permissions = permissionGate(input, currentEvidence);
   gates.push(permissions.result);
-  const criteria = criterionResults(input, currentEvidence);
+  // Authorization remains a governance record, never a generic QualityEvidence claim.
+  const governanceApprovalId = permissions.approvals.find((item) => item.name === 'Cristian' && item.state === 'satisfied')?.evidenceId ?? null;
+  const criteria = criterionResults(input, currentEvidence, governanceApprovalId);
   const requiredEvidenceGaps = input.requiredEvidence.filter((required) => {
     if (input.evaluationScope === 'pre-deployment-release-readiness' && PRE_DEPLOYMENT_DEFERRED_REQUIREMENTS.has(required)) return false;
+    if (required === 'human_approval') return governanceApprovalId === null;
     const aliases = evidenceAliases(required);
     return aliases.length === 0 || !currentEvidence.some((item) => aliases.includes(item.kind) && item.status === 'pass');
   });
@@ -544,7 +552,8 @@ export function evaluateQualityGate(input: AdmittedQualityGateInput): QualityGat
   let finalState: QualityFinalState;
   if (structuralErrors.length > 0 || blockedGates.length > 0 || reviewerBlocked || exhausted) finalState = 'blocked';
   else if (failedGates.length > 0 || failedCriteria.length > 0) finalState = 'reject';
-  else if (evidenceGaps.length > 0 || criteriaGaps.length > 0 || requiredEvidenceGaps.length > 0) finalState = 'needs-evidence';
+  else if (evidenceGaps.length > 0 || criteriaGaps.length > 0 || requiredEvidenceGaps.length > 0
+    || staleEvidence.length > 0 || input.unverifiedEvidence.length > 0 || input.unverifiedApprovals.length > 0) finalState = 'needs-evidence';
   else finalState = 'pass';
 
   const failed = unique([
@@ -638,7 +647,7 @@ function validateReceiptSemantics(receipt: QualityGateReceipt): string[] {
     errors.push('receipt violates Quality authority boundaries');
   }
   if (receipt.taskContract.id !== receipt.taskId || receipt.taskContract.projectId !== receipt.projectId
-    || receipt.taskContract.repository.commit !== receipt.candidateSha || receipt.taskContract.repository.branch !== receipt.branch
+    || receipt.taskContract.repository.branch !== receipt.branch
     || receipt.taskContract.risk.tier !== receipt.riskTier) errors.push('task contract identity mismatch');
   if (stable(receipt.taskContract.acceptanceCriteria) !== stable(receipt.acceptanceCriteria)
     || stable(receipt.taskContract.requiredEvidence) !== stable(receipt.requiredEvidence)) errors.push('task contract evidence snapshot mismatch');

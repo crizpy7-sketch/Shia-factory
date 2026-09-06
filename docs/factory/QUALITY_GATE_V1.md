@@ -55,6 +55,11 @@ Pre-deployment criteria requiring `production-observation` or `human_approval` a
 `not-evaluated`, not passed. They do not block the narrower readiness verdict, and the receipt makes
 their later requirement explicit. Full lifecycle cannot pass a required production-observation gate
 without exact-candidate evidence admitted through a trusted `production-observer` adapter.
+In full lifecycle, a `human_approval` requirement resolves through the separately verified Cristian
+governance approval (including its action and candidate binding). Its approval ID is recorded against
+the criterion; it is not converted into `QualityEvidence`, and cannot authorize a different action.
+Shelf admission may consume a scoped `1.2.0` receipt only for `full-lifecycle`, never readiness-only
+PASS. Historical `1.1.0` admission semantics remain unchanged.
 
 Legacy inputs that omit scope are normalized to `full-lifecycle` with production observation
 `not-applicable`, preserving the pre-1.2 evaluator behavior for non-deployment callers. Deployment
@@ -78,7 +83,10 @@ Workers, CI, BORIS, browser runners, production observers and GStack submit raw 
 only those evaluator-minted objects. `createTrustedQualityGateReceiptResolver` verifies the retained
 record, canonical receipt identity, complete gates/criteria, scope and provenance before returning a
 branded resolution. The production deployment gate requires that verified resolution and the exact
-task, repository, branch, candidate and acceptance-criteria snapshot. A caller-created JSON receipt,
+task, repository, branch, candidate and acceptance-criteria snapshot. It also recomputes current
+Shia Core risk/evidence policy and requires matching profile digest, objective, outcome, requested
+actions and changed paths. A genuine receipt under a weaker policy cannot certify a stronger task.
+A caller-created JSON receipt,
 plausible SHA-256, copied record or arbitrary resolver cannot authorize that gate.
 
 The in-process brands are not signatures and do not survive serialization. After restart,
@@ -88,6 +96,12 @@ regenerated receipt digest must match the stored receipt. A JSON file alone rema
 future environment-specific authenticated receipt store must preserve these guarantees, not bypass
 them. Independent Cristian governance approval is still separately required, and eligibility never
 executes a deployment.
+
+Excluded stale or unverified evidence/approval claims make the evaluator return `needs-evidence`
+even when other passing evidence exists; the canonical validator and evaluator agree. A general
+non-deployment task contract may record an earlier orchestration source commit, while receipt and
+admitted evidence always identify the exact candidate. Production eligibility is stricter: its
+task-contract commit must also match the actual candidate to be deployed.
 
 ## Risk-to-gate matrix
 

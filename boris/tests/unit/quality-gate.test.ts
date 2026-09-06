@@ -423,3 +423,26 @@ test('canonical receipt validation rejects malformed data, changed scopes, diges
     { ...receipt, controlPlane: { ...receipt.controlPlane, qualityEvidenceGrantsActionAuthority: undefined } },
   ]) assert.ok(validateCanonicalQualityGateReceipt(tampered).length > 0);
 });
+
+test('excluded evidence or approval claims remain needs-evidence and round-trip canonically', () => {
+  const base = input({ evaluationScope: 'pre-deployment-release-readiness' });
+  for (const amended of [
+    { ...base, actualEvidence: [...automated(), evidence('production-observation')] },
+    { ...base, actualEvidence: [...automated(), evidence('unit', { id: 'STALE', candidateSha: OLD_CANDIDATE })] },
+    { ...base, approvalReferences: ['unverified-approval'] },
+  ]) {
+    const receipt = evaluateQualityGate(admitTrustedFixture(amended, {}, ['production-observation']));
+    assert.equal(receipt.finalState, 'needs-evidence');
+    assert.deepEqual(validateCanonicalQualityGateReceipt(receipt), []);
+    const record = createQualityGateReceiptRecord(receipt, receipt.receiptId, 'test-store', NOW);
+    assert.ok(createTrustedQualityGateReceiptResolver('test-resolver', 'test-store', () => record).resolve(receipt.receiptId));
+  }
+});
+
+test('non-deployment source contract may predate the candidate but evidence remains exact-candidate', () => {
+  const initial = contract({ repository: { commit: OLD_CANDIDATE, branch: contract().repository.branch } });
+  const receipt = evaluate(input({ taskContract: initial }));
+  assert.equal(receipt.finalState, 'pass');
+  assert.deepEqual(validateCanonicalQualityGateReceipt(receipt), []);
+  assert.ok(receipt.actualEvidence.every((item) => item.candidateSha === CANDIDATE));
+});

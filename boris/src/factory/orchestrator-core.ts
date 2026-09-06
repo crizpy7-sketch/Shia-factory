@@ -638,7 +638,7 @@ function verifiedQualityReceipt(
   resolver: QualityGateReceiptResolver | undefined,
   request: OrchestrationRequest,
   deployment: ProductionDeploymentRequest,
-  projectId: string,
+  profile: NormalizedAppProfile,
 ): DeploymentPreconditionResult {
   const id: DeploymentPreconditionId = 'exact-candidate-quality-receipt';
   if (!referenceId) return missingDeploymentPrecondition(id, 'Exact-candidate Quality Gate receipt reference is missing.');
@@ -665,10 +665,20 @@ function verifiedQualityReceipt(
       reason: 'Quality Gate receipt is not a canonical authority-preserving pre-deployment release-readiness receipt.' };
   }
   if (receipt.candidateSha !== deployment.candidateSha || receipt.taskId !== request.taskId
-    || receipt.projectId !== projectId || receipt.repository !== deployment.repository || receipt.branch !== request.repository.branch
+    || receipt.projectId !== profile.app.id || receipt.repository !== deployment.repository || receipt.branch !== request.repository.branch
     || receipt.taskContract.repository.commit !== deployment.candidateSha
     || stable(receipt.acceptanceCriteria) !== stable(request.acceptanceCriteria)) {
     return { id, state: 'mismatch', evidenceReference: referenceId, reason: 'Quality Gate receipt is not bound to this task, repository and exact candidate SHA.' };
+  }
+  const expectedRisk = classifyRisk(profile, request);
+  if (stable(receipt.taskContract.risk) !== stable(expectedRisk) || receipt.riskTier !== expectedRisk.tier
+    || receipt.taskContract.profileDigest !== digest(profile)
+    || stable([...receipt.requiredEvidence].sort()) !== stable(requiredEvidenceFor(expectedRisk.tier, profile, request))
+    || receipt.taskContract.objective !== request.objective || receipt.taskContract.outcome !== request.outcome
+    || stable(receipt.taskContract.allowedActions.map((item) => item.action).sort()) !== stable([...request.requestedActions].sort())
+    || stable([...receipt.changedPaths].sort()) !== stable([...(request.changedPaths ?? [])].sort())) {
+    return { id, state: 'mismatch', evidenceReference: referenceId,
+      reason: 'Quality Gate receipt was evaluated under a different risk, profile, evidence policy or change scope.' };
   }
   if (receipt.finalState !== 'pass' || receipt.staleEvidence.length > 0 || receipt.unverifiedEvidence.length > 0
     || receipt.unverifiedApprovals.length > 0 || receipt.criterionResults.some((item) => !['pass', 'not-evaluated'].includes(item.state))
@@ -736,7 +746,7 @@ export function evaluateProductionDeployment(
       && record.releaseProvenance.source.trim() !== '',
       'Exact running-release provenance is missing.', 'Repository/deployment markers do not independently bind the running image to the exact Git revision.'),
   );
-  preconditions.push(verifiedQualityReceipt(deployment.qualityReceiptReferenceId, dependencies.qualityReceiptResolver, request, deployment, profile.app.id));
+  preconditions.push(verifiedQualityReceipt(deployment.qualityReceiptReferenceId, dependencies.qualityReceiptResolver, request, deployment, profile));
 
   const approvalId = deployment.approvalId;
   if (!approvalId) preconditions.push(missingDeploymentPrecondition('cristian-deploy-approval', 'Cristian deployment approval is missing.'));

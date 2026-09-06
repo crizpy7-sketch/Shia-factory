@@ -3,7 +3,7 @@ import test from 'node:test';
 import type { ApprovalRequest } from '../../src/domain/types.js';
 import type { OrchestratorTaskContract } from '../../src/factory/orchestrator-core.js';
 import { admitQualityGateInput, createStorageGovernanceApprovalResolver } from '../../src/quality/evidence-admission.js';
-import { evaluateQualityGate, type DangerousAction, type QualityEvidence, type QualityGateInput } from '../../src/quality/quality-gate.js';
+import { evaluateQualityGate, validateCanonicalQualityGateReceipt, type DangerousAction, type QualityEvidence, type QualityGateInput } from '../../src/quality/quality-gate.js';
 import { SqliteStorage } from '../../src/storage/sqlite.js';
 import { admitTrustedFixture } from '../helpers/quality-admission.js';
 const SHA='1'.repeat(40), NOW='2026-08-28T21:00:00Z';
@@ -20,3 +20,32 @@ test('verified existing-governance approval satisfies matching gate but grants n
 test('verified governance approval is immutable after admission',()=>{const s=db(),rec=approved('deploy');s.createApproval(rec);const i=packet();i.approvalReferences=[rec.id];i.dangerousActions=[{action:'merge',authorization:'pending',approvalId:rec.id}];const admitted=admitTrustedFixture(i,{governanceApprovalResolver:createStorageGovernanceApprovalResolver(s,'sqlite:approvals')});const receipt=admitted.governanceApprovals.at(0);assert.ok(receipt);assert.ok(Object.isFrozen(receipt));assert.throws(()=>{receipt.taskId='OTHER'},/read only|Cannot assign/);assert.throws(()=>{receipt.candidateSha='4'.repeat(40)},/read only|Cannot assign/);assert.throws(()=>{receipt.action='merge'},/read only|Cannot assign/);assert.equal(evaluateQualityGate(admitted).finalState,'blocked');s.close()});
 test('verified quality-certification approval satisfies compound gate only',()=>{const s=db(),rec=approved('quality-certification');s.createApproval(rec);const i=packet();i.taskContract.approvalGates=['Cristian+quality-receipt'];i.approvalReferences=[rec.id];const r=evaluate(i,s);assert.equal(r.finalState,'pass');assert.deepEqual(r.approvalGates.map(a=>a.state),['satisfied','satisfied']);assert.equal(r.controlPlane.qualityEvidenceGrantsActionAuthority,false);s.close()});
 test('direct secret access remains denied even with verified approval',()=>{const s=db(),rec=approved('secret-access');s.createApproval(rec);const i=packet();i.approvalReferences=[rec.id];i.dangerousActions=[{action:'secret-access',authorization:'approved',approvalId:rec.id}];assert.equal(evaluate(i,s).finalState,'blocked');s.close()});
+
+test('full lifecycle completes human_approval through exact governance, never generic QualityEvidence', () => {
+  const storage = db();
+  try {
+    const approval = approved('deploy'); storage.createApproval(approval);
+    const i = packet();
+    i.evaluationScope = 'full-lifecycle'; i.productionObservationRequirement = 'required';
+    i.riskTier = 'T4'; i.taskContract.risk = { tier: 'T4', reasons: ['production consequence'] };
+    i.requiredEvidence = ['test', 'human_approval', 'production-observation'];
+    i.taskContract.requiredEvidence = i.requiredEvidence;
+    i.acceptanceCriteria = [...i.acceptanceCriteria, { id: 'AC-APPROVAL', statement: 'Cristian authorizes the exact deployment.', evidence: ['human_approval'] }];
+    i.taskContract.acceptanceCriteria = i.acceptanceCriteria;
+    i.actualEvidence.push(evidence('security'), evidence('adversarial'),
+      evidence('independent-review', 'external:review'), evidence('production-observation'));
+    i.reviewer = { id: 'external-reviewer', source: 'external:review', independent: true };
+    i.dangerousActions = [{ action: 'deploy', authorization: 'pending', approvalId: approval.id }];
+    assert.equal(evaluate(i, storage).finalState, 'blocked');
+    i.approvalReferences = [approval.id];
+    const receipt = evaluate(i, storage);
+    assert.equal(receipt.finalState, 'pass');
+    assert.deepEqual(validateCanonicalQualityGateReceipt(receipt), []);
+    assert.equal(receipt.scopeStatus.productionDeploymentObservation, 'pass');
+    assert.deepEqual(receipt.criterionResults.find((item) => item.id === 'AC-APPROVAL')?.evidenceIds, [approval.id]);
+    assert.equal(receipt.actualEvidence.some((item) => item.kind === 'human-approval'), false);
+    assert.equal(receipt.controlPlane.qualityEvidenceGrantsActionAuthority, false);
+    i.dangerousActions = [{ action: 'merge', authorization: 'pending', approvalId: approval.id }];
+    assert.equal(evaluate(i, storage).finalState, 'blocked', 'deployment approval must not authorize merge');
+  } finally { storage.close(); }
+});
