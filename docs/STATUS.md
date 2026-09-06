@@ -115,6 +115,76 @@ an exact-candidate Quality Gate PASS, Cristian deployment approval and future po
 observation. The remaining three Phase 7 tracker items are incomplete. Approved progress is
 **31/41 = 75.61%**.
 
+### Factory Quality-scope prerequisite — PR #19 merged; lifecycle remains incomplete
+
+Cristian explicitly approved Factory PR #19 for candidate
+`e1e81ceaaffda38f1473a01d6f942eb13b3d89de`, reviewed tree
+`b8681480c0437762faf1a74b7cf122b40d795670`, with Factory main required to remain
+`2d4bbf30a86b72af4858b3a555c78a065ca1890b` before merge. All three identities, successful
+exact-candidate CI and the retained independent review were reverified before the normal merge.
+The [approval record](https://github.com/crizpy7-sketch/Shia-factory/pull/19#issuecomment-5558562982)
+covers this Factory merge and necessary bookkeeping only. It grants no Michel OS or deployment
+authority.
+
+The existing BORIS approval storage recorded approval `CRISTIAN-PR19-MERGE-e1e81cea` for task
+`PR19-MERGE-BOOKKEEPING-e1e81cea`, action `merge`, exact candidate above, state `approved`,
+decided by `Cristian`. The existing governance resolver and admission boundary verified that
+binding. The [retained approval export](https://github.com/crizpy7-sketch/Shia-factory/pull/19#issuecomment-5558566498)
+records the decision at `2026-09-06T10:17:07.376Z` (recording time, not an independently known
+chat-message timestamp); it is an audit export, not a transferable in-memory admission capability.
+
+[PR #19](https://github.com/crizpy7-sketch/Shia-factory/pull/19) merged normally at
+`eccd5ef4c3dfcc13c3e6e2287fe4a5185d5af530`. Its parents are the required former main SHA and
+the approved candidate SHA, in that order. Its tree is exactly the approved
+`b8681480c0437762faf1a74b7cf122b40d795670`. No force update or protection bypass was used.
+
+| Verification | Exact evidence |
+| --- | --- |
+| Reviewed candidate CI | [BORIS Runtime CI #33, run 34026245036](https://github.com/crizpy7-sketch/Shia-factory/actions/runs/34026245036), candidate `e1e81ceaaffda38f1473a01d6f942eb13b3d89de`, success |
+| Actual post-merge CI | [BORIS Runtime CI #34, run 34027015034](https://github.com/crizpy7-sketch/Shia-factory/actions/runs/34027015034), push to main at `eccd5ef4c3dfcc13c3e6e2287fe4a5185d5af530`, success; this is a new run on the merge SHA |
+| Post-merge commands | Locked `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:security`, `npm run test:e2e`, `node --test tests/*.test.mjs`, `node --test agents/tests/*.test.mjs` |
+| Post-merge test totals | 238 unit/integration + 43 security/adversarial + 5 runtime E2E + 32 Core + 102 legacy compatibility = **420 passed**, no failures or skipped tests |
+| Independent persistence-repair review | [Actual report](https://github.com/crizpy7-sketch/Shia-factory/pull/19#issuecomment-5558506254), exact approved candidate/tree, PASS with no blocking finding; 51 focused tests independently rerun; [retained report/evidence archive](https://github.com/crizpy7-sketch/Shia-factory/pull/19#issuecomment-5558505507) |
+| Regression before/after | [Retained verification evidence](https://github.com/crizpy7-sketch/Shia-factory/pull/19#issuecomment-5558496470): actual exported persistence function, same harness, starting implementation 7 passed / 3 failed, repair 10/10 passed |
+
+The merged implementation makes scoped Quality Gate receipts canonical at schema **1.2.0**,
+preserves historical **1.1.0** semantics, and separates pre-deployment release readiness from
+full-lifecycle evaluation. Quality evidence still grants no action authority; production
+deployment/observation and Cristian deployment approval remain separate requirements. The
+receipt-persistence repair atomically publishes complete bytes without replacing an existing
+receipt and accepts identical retries.
+
+Repair and dependency history remain intact. The two earlier architecture repair attempts and
+the one additionally authorized persistence repair remain consumed; this bookkeeping grants no
+new repair attempt. Ajv remains **8.20.0**. Preserve the
+[dependency audit evidence](https://github.com/crizpy7-sketch/Shia-factory/pull/19#issuecomment-5558408848),
+[independent dependency review](https://github.com/crizpy7-sketch/Shia-factory/pull/19#issuecomment-5558431894),
+[earlier scope review](https://github.com/crizpy7-sketch/Shia-factory/pull/19#issuecomment-5558402387)
+and [external historical reproductions](https://github.com/crizpy7-sketch/Shia-factory/pull/19#issuecomment-5558521557).
+Earlier reviews retain their original reviewed SHAs; they are not relabeled as reviews of the
+merge commit.
+
+Remaining limitations: receipt publication requires filesystem hard-link support and fails
+closed when unavailable. Crash durability/fsync, abandoned temporary-directory scavenging and
+protection against a malicious writer with independent filesystem access are not certified.
+Production CI/BORIS/browser/GStack adapter wiring still requires application-lifecycle proof.
+The external reproduction reports did not include the proposed patch or executable harness;
+their claimed proposed-fix results do not independently verify this candidate.
+
+**Observed automatic publication and bookkeeping boundary:** merging PR #19 automatically ran
+the repository's existing [Pages build and deployment, run 34027014451](https://github.com/crizpy7-sketch/Shia-factory/actions/runs/34027014451)
+on the merge SHA and successfully published the Factory GitHub Pages site. No deployment command
+was invoked by the worker; nevertheless this publication occurred and is not described as
+“no deployment.” Pages configuration was not changed. To respect the explicit no-deployment
+boundary after discovering this side effect, this status addition is retained on a documentation-only
+branch for review; applying it to main remains pending a decision on automatic Pages publication.
+No further main write or new publication was intentionally initiated.
+
+This Factory merge is a Phase 7 prerequisite, not production lifecycle completion. Michel OS
+PR #20 was not modified or merged; no VPS command, timer change, Michel deployment, Shelf
+admission or Phase 8 work was performed. There was no new live production observation in this
+merge task. **Phase 7 remains 1/4; approved Core v2 progress remains 31/41 = 75.61%.**
+
 ## Phase 8 — Factory Proven
 
 - [ ] GBrain learning round-trip verified
