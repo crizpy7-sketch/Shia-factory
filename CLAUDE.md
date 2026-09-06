@@ -164,6 +164,45 @@ Gary-specific rules:
 - Restricted actions — deploy, publish, spend, credentials, production data — require a human
   approval record. Auto-approving them in code is a defect, not a convenience.
 
+### Known limitation: the sandbox does not survive an interpreter
+
+The permission engine is a **process-level** boundary, and a process-level boundary cannot hold a
+program that is allowed to start another program. Two authorised calls walk around it:
+
+1. `fs_write` is `sensitivity: 'safe'` and may create any file in the workspace.
+2. `shell_run` may execute `node`, `npm`, `npx`, `python3` or `make` — all on
+   `DEFAULT_ALLOWED_BINARIES`.
+
+Write a script, run it, and the child process has the runtime user's full privileges. That defeats
+the workspace path sandbox, the credential-path denials, the `web_fetch` allowlist and its SSRF
+checks, the forbidden-command patterns, and every approval gate. Verified by execution, not
+inferred: a script written this way read `/etc/passwd`, wrote outside the workspace, and reached the
+network unfiltered. Only the scrubbed child environment still holds, because that is applied at
+`spawn` time rather than at authorize time.
+
+The `dev` tool is the same class by another door: `npm run build` and `npm test` execute scripts
+from a workspace `package.json` that `fs_write` may author, and `dev install` runs lifecycle scripts
+fetched from the network.
+
+**This is not a defect to be patched in `permissions.ts`.** Any tool useful enough to build software
+is useful enough to escape a process sandbox; removing the interpreters would leave an engineering
+agent that cannot run its own tests. The real boundary is the operating system — a container with
+its own mount namespace, a read-only root, no network by default, and an unprivileged user — with
+the permission engine as the layer inside it.
+
+Until that boundary exists, the honest statement is: **the permission engine constrains an agent
+acting in good faith and stops the obvious paths; it does not contain a hostile one.** The threat
+model that matters is prompt injection, not a disloyal Boris — `web_fetch` already tells the agent
+to treat what it returns as untrusted, and this is the path that untrusted instruction would take.
+
+Rules that follow from it:
+
+- Run the runtime where an escape is survivable. A workspace root pointed at anything you would mind
+  losing is a configuration error, not a permission question.
+- Do not describe the sandbox as containment in the README, the UI or a report. Say what it does.
+- Do not close this by weakening a security test. If a control is added, it needs a test that fails
+  without it — the plan-gate and approval tests are the pattern to follow.
+
 ## Completion criteria
 
 A change is done when:
