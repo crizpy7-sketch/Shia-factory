@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { OrchestratorTaskContract } from '../factory/orchestrator-core.js';
 import type { RiskTier } from '../factory/operating-system.js';
@@ -757,13 +757,23 @@ export async function persistQualityGateReceipt(receipt: QualityGateReceipt, dir
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
-  const temporary = `${target}.${process.pid}.tmp`;
+  // A private directory prevents concurrent calls (including this process) sharing cleanup ownership.
+  const temporaryDirectory = await mkdtemp(`${target}.`);
+  const temporary = path.join(temporaryDirectory, 'receipt.json');
   try {
     await writeFile(temporary, content, { encoding: 'utf8', flag: 'wx' });
-    await rename(temporary, target);
-  } catch (error) {
-    await unlink(temporary).catch(() => undefined);
-    throw error;
+    try {
+      // Publish complete bytes atomically without replacing a winner from another process.
+      // Unsupported hard links fail closed; never fall back to overwrite or an in-place write.
+      await link(temporary, target);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      if (await readFile(target, 'utf8') !== content) {
+        throw new Error(`Quality Gate receipt already exists with different content: ${target}`);
+      }
+    }
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
   }
   return target;
 }
