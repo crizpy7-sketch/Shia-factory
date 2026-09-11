@@ -1,5 +1,5 @@
 /**
- * Agent Foundry V1 — public API (Phase 1 + Phase 2).
+ * Agent Foundry V1 — public API (Phase 1 + Phase 2 + Phase 3).
  */
 
 export {
@@ -8,12 +8,14 @@ export {
   CANONICAL_WORKFORCE_ROLE_IDS,
   FOUNDRY_ERROR_CODES,
   EVAL_SUITE_CLASSES,
+  EVAL_RUNNER_CHECK_KINDS,
   type FoundryRunStatus,
   type AgentLifecycle,
   type CanonicalWorkforceRoleId,
   type BehaviorExample,
   type SourcePacket,
   type BehaviorContract,
+  type BehaviorContractCompileResult,
   type ProviderRequirements,
   type ProviderCompatibilityStatus,
   type ProviderCompatibilityGap,
@@ -48,6 +50,12 @@ export {
   type FoundryEvidenceGate,
   type EvalHarnessScore,
   type TournamentReport,
+  type MaterializedCandidateDraft,
+  type EvalRunnerCheckKind,
+  type StructuredEvalCheckResult,
+  type TournamentCandidateInput,
+  type TournamentSynthesisInput,
+  type TournamentJudgement,
 } from './types.js';
 
 export {
@@ -93,3 +101,41 @@ export {
   type EvalHarnessInput,
   type EvalHarnessResult,
 } from './eval-harness.js';
+
+export {
+  compileBehaviorContract,
+} from './behavior-contract.js';
+
+export {
+  materializeAgentPackage,
+  buildLeastPrivilegePermissions,
+  mintTemporaryCandidateId,
+  type MaterializePackageInput,
+} from './package-materialize.js';
+
+export {
+  createFoundryEvidenceGate,
+  foundryEvidenceDigest,
+  SCRIPTED_EVIDENCE_SOURCE,
+  PHASE3_ADMITTED_SOURCE_TYPES,
+  type FoundryEvidenceGateOptions,
+  type Phase3AdmittedSourceType,
+} from './evidence-gate.js';
+
+export {
+  runKeywordHeuristicCheck,
+  runPermissionLeastPrivilegeCheck,
+  runBoundaryRefusalCheck,
+  runProviderIncompatibleCheck,
+  runIncompletePacketCheck,
+  runFabricatedEvidenceCheck,
+  runStructuredEvalChecks,
+  aggregateStructuredChecks,
+  type EvalRunnerContext,
+} from './eval-runners.js';
+
+export {
+  synthesizeFromTournament,
+  toFoundryJudgementShape,
+  mintFoundryRunId,
+} from './tournament.js';

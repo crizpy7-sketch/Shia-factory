@@ -1,5 +1,5 @@
 /**
- * Agent Foundry V1 — domain types (Phase 1 + Phase 2).
+ * Agent Foundry V1 — domain types (Phase 1 + Phase 2 + Phase 3).
  *
  * FoundryRunStatus describes a single foundry *run*.
  * AgentLifecycle describes a *candidate agent*'s lifecycle state.
@@ -217,6 +217,8 @@ export interface AgentPackage {
   workflow: WorkflowContract;
   permissions: PermissionManifest;
   evals: EvalSuite;
+  /** Domain-side provider requirements attached at materialization (Phase 3). */
+  providerRequirements?: ProviderRequirements;
   provenance: ProvenanceManifest;
   knownLimitations: KnownLimitations;
 }
@@ -341,4 +343,115 @@ export interface TournamentReport {
   pass: boolean;
   fail: boolean;
   rejectReasons: string[];
+}
+
+// --- Phase 3: behavior contract, materialization, tournament ---
+
+/** Result of compiling a BehaviorContract from a SourcePacket. */
+export type BehaviorContractCompileResult =
+  | { ok: true; contract: BehaviorContract }
+  | {
+      ok: false;
+      code: 'INCOMPLETE_PACKET';
+      runStatus: 'needs_input';
+      gaps: string[];
+      issues: string[];
+      /** Uncertainties recorded even when compilation fails. */
+      uncertainties: string[];
+    };
+
+/**
+ * In-memory materialized candidate draft.
+ * Lifecycle is TEMPORARY_CANDIDATE or CANDIDATE only — never written to disk.
+ */
+export interface MaterializedCandidateDraft {
+  candidateId: string;
+  package: AgentPackage;
+  providerRequirements: ProviderRequirements;
+  lifecycle: Extract<AgentLifecycle, 'TEMPORARY_CANDIDATE' | 'CANDIDATE'>;
+  openGaps: string[];
+  reuseHits: ReuseHit[];
+}
+
+/** Structured eval-runner check kinds beyond the Phase 2 keyword heuristic. */
+export const EVAL_RUNNER_CHECK_KINDS = [
+  'permission-least-privilege',
+  'boundary-refusal',
+  'provider-incompatible',
+  'incomplete-packet',
+  'fabricated-evidence',
+  'keyword-heuristic',
+] as const;
+
+export type EvalRunnerCheckKind = (typeof EVAL_RUNNER_CHECK_KINDS)[number];
+
+export interface StructuredEvalCheckResult {
+  kind: EvalRunnerCheckKind;
+  evalId: string;
+  score: number;
+  passed: boolean;
+  evidenceBlob: Record<string, unknown>;
+}
+
+/**
+ * Lightweight candidate input for the Phase 3 tournament synthesizer.
+ * Compatible with CandidateBlueprint from agent-foundry.ts without circular imports.
+ */
+export interface TournamentCandidateInput {
+  candidateId: string;
+  architectRole?: string;
+  blueprint: {
+    id?: string;
+    name: string;
+    mission: string;
+    principles?: string[];
+    capabilities: string[];
+    tools?: string[];
+    memory?: { persistent?: string[]; taskScoped?: string[] };
+    workflow: string[];
+    outputContract?: string[];
+    guardrails?: string[];
+    evals: Array<{ id: string; description: string; passCondition: string }>;
+  };
+  provider?: string;
+  model?: string;
+}
+
+export interface TournamentSynthesisInput {
+  candidates: TournamentCandidateInput[];
+  reports: TournamentReport[];
+  suite: EvalSuite;
+  /** Minimum mean admitted score (0–1) to remain eligible. Default 0.5. */
+  passThreshold?: number;
+  /** Source packet / mission used when synthesizing the winner blueprint. */
+  sourceName?: string;
+  sourceMission?: string;
+}
+
+export interface TournamentJudgement {
+  winnerCandidateId: string;
+  rationale: string[];
+  synthesizedBlueprint: {
+    schemaVersion: '1.0.0';
+    id: string;
+    name: string;
+    mission: string;
+    principles: string[];
+    capabilities: string[];
+    tools: string[];
+    memory: { persistent: string[]; taskScoped: string[] };
+    workflow: string[];
+    outputContract: string[];
+    guardrails: string[];
+    evals: Array<{ id: string; description: string; passCondition: string }>;
+    provenance: {
+      method: 'behavioral-synthesis';
+      source: 'user-supplied-specification';
+      hiddenPromptRecovered: false;
+      chainOfThoughtRecovered: false;
+      weightsRecovered: false;
+    };
+  };
+  rejectedCandidateIds: string[];
+  aggregatedScores: Record<string, number>;
 }

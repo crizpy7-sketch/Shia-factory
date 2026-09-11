@@ -3,9 +3,12 @@ import type { CompletionRequest, ModelProvider } from '../providers/types.js';
 import {
   evaluateBoundaryPolicy,
   sourcePacketFromFoundryRequest,
+  synthesizeFromTournament,
   type FoundryError as FoundryErrorShape,
   type FoundryErrorCode,
   type FoundryRunStatus,
+  type EvalSuite,
+  type TournamentReport,
 } from './foundry/index.js';
 
 export interface BehaviorExample {
@@ -296,6 +299,39 @@ async function judgeCandidates(
   };
 }
 
+
+/**
+ * Phase 3: deterministic judgement from tournament reports without calling an LLM.
+ * Prefer this when scripted providers / harness reports are available.
+ * Does not replace runAgentFoundry — that path remains for live architect/judge providers.
+ */
+export function judgeFromTournamentReports(
+  candidates: CandidateBlueprint[],
+  reports: TournamentReport[],
+  suite: EvalSuite,
+  options: { passThreshold?: number; sourceName?: string; sourceMission?: string } = {},
+): FoundryJudgement {
+  const judgement = synthesizeFromTournament({
+    candidates: candidates.map((candidate) => ({
+      candidateId: candidate.candidateId,
+      architectRole: candidate.architectRole,
+      blueprint: candidate.blueprint,
+      provider: candidate.provider,
+      model: candidate.model,
+    })),
+    reports,
+    suite,
+    passThreshold: options.passThreshold,
+    sourceName: options.sourceName,
+    sourceMission: options.sourceMission,
+  });
+  return {
+    winnerCandidateId: judgement.winnerCandidateId,
+    rationale: judgement.rationale,
+    synthesizedBlueprint: judgement.synthesizedBlueprint,
+  };
+}
+
 export async function runAgentFoundry(
   request: AgentFoundryRequest,
   architectProviders: ModelProvider[],
@@ -322,7 +358,7 @@ export async function runAgentFoundry(
   };
 }
 
-// Convenience re-exports of Foundry symbols (Phase 1 + Phase 2; existing imports remain stable).
+// Convenience re-exports of Foundry symbols (Phase 1 + Phase 2 + Phase 3; existing imports remain stable).
 export {
   FOUNDRY_RUN_STATUSES,
   AGENT_LIFECYCLES,
@@ -338,6 +374,12 @@ export {
   runEvaluationHarness,
   createDefaultFoundryEvidenceGate,
   assertScriptedFirst,
+  compileBehaviorContract,
+  materializeAgentPackage,
+  buildLeastPrivilegePermissions,
+  createFoundryEvidenceGate,
+  synthesizeFromTournament,
+  toFoundryJudgementShape,
   type FoundryRunStatus,
   type AgentLifecycle,
   type SourcePacket,
@@ -347,4 +389,8 @@ export {
   type ReuseMap,
   type EvalSuite,
   type TournamentReport,
+  type BehaviorContract,
+  type MaterializedCandidateDraft,
+  type TournamentJudgement,
+  type TournamentCandidateInput,
 } from './foundry/index.js';

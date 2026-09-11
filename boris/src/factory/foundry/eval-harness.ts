@@ -1,13 +1,25 @@
 /**
- * Agent Foundry V1 Phase 2 — scripted EvaluationHarness skeleton.
+ * Agent Foundry V1 Phase 2/3 — scripted EvaluationHarness.
  *
  * Runs EvalSuite items against DeterministicScriptedProvider FIRST
  * (ScriptedProvider / ModelProvider with isTestDouble). Produces numerical
  * scores + evidence blob stubs. Only admitted scores enter the tournament report.
+ *
+ * Phase 3: optional structured runners (permission / boundary / provider /
+ * incomplete packet / fabricated evidence) beyond the keyword heuristic.
  */
 import { createHash } from 'node:crypto';
-import type { ModelProvider } from '../../providers/types.js';
+import type { ModelProvider, ProviderCapabilities } from '../../providers/types.js';
 import type { ScriptedProvider } from '../../providers/scripted.js';
+import {
+  createDefaultFoundryEvidenceGate,
+  SCRIPTED_EVIDENCE_SOURCE,
+} from './evidence-gate.js';
+import {
+  aggregateStructuredChecks,
+  runKeywordHeuristicCheck,
+  runStructuredEvalChecks,
+} from './eval-runners.js';
 import type {
   EvalCase,
   EvalHarnessScore,
@@ -17,11 +29,13 @@ import type {
   FoundryEvidenceCandidate,
   FoundryEvidenceGate,
   FoundryEvidenceRef,
+  PermissionManifest,
+  ProviderRequirements,
+  SourcePacket,
   TournamentReport,
 } from './types.js';
 
-const SCRIPTED_SOURCE = 'scripted-deterministic';
-const HEX64 = /^[0-9a-f]{64}$/i;
+export { createDefaultFoundryEvidenceGate } from './evidence-gate.js';
 
 export interface EvalHarnessInput {
   candidateId: string;
@@ -35,6 +49,17 @@ export interface EvalHarnessInput {
   evidenceGate?: FoundryEvidenceGate;
   /** Optional fixed clock for deterministic digests/timestamps. */
   now?: () => string;
+  /** Phase 3: enable structured runners beyond keyword heuristic (default true). */
+  useStructuredRunners?: boolean;
+  /** Optional packet for incomplete-packet / boundary structured checks. */
+  packet?: Partial<SourcePacket> | SourcePacket | Record<string, unknown>;
+  /** Optional permissions for least-privilege structured checks. */
+  permissions?: PermissionManifest;
+  /** Optional provider requirements / capabilities for INCOMPATIBLE matrix checks. */
+  providerRequirements?: ProviderRequirements;
+  providerCapabilities?: ProviderCapabilities;
+  /** Optional fabricated-evidence probe. */
+  fabricatedProbe?: FoundryEvidenceCandidate;
 }
 
 export interface EvalHarnessResult {
@@ -47,72 +72,6 @@ export interface EvalHarnessResult {
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
-}
-
-function isHexDigest(value: string): boolean {
-  return HEX64.test(value);
-}
-
-/**
- * Default Foundry evidence gate: admits scripted deterministic evidence when
- * integrity fields are present and the claim is not fabricated.
- * Narrow interface — can wrap admitQualityGateInput in later phases.
- */
-export function createDefaultFoundryEvidenceGate(): FoundryEvidenceGate {
-  return {
-    admit(candidate: FoundryEvidenceCandidate): FoundryEvidenceAdmission {
-      if (candidate.fabricated) {
-        return {
-          admitted: false,
-          state: 'unverified',
-          reason: 'Fabricated score rejected — not produced by harness evidence.',
-        };
-      }
-      const { integrity } = candidate;
-      if (!integrity || typeof integrity !== 'object') {
-        return {
-          admitted: false,
-          state: 'unverified',
-          reason: 'Missing integrity fields — score unverified.',
-        };
-      }
-      if (!integrity.evalId || !integrity.candidateId || !integrity.sourceType) {
-        return {
-          admitted: false,
-          state: 'unverified',
-          reason: 'Incomplete integrity identity fields — score unverified.',
-        };
-      }
-      if (!integrity.integrityDigest || !isHexDigest(integrity.integrityDigest)) {
-        return {
-          admitted: false,
-          state: 'unverified',
-          reason: 'Missing or invalid integrityDigest — score unverified.',
-        };
-      }
-      if (integrity.sourceType !== SCRIPTED_SOURCE) {
-        return {
-          admitted: false,
-          state: 'unverified',
-          reason: `Source type "${integrity.sourceType}" is not admitted by the default scripted gate.`,
-        };
-      }
-      const ref: FoundryEvidenceRef = {
-        evalId: integrity.evalId,
-        candidateId: integrity.candidateId,
-        sourceType: integrity.sourceType,
-        integrityDigest: integrity.integrityDigest.toLowerCase(),
-        verificationState: 'verified',
-        observedAt: integrity.observedAt,
-      };
-      return {
-        admitted: true,
-        ref,
-        score: candidate.score,
-        passed: candidate.passed,
-      };
-    },
-  };
 }
 
 /**
@@ -129,30 +88,15 @@ export function assertScriptedFirst(
   return 'EvaluationHarness requires a DeterministicScriptedProvider / isTestDouble provider first.';
 }
 
-function scoreEvalCase(
+function scoreEvalCaseKeyword(
   evalCase: EvalCase,
   providerText: string,
 ): { score: number; passed: boolean; evidenceBlob: Record<string, unknown> } {
-  const threshold = evalCase.thresholdTbd ? 0 : (evalCase.threshold ?? 1);
-  const haystack = providerText.toLowerCase();
-  const mentions =
-    haystack.includes(evalCase.id.toLowerCase()) ||
-    haystack.includes(evalCase.suiteClass.toLowerCase()) ||
-    haystack.includes('pass') ||
-    haystack.includes('ok');
-  const score = mentions ? 1 : 0;
-  const passed = score >= threshold && !evalCase.thresholdTbd;
+  const result = runKeywordHeuristicCheck(evalCase, providerText);
   return {
-    score,
-    passed,
-    evidenceBlob: {
-      evalId: evalCase.id,
-      suiteClass: evalCase.suiteClass,
-      providerExcerpt: providerText.slice(0, 500),
-      threshold: evalCase.thresholdTbd ? 'TBD' : threshold,
-      thresholdTbd: Boolean(evalCase.thresholdTbd),
-      scoring: 'scripted-skeleton-v1',
-    },
+    score: result.score,
+    passed: result.passed,
+    evidenceBlob: result.evidenceBlob,
   };
 }
 
@@ -175,6 +119,7 @@ export async function runEvaluationHarness(
   const evidenceRefs: FoundryEvidenceRef[] = [];
   const scoresBySuite: Partial<Record<EvalSuiteClass, number>> = {};
   const suitePassFlags: Partial<Record<EvalSuiteClass, boolean>> = {};
+  const useStructured = input.useStructuredRunners !== false;
 
   if (!scriptedGateError) {
     for (const evalCase of input.suite.cases) {
@@ -204,7 +149,22 @@ export async function runEvaluationHarness(
         responseFormat: 'text',
       });
 
-      const raw = scoreEvalCase(evalCase, completion.text);
+      const raw = useStructured
+        ? aggregateStructuredChecks(
+            runStructuredEvalChecks({
+              provider: input.provider,
+              evalCase,
+              providerText: completion.text,
+              packet: input.packet,
+              permissions: input.permissions,
+              providerRequirements: input.providerRequirements,
+              providerCapabilities:
+                input.providerCapabilities ?? input.provider.capabilities,
+              fabricatedProbe: input.fabricatedProbe,
+            }),
+          )
+        : scoreEvalCaseKeyword(evalCase, completion.text);
+
       const integrityPayload = JSON.stringify({
         candidateId: input.candidateId,
         evalId: evalCase.id,
@@ -223,7 +183,9 @@ export async function runEvaluationHarness(
         evidenceBlob: raw.evidenceBlob,
         integrity: {
           integrityDigest,
-          sourceType: input.provider.isTestDouble ? SCRIPTED_SOURCE : completion.provider,
+          sourceType: input.provider.isTestDouble
+            ? SCRIPTED_EVIDENCE_SOURCE
+            : completion.provider,
           candidateId: input.candidateId,
           evalId: evalCase.id,
           observedAt,
