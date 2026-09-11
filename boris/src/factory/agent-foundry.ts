@@ -322,19 +322,29 @@ export async function runAgentFoundry(
   };
 }
 
-// Convenience re-exports of Phase 1 Foundry symbols (existing imports of agent-foundry remain stable).
+// Convenience re-exports of Foundry symbols (Phase 1 + Phase 2; existing imports remain stable).
 export {
   FOUNDRY_RUN_STATUSES,
   AGENT_LIFECYCLES,
   CANONICAL_WORKFORCE_ROLE_IDS,
+  EVAL_SUITE_CLASSES,
   validateSourcePacket,
   sourcePacketFromFoundryRequest,
   evaluateBoundaryPolicy,
   collectDeterministicPatternSignals,
   matchProviderRequirements,
+  analyzeReuse,
+  buildEvalSuite,
+  runEvaluationHarness,
+  createDefaultFoundryEvidenceGate,
+  assertScriptedFirst,
   type FoundryRunStatus,
   type AgentLifecycle,
   type SourcePacket,
   type ProviderRequirements,
   type ProviderCompatibilityResult,
+  type ReuseAnalysisResult,
+  type ReuseMap,
+  type EvalSuite,
+  type TournamentReport,
 } from './foundry/index.js';

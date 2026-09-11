@@ -1,5 +1,5 @@
 /**
- * Agent Foundry V1 — Phase 1 domain types.
+ * Agent Foundry V1 — domain types (Phase 1 + Phase 2).
  *
  * FoundryRunStatus describes a single foundry *run*.
  * AgentLifecycle describes a *candidate agent*'s lifecycle state.
@@ -159,8 +159,42 @@ export interface PermissionManifest {
   permissions: string[];
 }
 
+/** Required eval suite classes for Foundry V1 Phase 2. */
+export const EVAL_SUITE_CLASSES = [
+  'capability',
+  'regression',
+  'hallucination',
+  'adversarial',
+  'tool-use',
+  'permission',
+  'memory-contamination',
+  'portability',
+  'failure-recovery',
+] as const;
+
+export type EvalSuiteClass = (typeof EVAL_SUITE_CLASSES)[number];
+
+export interface EvalCase {
+  id: string;
+  description: string;
+  passCondition: string;
+  suiteClass: EvalSuiteClass;
+  /** Concrete numeric pass threshold when known. */
+  threshold?: number;
+  /** True only when threshold is explicitly TBD (placeholder allowed with flag). */
+  thresholdTbd?: boolean;
+  /** Bad-behavior string this case covers, when mapped from SourcePacket.badBehaviors. */
+  mapsBadBehavior?: string;
+}
+
+/**
+ * Eval suite. Phase 1 callers only need cases[].id/description/passCondition;
+ * Phase 2 populates suiteClass, thresholds, and badBehaviorCoverage.
+ */
 export interface EvalSuite {
-  cases: Array<{ id: string; description: string; passCondition: string }>;
+  cases: EvalCase[];
+  requiredClasses: readonly EvalSuiteClass[];
+  badBehaviorCoverage: Array<{ badBehavior: string; evalIds: string[] }>;
 }
 
 export interface ProvenanceManifest {
@@ -195,4 +229,116 @@ export interface CandidateRegistryContract {
   list(filter?: { lifecycle?: AgentLifecycle }): Promise<Array<{ id: string; lifecycle: AgentLifecycle }>>;
   register(packet: SourcePacket, pkg: AgentPackage): Promise<{ id: string; lifecycle: AgentLifecycle }>;
   updateLifecycle(candidateId: string, lifecycle: AgentLifecycle): Promise<void>;
+}
+
+// --- Phase 2: reuse analysis + harness types ---
+
+export type ReuseDisposition = 'REUSE' | 'EXTEND' | 'CREATE';
+
+export type ReuseAssetKind = 'tool' | 'skill' | 'shelf';
+
+export interface ReuseHit {
+  capability: string;
+  kind: ReuseAssetKind;
+  existingId: string;
+  evidence: string;
+}
+
+export interface ReuseGap {
+  capability: string;
+  justification: string;
+  noMatchEvidence: string[];
+}
+
+export interface ReuseCapabilityDisposition {
+  capability: string;
+  disposition: ReuseDisposition;
+  kind?: ReuseAssetKind;
+  existingId?: string;
+  evidence: string[];
+  justification?: string;
+}
+
+/** Map of reuse decisions across requested capabilities / tools. */
+export interface ReuseMap {
+  hits: ReuseHit[];
+  gaps: ReuseGap[];
+  dispositions: ReuseCapabilityDisposition[];
+}
+
+export interface ReuseAnalysisResult {
+  map: ReuseMap;
+  analyzedAt: string;
+  inputCapabilities: string[];
+}
+
+export interface FoundryEvidenceIntegrity {
+  /** Hex digest of the evidence payload (required for scripted admission). */
+  integrityDigest: string;
+  /** Source that produced the score — scripted doubles use this marker. */
+  sourceType: string;
+  /** Candidate / run identifier the evidence claims to cover. */
+  candidateId: string;
+  /** Eval id the score belongs to. */
+  evalId: string;
+  observedAt: string;
+}
+
+export interface FoundryEvidenceCandidate {
+  score: number;
+  passed: boolean;
+  integrity: FoundryEvidenceIntegrity;
+  evidenceBlob: Record<string, unknown>;
+  /** When true, claim is fabricated / not from a harness run — must be rejected. */
+  fabricated?: boolean;
+}
+
+export type FoundryEvidenceAdmission =
+  | {
+      admitted: true;
+      ref: FoundryEvidenceRef;
+      score: number;
+      passed: boolean;
+    }
+  | {
+      admitted: false;
+      reason: string;
+      state: 'unverified';
+    };
+
+export interface FoundryEvidenceRef {
+  evalId: string;
+  candidateId: string;
+  sourceType: string;
+  integrityDigest: string;
+  verificationState: 'verified';
+  observedAt: string;
+}
+
+/**
+ * Narrow evidence gate for Foundry harness.
+ * Can wrap admitQualityGateInput later; default accepts scripted deterministic
+ * evidence when integrity fields are present.
+ */
+export interface FoundryEvidenceGate {
+  admit(candidate: FoundryEvidenceCandidate): FoundryEvidenceAdmission;
+}
+
+export interface EvalHarnessScore {
+  evalId: string;
+  suiteClass: EvalSuiteClass;
+  score: number;
+  passed: boolean;
+  evidenceBlob: Record<string, unknown>;
+  admission: FoundryEvidenceAdmission;
+}
+
+export interface TournamentReport {
+  candidateId: string;
+  /** Suite-class → admitted numeric score only (unverified scores omitted). */
+  scoresBySuite: Partial<Record<EvalSuiteClass, number>>;
+  evidenceRefs: FoundryEvidenceRef[];
+  pass: boolean;
+  fail: boolean;
+  rejectReasons: string[];
 }
