@@ -49,6 +49,27 @@ BORIS_AGENTS=GARY-001 BORIS_AGENT_ID=GARY-001 node dist/src/cli.js run
 docker compose -f boris/docker-compose.solo.yml --profile gary up -d
 ```
 
+## Agent tooling
+
+`.claude/settings.json` registers the `typesafe-ai` marketplace and enables the `typesafe` plugin,
+which ships one skill (`typesafe-ai`) and nothing else — no hooks, no MCP servers, no agents, no
+`bin/`. It is reference material for the TypeSafe System One API, not a runtime dependency.
+
+Registering the marketplace is not installing the plugin. Project settings add the marketplace once
+the repository folder is trusted, but a plugin from an external source still has to be installed per
+environment:
+
+```sh
+claude plugin install typesafe@typesafe-ai
+```
+
+**TypeSafe is not a dependency of anything in this repository.** No code imports it, no agent calls
+it, and no credential for it exists here. The skill describes an API that this repo does not use;
+per the source-of-truth rules, that documentation does not make an integration exist. If a TypeSafe
+integration is ever built, it obeys the same rules as everything else: permissions stay in
+`boris/src/policy/permissions.ts`, credentials are never read from disk, and a network-calling tool
+is bounded per agent in `roster.ts` before it can be reached.
+
 ## Headquarters
 
 The building has five rooms and one address. `node dist/src/cli.js run` serves all of it:
