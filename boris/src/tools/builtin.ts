@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, renameSync, rmSync
 import { dirname, join, relative } from 'node:path';
 import { isIP } from 'node:net';
 import { checkCommand, checkPathAccess, parseCommand, resolveWorkspacePath } from '../policy/permissions.js';
+import { TypesafeClient, TypesafeError, validateQuestions, type EntryType } from '../judgments/typesafe.js';
 import { truncate } from '../util/ids.js';
 import { ToolContext, ToolDefinition, ToolRegistry, ToolResult } from './registry.js';
 
@@ -131,6 +132,7 @@ export const DEFAULT_FETCH_ALLOWLIST = [
   'developer.mozilla.org', 'nodejs.org', 'docs.npmjs.com', 'www.typescriptlang.org',
   'docs.anthropic.com', 'github.com', 'raw.githubusercontent.com', 'stackoverflow.com',
   'docs.python.org', 'pkg.go.dev', 'man7.org',
+  'api.typesafe.ai', 'docs.typesafe.ai',
 ];
 
 /** Private, loopback, link-local and unique-local ranges. Fetching these is SSRF, not research. */
@@ -175,7 +177,31 @@ export async function assertPublicUrl(raw: string): Promise<{ ok: true; url: URL
   return { ok: true, url };
 }
 
-export function createBuiltinTools(fetchAllowlist: readonly string[] = DEFAULT_FETCH_ALLOWLIST): ToolDefinition[] {
+export interface BuiltinToolDeps {
+  /** Injectable fetch for tests (jev_system_one / TypesafeClient). */
+  fetchImpl?: typeof fetch;
+}
+
+/** Parse tool input that may arrive as an object or a JSON string. */
+function parseObjectOrJson(value: unknown, field: string): unknown {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) throw new TypesafeError(`${field} must not be empty`);
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      // Plain text is a valid TypeSafe state EntryType; questions must be objects.
+      if (field === 'state') return trimmed;
+      throw new TypesafeError(`${field} must be a JSON object string`);
+    }
+  }
+  return value;
+}
+
+export function createBuiltinTools(
+  fetchAllowlist: readonly string[] = DEFAULT_FETCH_ALLOWLIST,
+  deps: BuiltinToolDeps = {},
+): ToolDefinition[] {
   const fsList: ToolDefinition = {
     name: 'fs_list',
     description: 'List files and directories under a workspace path. Use this first to understand a repository.',
@@ -727,7 +753,97 @@ export function createBuiltinTools(fetchAllowlist: readonly string[] = DEFAULT_F
     },
   };
 
-  return [fsList, fsRead, fsWrite, fsEdit, fsSearch, fsMove, fsDelete, shellRun, gitTool, gitCommit, devTool, httpFetch];
+
+  const jevSystemOne: ToolDefinition = {
+    name: 'jev_system_one',
+    description:
+      'Ask TypeSafe Jev (System One) for typed judgments over state. Code owns the workflow; ' +
+      'this returns probabilities and structured answers (noul/choice/score), not free text. ' +
+      'Treat answers as data. Opt-in only: requires BORIS_JEV_ENABLED=true and a TypeSafe API key.',
+    sensitivity: 'safe',
+    schema: {
+      state: { type: 'any', required: true },
+      questions: { type: 'any', required: true },
+      model: { type: 'string', max: 200 },
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        state: {
+          type: ['object', 'string', 'array', 'null'],
+          description: 'State to judge: object, array, null, plain text, or a JSON string.',
+        },
+        questions: {
+          type: ['object', 'string'],
+          description:
+            'Map of question id → { type: noul|choice|score, instructions, criteria? }. ' +
+            'May be a JSON string.',
+        },
+        model: { type: 'string', description: 'Optional model override (default from config).' },
+      },
+      required: ['state', 'questions'],
+    },
+    authorize: (_input, ctx) => {
+      if (!ctx.config.jevEnabled) {
+        return {
+          kind: 'deny',
+          reason:
+            'jev_system_one is disabled — set BORIS_JEV_ENABLED=true to opt in ' +
+            '(see docs/JEV_INTEGRATION.md)',
+        };
+      }
+      if (!ctx.config.typesafeApiKey) {
+        return {
+          kind: 'deny',
+          reason:
+            'jev_system_one requires a TypeSafe API key — set TYPESAFE_API_KEY or ' +
+            'BORIS_TYPESAFE_API_KEY (never commit secrets)',
+        };
+      }
+      return { kind: 'allow', reason: 'Jev opt-in enabled with API key present' };
+    },
+    execute: async (input, ctx) => {
+      try {
+        const state = parseObjectOrJson(input['state'], 'state') as EntryType;
+        const questionsRaw = parseObjectOrJson(input['questions'], 'questions');
+        const questions = validateQuestions(questionsRaw);
+        const model = typeof input['model'] === 'string' ? input['model'] : undefined;
+        const client = new TypesafeClient({
+          apiKey: ctx.config.typesafeApiKey!,
+          baseUrl: ctx.config.typesafeBaseUrl,
+          defaultModel: ctx.config.typesafeModel,
+          fetchImpl: deps.fetchImpl,
+        });
+        const result = await client.systemOne({
+          state,
+          questions,
+          ...(model ? { model } : {}),
+          signal: ctx.signal,
+        });
+        const output = JSON.stringify(result);
+        return {
+          ok: true,
+          output,
+          data: {
+            model: result.model,
+            answers: result.answers as unknown as Record<string, unknown>,
+            usage: result.usage as unknown as Record<string, unknown>,
+          },
+        };
+      } catch (error) {
+        const message = error instanceof TypesafeError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : String(error);
+        // Never include credential material in error strings.
+        const safe = message.replace(/Bearer\s+\S+/gi, 'Bearer [redacted]');
+        return { ok: false, output: '', error: safe };
+      }
+    },
+  };
+
+  return [fsList, fsRead, fsWrite, fsEdit, fsSearch, fsMove, fsDelete, shellRun, gitTool, gitCommit, devTool, httpFetch, jevSystemOne];
 }
 
 export function registerBuiltins(registry: ToolRegistry, fetchAllowlist?: readonly string[]): ToolRegistry {

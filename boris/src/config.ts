@@ -92,6 +92,17 @@ export interface Config {
   autoApprove: boolean;
   workerPollMs: number;
   schedulerPollMs: number;
+  /**
+   * Opt-in TypeSafe/Jev judgment tool. Default false. Even when true, the tool
+   * still requires a TypeSafe API key before it will authorize.
+   */
+  jevEnabled: boolean;
+  /** TypeSafe API key. Never committed; never logged. */
+  typesafeApiKey: string | null;
+  /** TypeSafe API root. Default https://api.typesafe.ai */
+  typesafeBaseUrl: string;
+  /** Default Jev model for System One. Default jev-latest */
+  typesafeModel: string;
 }
 
 export function loadConfig(overrides: Partial<Config> = {}): Config {
@@ -122,6 +133,10 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     autoApprove: str('BORIS_AUTO_APPROVE', 'false') === 'true',
     workerPollMs: num('BORIS_WORKER_POLL_MS', 1000),
     schedulerPollMs: num('BORIS_SCHEDULER_POLL_MS', 5000),
+    jevEnabled: str('BORIS_JEV_ENABLED', 'false') === 'true',
+    typesafeApiKey: process.env['TYPESAFE_API_KEY'] ?? process.env['BORIS_TYPESAFE_API_KEY'] ?? null,
+    typesafeBaseUrl: str('BORIS_TYPESAFE_BASE_URL', 'https://api.typesafe.ai'),
+    typesafeModel: str('BORIS_TYPESAFE_MODEL', 'jev-latest'),
     limits: {
       maxModelCallsPerTask: num('BORIS_MAX_MODEL_CALLS', 40),
       maxTurnsPerRun: num('BORIS_MAX_TURNS', 25),

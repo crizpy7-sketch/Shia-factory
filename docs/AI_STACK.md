@@ -54,6 +54,13 @@ Memory seed ledger: `gbrain/FACTORY_MEMORY_SEED.md`.
 
 GBrain is not the authority that overrides repository truth, Factory state, or explicit decisions.
 
+### TypeSafe / Jev (optional)
+
+Optional judgment layer under the Factory control plane. When opted in
+(`BORIS_JEV_ENABLED=true` plus a TypeSafe API key), Boris may call `jev_system_one` for typed
+System One answers (probabilities / structured judgments). Code retains workflow ownership.
+Default off; not a Core v2 phase; see `docs/JEV_INTEGRATION.md`.
+
 ## Current topology
 
 ```text
