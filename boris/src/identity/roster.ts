@@ -103,10 +103,10 @@ const GARY: ProfileTemplate = {
     ],
   },
   tools: [
-    'fs_list', 'fs_read', 'fs_search', 'http_fetch',
+    'fs_list', 'fs_read', 'fs_search', 'http_fetch', 'jev_system_one',
     'plan', 'report_result', 'request_approval', 'delegate', 'memory_write', 'memory_search', 'skill_create',
   ],
-  toolsReason: 'Read, research and reasoning only. His package grants no authority to change a repository, so no write, shell, git or deploy tool is offered to him.',
+  toolsReason: 'Read, research, reasoning and opt-in typed judgments (jev_system_one) only. Still no write, shell, git or deploy — his package grants no authority to change a repository.',
   colleagueNote:
     'His cognitive model: "BORIS: Gary pressures for customer relevance, positioning, speed, '
     + 'distribution and market learning. BORIS pressures Gary for truth, feasibility, reliability, '

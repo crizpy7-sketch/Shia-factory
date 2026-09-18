@@ -148,10 +148,11 @@ test('an agent is offered only the tools his package gives him authority for', (
   for (const tool of ['fs_write', 'fs_edit', 'fs_delete', 'fs_move', 'shell_run', 'git', 'git_commit', 'dev']) {
     assert.equal(gary.tools?.includes(tool), false, `Gary must not be offered ${tool}`);
   }
-  for (const tool of ['fs_read', 'fs_search', 'http_fetch', 'plan', 'report_result', 'request_approval']) {
+  for (const tool of ['fs_read', 'fs_search', 'http_fetch', 'jev_system_one', 'plan', 'report_result', 'request_approval']) {
     assert.ok(gary.tools?.includes(tool), `Gary needs ${tool} to do his work`);
   }
   assert.match(gary.toolsReason, /no authority to change a repository/i);
+  assert.match(gary.toolsReason, /judgment/i);
 });
 
 test('a subagent id resolves to the agent who spawned it', () => {

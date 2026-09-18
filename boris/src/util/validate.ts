@@ -10,7 +10,8 @@ export type FieldSpec =
   | { type: 'number'; required?: boolean; min?: number; max?: number; integer?: boolean }
   | { type: 'boolean'; required?: boolean }
   | { type: 'object'; required?: boolean }
-  | { type: 'array'; required?: boolean; of?: 'string' | 'number' | 'object'; max?: number };
+  | { type: 'array'; required?: boolean; of?: 'string' | 'number' | 'object'; max?: number }
+  | { type: 'any'; required?: boolean };
 
 export type Schema = Record<string, FieldSpec>;
 
@@ -77,6 +78,10 @@ export function validate<T = Record<string, unknown>>(input: unknown, schema: Sc
             spec.of === 'object' ? typeof v !== 'object' || v === null : typeof v !== spec.of);
           if (bad) issues.push(`${key} must contain only ${spec.of} values`);
         }
+        out[key] = value;
+        break;
+      }
+      case 'any': {
         out[key] = value;
         break;
       }

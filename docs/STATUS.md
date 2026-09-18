@@ -195,3 +195,4 @@ merge task. **Phase 7 remains 1/4; approved Core v2 progress remains 31/41 = 75.
 ## Deferred cross-phase improvement
 
 - [ ] Make `docs/STATUS.md` the canonical progress source and have the Factory dashboard derive percentages from it; retire browser-local checkbox state only after compatibility and migration tests pass
+- [ ] Optional Jev/TypeSafe judgment tool (opt-in; does not advance Core v2 phases)
